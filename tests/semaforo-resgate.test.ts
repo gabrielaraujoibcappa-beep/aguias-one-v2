@@ -7,11 +7,11 @@ import {
 
 describe("Painel Operacional da Turma & Resgate (ÁGUIAS ONE v2)", () => {
   it("dispara necessidade de resgate se aluno estiver 2 semanas seguidas no vermelho", () => {
-    const historicoVermelhoDuplo = ["vermelho", "vermelho"];
+    const historicoVermelhoDuplo: ("verde" | "amarelo" | "vermelho")[] = ["vermelho", "vermelho"];
     expect(verificarNecessidadeResgate(historicoVermelhoDuplo).precisaResgate).toBe(true);
     expect(verificarNecessidadeResgate(historicoVermelhoDuplo).semanasVermelhas).toBe(2);
 
-    const historicoMisto = ["verde", "vermelho"];
+    const historicoMisto: ("verde" | "amarelo" | "vermelho")[] = ["verde", "vermelho"];
     expect(verificarNecessidadeResgate(historicoMisto).precisaResgate).toBe(false);
   });
 
@@ -24,6 +24,7 @@ describe("Painel Operacional da Turma & Resgate (ÁGUIAS ONE v2)", () => {
       historicoSemaforos: ["vermelho", "vermelho"],
       precisaResgate: true,
       moduloAtual: "Módulo 2 — Agenda",
+      checkinEntregue: false,
     };
 
     const link = gerarLinkWhatsAppResgate(aluno, "Flávio Lopes");

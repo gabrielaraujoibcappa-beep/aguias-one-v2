@@ -28,6 +28,7 @@ export function InputMultiploArquivos({
     for (let i = 0; i < files.length; i++) {
       const file = files[i];
       onAdicionar({
+        rotulo: file.name,
         nome: file.name,
         path: `/mock/uploads/${file.name}`,
         tipo: file.type.includes("pdf") ? "pdf" : "print",

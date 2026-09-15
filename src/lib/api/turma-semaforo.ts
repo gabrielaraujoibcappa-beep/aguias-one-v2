@@ -9,6 +9,7 @@ export interface AlunoSemaforoStatus {
   moduloAtual: string;
   checkinEntregue: boolean;
   precisaResgate: boolean;
+  faturamentoAtual?: number;
 }
 
 export function verificarNecessidadeResgate(

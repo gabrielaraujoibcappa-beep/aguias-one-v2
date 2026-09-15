@@ -4,9 +4,11 @@ export interface EvidenciaLinkItem {
 }
 
 export interface EvidenciaArquivoItem {
-  rotulo: string;
+  rotulo?: string;
   path: string;
   nome: string;
+  tipo?: string;
+  tamanhoBytes?: number;
 }
 
 export interface SubmissaoCheckin {
