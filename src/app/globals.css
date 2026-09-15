@@ -1,0 +1,127 @@
+@import "../styles/tokens.css";
+
+*, *::before, *::after {
+  box-sizing: border-box;
+  margin: 0;
+  padding: 0;
+}
+
+body {
+  background-color: var(--cor-canvas);
+  color: var(--cor-ink);
+  font-family: var(--font-family-ui);
+  font-size: 15px;
+  line-height: 1.5;
+  -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
+}
+
+h1, h2, h3, h4, h5, h6 {
+  font-family: var(--font-family-display);
+  font-weight: 500;
+  color: var(--cor-primary);
+  line-height: 1.2;
+}
+
+a {
+  color: inherit;
+  text-decoration: none;
+}
+
+button {
+  font-family: inherit;
+  cursor: pointer;
+  border: none;
+  background: none;
+  font-size: 14px;
+}
+
+input, select, textarea {
+  font-family: inherit;
+  font-size: 14px;
+}
+
+/* Componentes Base no Padrão Cohere */
+.btn-primary {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: var(--espaco-sm);
+  background-color: var(--cor-primary);
+  color: var(--cor-on-primary);
+  padding: 10px 20px;
+  border-radius: var(--radius-pill);
+  font-weight: 500;
+  transition: opacity 0.2s ease, transform 0.1s ease;
+}
+
+.btn-primary:hover {
+  opacity: 0.92;
+}
+
+.btn-primary:active {
+  transform: scale(0.98);
+}
+
+.btn-secondary {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: var(--espaco-sm);
+  background-color: transparent;
+  color: var(--cor-ink);
+  border: 1px solid var(--cor-hairline);
+  padding: 8px 16px;
+  border-radius: var(--radius-pill);
+  font-weight: 500;
+  transition: background-color 0.2s ease, border-color 0.2s ease;
+}
+
+.btn-secondary:hover {
+  background-color: var(--cor-soft-stone);
+  border-color: var(--cor-border-light);
+}
+
+.card {
+  background-color: var(--cor-canvas);
+  border: 1px solid var(--cor-border-light);
+  border-radius: var(--radius-md);
+  padding: var(--espaco-xl);
+}
+
+.card-dark {
+  background-color: var(--cor-deep-green);
+  color: var(--cor-on-dark);
+  border-radius: var(--radius-lg);
+  padding: var(--espaco-xxl);
+}
+
+.badge-semaforo {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  padding: 4px 10px;
+  border-radius: var(--radius-pill);
+  font-size: 12px;
+  font-weight: 600;
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+}
+
+.badge-semaforo.verde {
+  background-color: #ecfdf5;
+  color: #065f46;
+  border: 1px solid #a7f3d0;
+}
+
+.badge-semaforo.amarelo {
+  background-color: #fffbeb;
+  color: #92400e;
+  border: 1px solid #fde68a;
+}
+
+.badge-semaforo.vermelho {
+  background-color: #fef2f2;
+  color: #991b1b;
+  border: 1px solid #fecaca;
+}

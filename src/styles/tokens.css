@@ -1,0 +1,63 @@
+:root {
+  /* Cores Principais (DESIGN.md - Cohere Enterprise 2026) */
+  --cor-primary: #17171c;
+  --cor-black: #000000;
+  --cor-ink: #212121;
+  --cor-deep-green: #003c33;
+  --cor-dark-navy: #071829;
+  --cor-canvas: #ffffff;
+  --cor-soft-stone: #eeece7;
+  --cor-pale-green: #edfce9;
+  --cor-pale-blue: #f1f5ff;
+
+  /* Bordas e Linhas */
+  --cor-hairline: #d9d9dd;
+  --cor-border-light: #e5e7eb;
+  --cor-card-border: #f2f2f2;
+
+  /* Neutros e Apoio */
+  --cor-muted: #93939f;
+  --cor-slate: #75758a;
+  --cor-body-muted: #616161;
+  --cor-on-primary: #ffffff;
+  --cor-on-dark: #ffffff;
+
+  /* Acentos Semânticos */
+  --cor-action-blue: #1863dc;
+  --cor-focus-blue: #4c6ee6;
+  --cor-coral: #ff7759;
+  --cor-coral-soft: #ffad9b;
+  --cor-form-focus: #9b60aa;
+  --cor-error: #b30000;
+  --cor-success: #1b8a5a;
+  --cor-warning: #e09f00;
+
+  /* Semáforo ÁGUIAS ONE */
+  --semaforo-verde: #10b981;
+  --semaforo-amarelo: #f59e0b;
+  --semaforo-vermelho: #ef4444;
+
+  /* Arredondamentos (Radii) */
+  --radius-xs: 4px;
+  --radius-sm: 8px;
+  --radius-md: 16px;
+  --radius-lg: 22px;
+  --radius-xl: 30px;
+  --radius-pill: 32px;
+  --radius-full: 9999px;
+
+  /* Espaçamentos */
+  --espaco-xxs: 2px;
+  --espaco-xs: 6px;
+  --espaco-sm: 8px;
+  --espaco-md: 12px;
+  --espaco-lg: 16px;
+  --espaco-xl: 24px;
+  --espaco-xxl: 32px;
+  --espaco-section: 80px;
+
+  /* Tipografia */
+  --font-family-display: "Space Grotesk", "Inter", -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
+  --font-family-ui: "Inter", -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
+  --font-family-mono: "SF Mono", "Fira Code", "Courier New", monospace;
+}
