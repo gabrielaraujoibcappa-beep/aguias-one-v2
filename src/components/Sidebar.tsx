@@ -23,6 +23,7 @@ import {
   IconChevronRight,
   IconMenu,
   IconX,
+  IconMail,
 } from "./ui/Icons";
 
 interface ItemSidebar {
@@ -191,6 +192,7 @@ export function Sidebar() {
       itens: [
         { rotulo: "Gestão de Alunos", href: "/admin/alunos", icone: IconUserPlus },
         { rotulo: "Gestão de Turmas", href: "/admin/turmas", icone: IconBuilding },
+        { rotulo: "Templates de E-mail", href: "/admin/emails", icone: IconMail },
       ],
     },
   ];
