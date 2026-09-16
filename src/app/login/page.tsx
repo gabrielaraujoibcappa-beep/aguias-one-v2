@@ -40,7 +40,9 @@ export default function LoginPage() {
 
     const destino = new URLSearchParams(window.location.search).get("redirect");
     const destinoSeguro = destino && destino.startsWith("/") && !destino.startsWith("//") ? destino : null;
-    router.replace(destinoSeguro ?? (usuario.papel === "mentorado" ? "/dashboard" : "/painel/turma"));
+    const rotaInicial =
+      usuario.papel === "mentorado" ? "/dashboard" : usuario.papel === "resgate" ? "/resgate" : "/painel/turma";
+    router.replace(destinoSeguro ?? rotaInicial);
   };
 
   const executarLogin = async (emailAlvo: string) => {

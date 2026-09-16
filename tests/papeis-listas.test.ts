@@ -41,6 +41,7 @@ describe("Papéis nas listas de alunos", () => {
       concierge: "Concierge",
       anjo: "Anjo",
       mentor: "Mentor",
+      resgate: "Resgate",
       mentorado: "Mentorado",
     });
   });

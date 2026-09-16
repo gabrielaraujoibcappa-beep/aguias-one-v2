@@ -1,6 +1,8 @@
 import { NextRequest, NextResponse } from "next/server";
 import { exigirSessao, PAPEIS_EQUIPE } from "@/lib/auth/sessao-api";
 import { supabaseAdmin } from "@/lib/supabase/admin";
+import { ajustarSemaforoPorDiagnostico } from "@/lib/diagnostico/regras";
+import { inicioSemana, vermelhos28d, type FotoSemana } from "@/lib/acompanhamento/semaforo-semanal";
 
 export async function GET(req: NextRequest) {
   const auth = await exigirSessao(req, PAPEIS_EQUIPE);
@@ -38,7 +40,8 @@ export async function GET(req: NextRequest) {
         checkins_modulo (
           id, modulo_id, status, enviado_em,
           modulos (numero, titulo)
-        )
+        ),
+        diagnostico (status)
       `)
       .eq("turma_id", turmaId);
 
@@ -76,6 +79,18 @@ export async function GET(req: NextRequest) {
         motivo = `${diasSemEntrega} dias sem submeter check-in (atenção)`;
       }
 
+      // Semana 1 (SPEC diagnóstico §6): sem placar de entrada enviado não fecha verde
+      const diag = Array.isArray(m.diagnostico) ? m.diagnostico[0] : m.diagnostico;
+      const placarEnviado = !!diag && diag.status !== "rascunho";
+      if (usuario.status !== "bloqueado" && !placarEnviado) {
+        const diasMatricula = (agora.getTime() - new Date(m.matriculado_em).getTime()) / (1000 * 60 * 60 * 24);
+        const ajustado = ajustarSemaforoPorDiagnostico(statusSemaforo, false, checkins.length > 0, diasMatricula >= 7);
+        if (ajustado !== statusSemaforo) {
+          statusSemaforo = ajustado;
+          motivo = ajustado === "vermelho" ? "Sem check-in e sem placar de entrada" : "Placar de entrada não enviado";
+        }
+      }
+
       const modulosAprovados = checkins.filter((c: any) => c.status === "aprovado").length;
       const progressoPercentual = Math.min(100, Math.round((modulosAprovados / 10) * 100));
 
@@ -95,6 +110,42 @@ export async function GET(req: NextRequest) {
       };
     });
 
+    // Foto da semana corrente + histórico para "vermelhos em 28 dias"
+    const semanaAtual = inicioSemana(agora);
+    const historicoPorMatricula = new Map<string, FotoSemana[]>();
+    if (alunosSemaforo.length) {
+      const { error: erroFoto } = await supabaseAdmin.from("semaforo_semanal").upsert(
+        alunosSemaforo.map((a) => ({
+          matricula_id: a.matriculaId,
+          semana: semanaAtual,
+          cor: a.statusSemaforo,
+          motivo: a.motivoSemaforo,
+          atualizado_em: agora.toISOString(),
+        })),
+        { onConflict: "matricula_id,semana" }
+      );
+      if (erroFoto) console.error("[semaforo_semanal] upsert", erroFoto.message);
+
+      const desde = new Date(agora.getTime() - 35 * 24 * 60 * 60 * 1000).toISOString().slice(0, 10);
+      const { data: fotos, error: erroHist } = await supabaseAdmin
+        .from("semaforo_semanal")
+        .select("matricula_id, semana, cor")
+        .in("matricula_id", alunosSemaforo.map((a) => a.matriculaId))
+        .gte("semana", desde);
+      if (erroHist) console.error("[semaforo_semanal] leitura", erroHist.message);
+      for (const f of fotos || []) {
+        const lista = historicoPorMatricula.get(f.matricula_id) ?? [];
+        lista.push({ semana: f.semana, cor: f.cor });
+        historicoPorMatricula.set(f.matricula_id, lista);
+      }
+    }
+    const alunosComHistorico = alunosSemaforo.map((a) => {
+      const hist = historicoPorMatricula.get(a.matriculaId) ?? [];
+      // Sem foto gravada (falha no upsert), a semana corrente conta pelo cálculo atual
+      if (!hist.some((f) => f.semana === semanaAtual)) hist.push({ semana: semanaAtual, cor: a.statusSemaforo });
+      return { ...a, vermelhos28d: vermelhos28d(hist, agora) };
+    });
+
     const resumo = {
       total: alunosSemaforo.length,
       verde: alunosSemaforo.filter((a) => a.statusSemaforo === "verde").length,
@@ -106,7 +157,7 @@ export async function GET(req: NextRequest) {
       sucesso: true,
       turmaId,
       resumo,
-      alunos: alunosSemaforo,
+      alunos: alunosComHistorico,
     });
   } catch (err: any) {
     return NextResponse.json({ sucesso: false, erro: err?.message }, { status: 500 });

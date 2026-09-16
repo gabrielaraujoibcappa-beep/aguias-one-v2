@@ -1,5 +1,9 @@
 import { NextRequest, NextResponse } from "next/server";
-import { exigirSessao, PAPEIS_EQUIPE } from "@/lib/auth/sessao-api";
+import { exigirSessao } from "@/lib/auth/sessao-api";
+import type { PapelUsuario } from "@/lib/auth/roles";
+
+// Parecer: admin, concierge e mentor. Anjo não edita check-in nem faturamento (SPEC diagnóstico §3)
+const PAPEIS_PARECER: PapelUsuario[] = ["admin", "concierge", "mentor"];
 import { supabaseAdmin } from "@/lib/supabase/admin";
 
 interface RouteParams {
@@ -7,7 +11,7 @@ interface RouteParams {
 }
 
 export async function PATCH(req: NextRequest, { params }: RouteParams) {
-  const auth = await exigirSessao(req, PAPEIS_EQUIPE);
+  const auth = await exigirSessao(req, PAPEIS_PARECER);
   if (auth.erro) return auth.erro;
   try {
     const { id } = await params;

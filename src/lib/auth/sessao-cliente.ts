@@ -15,6 +15,7 @@ export const CONTAS_DEMO: { nome: string; email: string; papel: PapelUsuario; ca
   { nome: "Flávio Lopes", email: "flavio.lopes@unibcappa.com.br", papel: "concierge", cargo: "Concierge da Turma" },
   { nome: "Ana Carolina", email: "ana.carolina@unibcappa.com.br", papel: "anjo", cargo: "Anjo & Auditoria" },
   { nome: "Prof. Edilson Aguiais", email: "edilson.aguiais@unibcappa.com.br", papel: "mentor", cargo: "Coordenação & Mentoria" },
+  { nome: "Adelayne", email: "adelayne@unibcappa.com.br", papel: "resgate", cargo: "Resgate de alunos" },
   { nome: "Coordenação UniBCAPPA", email: "admin@aguiasone.test", papel: "admin", cargo: "Gestão" },
 ];
 

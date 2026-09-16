@@ -1,4 +1,4 @@
-export type PapelUsuario = "admin" | "concierge" | "anjo" | "mentor" | "mentorado";
+export type PapelUsuario = "admin" | "concierge" | "anjo" | "mentor" | "resgate" | "mentorado";
 
 export interface UsuarioSessao {
   id: string;
@@ -12,8 +12,17 @@ export function isStaff(papel: PapelUsuario): boolean {
   return ["admin", "concierge", "anjo", "mentor"].includes(papel);
 }
 
+/** Resgate (Adelayne): opera só /resgate. Não é equipe: não lê faturamento, notas nem frases. */
+export function ehResgate(papel?: PapelUsuario | null): boolean {
+  return papel === "resgate";
+}
+
+/**
+ * Parecer em check-in e faturamento. Anjo não edita check-in/faturamento
+ * (SPEC diagnóstico §3); mentor dá parecer de auditoria.
+ */
 export function canAudit(papel: PapelUsuario): boolean {
-  return ["admin", "concierge", "anjo"].includes(papel);
+  return ["admin", "concierge", "mentor"].includes(papel);
 }
 
 export function canManageCohorts(papel: PapelUsuario): boolean {
@@ -29,6 +38,7 @@ export const ROTULOS_PAPEL: Record<PapelUsuario, string> = {
   concierge: "Concierge",
   anjo: "Anjo",
   mentor: "Mentor",
+  resgate: "Resgate",
   mentorado: "Mentorado",
 };
 

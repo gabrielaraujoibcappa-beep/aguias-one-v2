@@ -24,7 +24,8 @@ import {
   IconMenu,
   IconX,
   IconMail,
-  IconFolder
+  IconFolder,
+  IconCalendar
 } from "./ui/Icons";
 import { CONTAS_DEMO, MODO_DEMO, encerrarSessao, iniciarSessaoDemo } from "@/lib/auth/sessao-cliente";
 
@@ -128,13 +129,16 @@ export function Sidebar() {
     setMobileAberta(false);
   }, [pathname]);
 
-  const isStaff = estado.papelAtual !== "mentorado";
+  const isResgate = estado.papelAtual === "resgate";
+  // Resgate não é equipe: não vê painéis nem cadastros
+  const isStaff = estado.papelAtual !== "mentorado" && !isResgate;
 
   const personasConfig: { id: PapelUsuario; rotulo: string; cargo: string; nomeExemplo: string; rotaPadrao: string }[] = [
     { id: "mentorado", rotulo: "Mentorado", cargo: "Perito Solo", nomeExemplo: "Dr. Roberto Silva", rotaPadrao: "/dashboard" },
     { id: "concierge", rotulo: "Concierge", cargo: "Operação & Turma", nomeExemplo: "Flávio Lopes", rotaPadrao: "/painel/turma" },
     { id: "anjo", rotulo: "Anjo", cargo: "Suporte & Auditoria", nomeExemplo: "Ana Carolina", rotaPadrao: "/painel/modulos" },
     { id: "mentor", rotulo: "Mentor", cargo: "Coordenação", nomeExemplo: "Prof. Edilson Aguiais", rotaPadrao: "/painel/turma" },
+    { id: "resgate", rotulo: "Resgate", cargo: "Resgate de alunos", nomeExemplo: "Adelayne", rotaPadrao: "/resgate" },
     { id: "admin", rotulo: "Admin", cargo: "Gestão", nomeExemplo: "Coordenação UniBCAPPA", rotaPadrao: "/admin/alunos" },
   ];
 
@@ -172,6 +176,7 @@ export function Sidebar() {
     {
       secao: "Jornada",
       itens: [
+        { rotulo: "Placar de entrada", href: "/diagnostico", icone: IconAudit },
         { rotulo: "Check-in Modular", href: "/checkin/mod-1", icone: IconCheckCircle },
       ],
     },
@@ -206,7 +211,39 @@ export function Sidebar() {
     },
   ];
 
-  const gruposNavegacao: GrupoSidebar[] = isStaff ? linksStaff : linksMentorado;
+  // Painéis de acompanhamento: cada papel vê só o seu (mentor e admin veem todos)
+  const papel = estado.papelAtual;
+  const itensAcompanhamento: ItemSidebar[] = [
+    ...(["concierge", "mentor", "admin"].includes(papel)
+      ? [{ rotulo: "Concierge · Turma", href: "/concierge/turma", icone: IconUsers }]
+      : []),
+    ...(["anjo", "mentor", "admin"].includes(papel)
+      ? [
+          { rotulo: "Mesa do Anjo", href: "/anjo", icone: IconAudit },
+          { rotulo: "Lista do mês 6", href: "/anjo/mes6", icone: IconCalendar },
+        ]
+      : []),
+    ...(["mentor", "admin"].includes(papel)
+      ? [
+          { rotulo: "Mentor · Turma", href: "/mentor/turma", icone: IconUsers },
+          { rotulo: "ICP & Frases", href: "/mentor/icp", icone: IconFolder },
+          { rotulo: "Auditoria de acessos", href: "/mentor/auditoria", icone: IconAudit },
+        ]
+      : []),
+  ];
+
+  const linksResgate: GrupoSidebar[] = [
+    { secao: "Resgate", itens: [{ rotulo: "Alunos para resgatar", href: "/resgate", icone: IconUsers }] },
+  ];
+
+  const gruposNavegacao: GrupoSidebar[] = isResgate
+    ? linksResgate
+    : isStaff
+    ? [
+        ...(itensAcompanhamento.length ? [{ secao: "Acompanhamento", itens: itensAcompanhamento }] : []),
+        ...linksStaff,
+      ]
+    : linksMentorado;
 
   return (
     <>
@@ -287,7 +324,7 @@ export function Sidebar() {
           }}
         >
           <Link
-            href={isStaff ? "/painel/turma" : "/dashboard"}
+            href={isResgate ? "/resgate" : isStaff ? "/painel/turma" : "/dashboard"}
             title="Ir para início"
             style={{
               display: "flex",
@@ -610,7 +647,8 @@ export function Sidebar() {
           })}
         </nav>
 
-        {/* Ação Primária Contextual */}
+        {/* Ação Primária Contextual (resgate não tem) */}
+        {!isResgate && (
         <div style={{ padding: recolhida ? "8px" : "12px 14px", borderTop: "1px solid rgba(255, 255, 255, 0.08)" }}>
           {isStaff ? (
             <button
@@ -654,6 +692,7 @@ export function Sidebar() {
             </Link>
           )}
         </div>
+        )}
 
         {/* Rodapé da Sidebar: Turma e Botão de Alternância de Largura Desktop */}
         <div

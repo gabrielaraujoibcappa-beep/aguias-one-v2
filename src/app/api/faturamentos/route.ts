@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from "next/server";
 import { exigirSessao, podeAcessarMatricula, respostaProibida } from "@/lib/auth/sessao-api";
 import { supabaseAdmin } from "@/lib/supabase/admin";
+import { registrarAcessoFaturamento } from "@/lib/diagnostico/servidor";
 
 export async function GET(req: NextRequest) {
   const auth = await exigirSessao(req);
@@ -28,6 +29,11 @@ export async function GET(req: NextRequest) {
       query = query.eq("matricula_id", matriculaId);
     } else if (!auth.sessao.equipe) {
       query = query.in("matricula_id", auth.sessao.matriculaIds);
+    }
+
+    // Equipe lendo dinheiro de mentorado: registra antes de entregar (SPEC diagnóstico §3)
+    if (auth.sessao.equipe && !(matriculaId && auth.sessao.matriculaIds.includes(matriculaId))) {
+      await registrarAcessoFaturamento(auth.sessao, matriculaId, matriculaId ? "faturamentos_aluno" : "faturamentos_lista");
     }
 
     const { data: faturamentos, error } = await query;
@@ -77,6 +83,10 @@ export async function POST(req: NextRequest) {
   try {
     const body = await req.json();
     const { matriculaId, mesReferencia, valorBruto, storageZipPath } = body;
+    // Declaração é do próprio aluno. Na equipe, só admin lança em nome dele (Anjo/Concierge não editam faturamento)
+    if (auth.sessao.equipe && auth.sessao.papel !== "admin") {
+      return respostaProibida("Somente o próprio mentorado ou a coordenação (admin) declaram faturamento.");
+    }
     if (matriculaId && !podeAcessarMatricula(auth.sessao, matriculaId)) return respostaProibida();
 
     if (!matriculaId || !mesReferencia || valorBruto === undefined) {

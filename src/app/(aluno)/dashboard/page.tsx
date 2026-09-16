@@ -5,6 +5,7 @@ import { CardPerfilAluno } from "@/components/aluno/CardPerfilAluno";
 import { PainelKpisAluno } from "@/components/aluno/PainelKpisAluno";
 import { AtalhosPrincipais } from "@/components/aluno/AtalhosPrincipais";
 import { SecaoMateriais } from "@/components/aluno/SecaoMateriais";
+import { CardPlanoAnjo } from "@/components/aluno/CardPlanoAnjo";
 import { useSistemaStore } from "@/lib/store/sistema-store";
 import { filtrarModulosVisiveis } from "@/lib/api/modulos-liberacao";
 import { calcularMetaMensal } from "@/lib/api/faturamento";
@@ -26,6 +27,9 @@ export default function DashboardAlunoPage() {
         semaforo="verde"
         moduloAtualTitulo={`Módulo ${moduloAtual.numero} — ${moduloAtual.titulo}`}
       />
+
+      {/* Plano dos 6 meses do Anjo (só quando ativo ou em reavaliação) */}
+      <CardPlanoAnjo />
 
       {/* 2. Indicadores & Metas do Perito (KPIs 360) */}
       <PainelKpisAluno

@@ -46,6 +46,7 @@ const NOMES_AVALIADORES: Record<PapelUsuario, string> = {
   concierge: "Flávio Lopes (Concierge)",
   anjo: "Ana Carolina (Anjo)",
   mentor: "Prof. Edilson Aguiais (Mentor)",
+  resgate: "Adelayne (Resgate)",
   mentorado: "Mentorado",
 };
 
