@@ -53,33 +53,96 @@ export default function PainelFaturamentoPage() {
 
   if (!carregado) return null;
 
-  const mostrarToast = (msg: string) => {
-    setToast(msg);
-    setTimeout(() => setToast(null), 4000);
-  };
-
   const nomeDe = (id: string) => nomesAlunos[id] ?? "Mentorado";
 
-  const handleAprovar = (id: string) => {
-    const alvo = estado.faturamentos.find((f) => f.id === id);
-    auditarFaturamento(id, "aprovado");
-    mostrarToast(`Declaração de ${nomeDe(alvo?.alunoId ?? "")} aprovada.`);
+  /** "declaração de agosto de 2026 de Dr. Roberto Silva" */
+  const descreverDeclaracao = (d: DeclaracaoFaturamento) => `declaração de ${mesNaFrase(d.mesReferencia)} de ${nomeDe(d.alunoId ?? "")}`;
+
+  const localizar = (id: string) => {
+    const lista = lerEstadoSistema().faturamentos;
+    const indice = lista.findIndex((f) => f.id === id);
+    return { registro: indice >= 0 ? lista[indice] : undefined, indice };
   };
 
-  const handleSolicitarAjuste = (id: string, parecer: string) => {
-    const alvo = estado.faturamentos.find((f) => f.id === id);
-    auditarFaturamento(id, "ajuste_solicitado", parecer);
-    mostrarToast(`Ajuste solicitado para ${nomeDe(alvo?.alunoId ?? "")}.`);
+  /**
+   * Aprovar e pedir ajuste: a decisão aparece na hora, mas só é enviada ao backend
+   * quando a janela de "Desfazer" termina. Desfazer devolve a declaração exatamente
+   * como estava, sem nenhum envio.
+   */
+  const auditarComDesfazer = (id: string, decisao: "aprovado" | "ajuste_solicitado", parecer?: string) => {
+    const { registro: anterior, indice } = localizar(id);
+    if (!anterior) return;
+    const efetivar = auditarFaturamento(id, decisao, parecer, { adiarPersistencia: true });
+    const posterior = localizar(id).registro;
+    const objeto = descreverDeclaracao(anterior);
+    const aprovacao = decisao === "aprovado";
+
+    notificar(aprovacao ? `${capitalizar(objeto)} aprovada.` : `Ajuste solicitado na ${objeto}.`, {
+      efetivar,
+      desfazer: {
+        rotulo: aprovacao ? "Desfazer aprovação" : "Desfazer pedido de ajuste",
+        rotuloAcessivel: `${aprovacao ? "Desfazer aprovação" : "Desfazer pedido de ajuste"} da ${objeto}`,
+        executar: () => reverterFaturamento({ anterior, posterior, indice }),
+        mensagemAposDesfazer: `${aprovacao ? "Aprovação desfeita" : "Pedido de ajuste desfeito"}. A ${objeto} voltou para a fila de auditoria.`,
+      },
+    });
   };
+
+  const handleAprovar = (id: string) => auditarComDesfazer(id, "aprovado");
+
+  const handleSolicitarAjuste = (id: string, parecer: string) => auditarComDesfazer(id, "ajuste_solicitado", parecer);
 
   const handleSalvarDeclaracao = (declaracao: DeclaracaoFaturamento) => {
+    const edicao = declaracao.id ? localizar(declaracao.id) : { registro: undefined, indice: -1 };
     salvarFaturamento(declaracao);
-    mostrarToast(`Declaração de ${nomeDe(declaracao.alunoId ?? "")} salva.`);
+
+    // Nova declaração: apenas confirma. Ela pode ser excluída pela própria tabela.
+    if (!edicao.registro) {
+      notificar(`Declaração de ${mesNaFrase(declaracao.mesReferencia)} lançada para ${nomeDe(declaracao.alunoId ?? "")}.`);
+      return;
+    }
+
+    const anterior = edicao.registro;
+    const posterior = localizar(anterior.id as string).registro;
+    const objeto = descreverDeclaracao(anterior);
+    notificar(`Alterações salvas na ${objeto}.`, {
+      desfazer: {
+        rotulo: "Desfazer edição",
+        rotuloAcessivel: `Desfazer edição da ${objeto}`,
+        executar: () => reverterFaturamento({ anterior, posterior, indice: edicao.indice }),
+        mensagemAposDesfazer: `Edição desfeita. A ${objeto} voltou aos valores anteriores.`,
+      },
+    });
   };
 
   const handleExcluir = (id: string) => {
+    const { registro: anterior, indice } = localizar(id);
+    if (!anterior) return;
     excluirFaturamento(id);
-    mostrarToast("Declaração excluída.");
+    const objeto = descreverDeclaracao(anterior);
+    notificar(`${capitalizar(objeto)} excluída.`, {
+      desfazer: {
+        rotulo: "Desfazer exclusão",
+        rotuloAcessivel: `Desfazer exclusão da ${objeto}`,
+        executar: () => reverterFaturamento({ anterior, indice }),
+        mensagemAposDesfazer: `Exclusão desfeita. A ${objeto} foi restaurada.`,
+      },
+    });
+  };
+
+  const handleDefinirMeta = (alunoId: string, nome: string, valor: number) => {
+    const anterior = lerEstadoSistema().metasFaturamentoAlunos[alunoId];
+    definirMetaFaturamentoAnual(valor, alunoId);
+    const posterior = lerEstadoSistema().metasFaturamentoAlunos[alunoId];
+    if (anterior === posterior) return;
+    notificar(`Meta anual de ${nome} alterada para ${formatarMoedaReal(posterior)}.`, {
+      desfazer: {
+        rotulo: "Desfazer alteração",
+        rotuloAcessivel: `Desfazer alteração da meta anual de ${nome}`,
+        executar: () => reverterMetaFaturamento(alunoId, anterior, posterior),
+        mensagemAposDesfazer: `Alteração desfeita. A meta anual de ${nome} voltou para ${formatarMoedaReal(obterMetaAnualAluno(lerEstadoSistema().metasFaturamentoAlunos, alunoId))}.`,
+      },
+    });
   };
 
   const pendentes = estado.faturamentos.filter((f) => (f.statusAuditoria ?? "pendente") === "pendente");
@@ -140,21 +203,12 @@ export default function PainelFaturamentoPage() {
         </p>
       </div>
 
-      {toast && (
-        <div role="status" style={{ backgroundColor: "#ecfdf5", border: "1px solid #a7f3d0", color: "#065f46", padding: "12px 16px", borderRadius: "var(--radius-sm)", marginBottom: "var(--espaco-md)", fontWeight: 500 }}>
-          {toast}
-        </div>
-      )}
-
       {alunoSelecionado ? (
         <DetalheFaturamentoAluno
           aluno={{ ...alunoSelecionado, turmaNome: estado.alunos.find((a) => a.id === alunoSelecionado.id)?.turmaNome }}
           faturamentos={filtrarFaturamentosPorAluno(estado.faturamentos, alunoSelecionado.id)}
           metaAnual={obterMetaAnualAluno(estado.metasFaturamentoAlunos, alunoSelecionado.id)}
-          onDefinirMeta={(valor) => {
-            definirMetaFaturamentoAnual(valor, alunoSelecionado.id);
-            mostrarToast(`Meta anual de ${alunoSelecionado.nome} definida em ${formatarMoedaReal(valor)}.`);
-          }}
+          onDefinirMeta={(valor) => handleDefinirMeta(alunoSelecionado.id, alunoSelecionado.nome, valor)}
           onNovaDeclaracao={() => setModal({ aberto: true, declaracao: null, alunoFixoId: alunoSelecionado.id })}
           onEditar={(d) => setModal({ aberto: true, declaracao: d, alunoFixoId: alunoSelecionado.id })}
           onExcluir={handleExcluir}
