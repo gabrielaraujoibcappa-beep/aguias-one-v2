@@ -99,4 +99,27 @@ describe("Criação de Usuários pelo Administrador (ÁGUIAS ONE v2)", () => {
     expect(html).toContain("btn-primary");
     expect(html).toContain("btn-secondary");
   });
+
+  it("deve abrir a edição com o papel do usuário, não com mentorado (regressão)", () => {
+    const html = renderToStaticMarkup(
+      React.createElement(ModalAluno, {
+        aberto: true,
+        alunoInicial: {
+          id: "u-flavio",
+          nome: "Flávio Lopes",
+          email: "flaviortlopes@gmail.com",
+          whatsapp: "11976306262",
+          turmaId: "",
+          status: "ativo",
+          papel: "concierge",
+        },
+        turmas: [{ id: "t1", nome: "Águias ONE 2026.1" }],
+        onSalvar: () => {},
+        onFechar: () => {},
+      })
+    );
+
+    expect(html).toMatch(/<option value="concierge" selected="">/);
+    expect(html).not.toMatch(/<option value="mentorado" selected="">/);
+  });
 });

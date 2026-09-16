@@ -31,7 +31,7 @@ export async function GET(req: NextRequest) {
         .order("data_encontro", { ascending: false }),
       supabaseAdmin
         .from("matriculas")
-        .select("id, status, matriculado_em, usuarios (nome, email, whatsapp, area_pericial)")
+        .select("id, status, matriculado_em, usuarios (nome, email, whatsapp, area_pericial, papel)")
         .eq("turma_id", turmaId)
         .order("matriculado_em", { ascending: true }),
     ]);
@@ -54,7 +54,9 @@ export async function GET(req: NextRequest) {
       presencas = data || [];
     }
 
+    // Chamada é de alunos: matrículas de contas da equipe não entram na lista
     const alunos = (matriculasRes.data || [])
+      .filter((m: any) => m.usuarios?.papel === "mentorado")
       .map((m: any) => ({
         matricula_id: m.id,
         status: m.status,

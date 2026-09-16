@@ -13,7 +13,9 @@ export async function PATCH(req: NextRequest, { params }: RouteParams) {
     const { id } = await params;
     const body = await req.json();
     const { nome, email, whatsapp, cpf, areaPericial, papel, status, turmaId } = body;
-    if (papel && auth.sessao.papel !== "admin") {
+    const { data: atual } = await supabaseAdmin.from("usuarios").select("papel").eq("id", id).maybeSingle();
+    // Só bloqueia quando o papel muda de fato (formulários reenviam o papel atual)
+    if (papel && atual && papel !== atual.papel && auth.sessao.papel !== "admin") {
       return NextResponse.json(
         { sucesso: false, erro: "Apenas administradores podem alterar o papel de um usuário." },
         { status: 403 }
@@ -43,8 +45,8 @@ export async function PATCH(req: NextRequest, { params }: RouteParams) {
       return NextResponse.json({ sucesso: false, erro: errUser.message }, { status: 400 });
     }
 
-    // Se turmaId foi fornecida, atualiza matrícula
-    if (turmaId) {
+    // Se turmaId foi fornecida, atualiza matrícula (exclusiva de mentorados)
+    if (turmaId && usuario?.papel === "mentorado") {
       const { data: matExistente } = await supabaseAdmin
         .from("matriculas")
         .select("id")

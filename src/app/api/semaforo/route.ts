@@ -48,7 +48,10 @@ export async function GET(req: NextRequest) {
 
     const agora = new Date();
 
-    const alunosSemaforo = (matriculas || []).map((m: any) => {
+    // Semáforo é de alunos: matrículas de contas da equipe (admin, anjo...) ficam de fora
+    const matriculasDeMentorados = (matriculas || []).filter((m: any) => m.usuarios?.papel === "mentorado");
+
+    const alunosSemaforo = matriculasDeMentorados.map((m: any) => {
       const usuario = m.usuarios;
       const checkins = (m.checkins_modulo || []).sort(
         (a: any, b: any) => new Date(b.enviado_em).getTime() - new Date(a.enviado_em).getTime()

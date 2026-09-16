@@ -12,7 +12,7 @@ const ANO_ATUAL = new Date().getFullYear();
 function ConteudoFicha() {
   const params = useParams<{ id: string }>();
   const searchParams = useSearchParams();
-  const { estado, carregado } = useSistemaStore();
+  const { estado, mentorados, carregado } = useSistemaStore();
 
   const alunoId = decodeURIComponent(Array.isArray(params?.id) ? params.id[0] : params?.id ?? "");
   const contextoChave = searchParams.get("contexto") ?? "";
@@ -23,7 +23,8 @@ function ConteudoFicha() {
       carregado
         ? montarFichaAluno(
             {
-              alunos: estado.alunos,
+              // A ficha é do mentorado: conta da equipe cai em "Aluno não encontrado"
+              alunos: mentorados,
               turmas: estado.turmas,
               alunosSemaforo: estado.alunosSemaforo,
               entregas: estado.entregas,

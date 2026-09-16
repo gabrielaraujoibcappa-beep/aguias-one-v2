@@ -17,7 +17,7 @@ import {
 import { CanalItem, CANAIS_INICIAIS_MOCK } from "../api/canais";
 import { EntregaPendente, ENTREGAS_MOCK } from "../api/auditoria";
 import { AlunoSemaforoStatus, ALUNOS_SEMAFORO_MOCK } from "../api/turma-semaforo";
-import { PapelUsuario } from "../auth/roles";
+import { PapelUsuario, apenasMentorados } from "../auth/roles";
 import {
   BloqueioAcesso,
   DadosNovoBloqueio,
@@ -633,6 +633,8 @@ export function useSistemaStore() {
   const faturamentosPendentesAuditoria = estadoGlobal.faturamentos.filter(
     (f) => ((f.statusAuditoria ?? "pendente") as StatusAuditoriaFaturamento) === "pendente"
   ).length;
+  /** Só mentorados: o cadastro também traz contas da equipe (admin, concierge, anjo, mentor). */
+  const mentorados = apenasMentorados(estadoGlobal.alunos);
 
   const atualizarCanal = (nomeCanal: string, status: "ativo" | "nao_iniciado", url?: string) => {
     const canaisAtualizados = estadoGlobal.canais.map((c) =>
@@ -728,6 +730,7 @@ export function useSistemaStore() {
 
   return {
     estado,
+    mentorados,
     carregado,
     mudarPapel,
     definirUsuarioLogado,

@@ -3,7 +3,7 @@
 import React, { useState } from "react";
 import Link from "next/link";
 import { useSistemaStore } from "@/lib/store/sistema-store";
-import { IconFolder, IconUsers, IconPrinter, IconCheckCircle } from "@/components/ui/Icons";
+import { IconFolder, IconUsers, IconPrinter, IconCheckCircle, IconCurrency } from "@/components/ui/Icons";
 
 const RELATORIOS = [
   {
@@ -21,6 +21,22 @@ const RELATORIOS = [
     formato: "A4 · Paisagem",
     icone: <IconCheckCircle size={22} />,
     corIcone: "verde",
+  },
+  {
+    id: "financeiro-geral",
+    titulo: "Financeiro geral da turma",
+    descricao: "Realizado no ano por aluno, percentual da meta, meses declarados e pendências de auditoria.",
+    formato: "A4 · Paisagem",
+    icone: <IconCurrency size={22} />,
+    corIcone: "verde",
+  },
+  {
+    id: "financeiro-individual",
+    titulo: "Financeiro individual",
+    descricao: "Evolução mês a mês contra a meta e declarações do ano de um aluno, com status de auditoria.",
+    formato: "A4 · Retrato",
+    icone: <IconCurrency size={22} />,
+    corIcone: "",
   },
 ];
 

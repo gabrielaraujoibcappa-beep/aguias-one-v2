@@ -28,6 +28,7 @@ function mesNaFrase(mesReferencia: string): string {
 export default function PainelFaturamentoPage() {
   const {
     estado,
+    mentorados,
     carregado,
     salvarFaturamento,
     excluirFaturamento,
@@ -41,8 +42,9 @@ export default function PainelFaturamentoPage() {
   const [modal, setModal] = useState<{ aberto: boolean; declaracao: DeclaracaoFaturamento | null; alunoFixoId?: string }>({ aberto: false, declaracao: null });
 
   const alunosBase = useMemo(
-    () => estado.alunos.map((a) => ({ id: a.id ?? "", nome: a.nome, email: a.email })).filter((a) => a.id),
-    [estado.alunos]
+    // Metas e faturamento são só de mentorados; contas da equipe ficam de fora
+    () => mentorados.map((a) => ({ id: a.id ?? "", nome: a.nome, email: a.email })).filter((a) => a.id),
+    [mentorados]
   );
   const nomesAlunos = useMemo(() => Object.fromEntries(alunosBase.map((a) => [a.id, a.nome])), [alunosBase]);
 

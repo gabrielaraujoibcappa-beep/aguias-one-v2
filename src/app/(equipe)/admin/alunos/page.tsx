@@ -100,13 +100,19 @@ export default function AdminAlunosPage() {
         />
       )}
 
-      <ModalAluno
-        aberto={modalAberto}
-        alunoInicial={alunoEmEdicao}
-        turmas={turmasDisponiveis}
-        onSalvar={handleSalvar}
-        onFechar={() => setModalAberto(false)}
-      />
+      {/* Montado só quando aberto e com key por registro: o formulário inicializa o estado
+          (papel incluído) a partir de alunoInicial; sem isso, editar alguém da equipe
+          reaproveitava o papel "mentorado" do primeiro render e o salvava como aluno. */}
+      {modalAberto && (
+        <ModalAluno
+          key={alunoEmEdicao?.id ?? "novo"}
+          aberto={modalAberto}
+          alunoInicial={alunoEmEdicao}
+          turmas={turmasDisponiveis}
+          onSalvar={handleSalvar}
+          onFechar={() => setModalAberto(false)}
+        />
+      )}
 
       {/* Modal de Confirmação Destrutiva conforme Diretrizes Câmara UX */}
       <ModalConfirmacaoDestrutiva

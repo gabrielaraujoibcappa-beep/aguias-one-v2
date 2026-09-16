@@ -28,17 +28,19 @@ export async function PUT(req: NextRequest, { params }: { params: { encontroId: 
       return NextResponse.json({ sucesso: false, erro: "Encontro não encontrado." }, { status: 404 });
     }
 
-    // Só aceita matrículas da própria turma do encontro
+    // Só aceita matrículas de mentorados da própria turma do encontro
     const { data: matriculas, error: erroMatriculas } = await supabaseAdmin
       .from("matriculas")
-      .select("id")
+      .select("id, usuarios (papel)")
       .eq("turma_id", encontro.turma_id);
 
     if (erroMatriculas) {
       return NextResponse.json({ sucesso: false, erro: erroMatriculas.message }, { status: 500 });
     }
 
-    const idsDaTurma = new Set((matriculas || []).map((m) => m.id));
+    const idsDaTurma = new Set(
+      (matriculas || []).filter((m: any) => m.usuarios?.papel === "mentorado").map((m: any) => m.id)
+    );
     if (presencas.some((p) => !idsDaTurma.has(p.matricula_id))) {
       return NextResponse.json(
         { sucesso: false, erro: "Há alunos que não pertencem à turma deste encontro." },

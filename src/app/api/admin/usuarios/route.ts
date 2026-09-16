@@ -110,8 +110,8 @@ export async function POST(req: NextRequest) {
       if (!dbError && usuarioDb) {
         usuarioCriadoId = usuarioDb.id;
 
-        // 4. Vincula a matrícula da turma caso informada
-        if (turmaId) {
+        // 4. Vincula a matrícula da turma caso informada (matrícula é exclusiva de mentorados)
+        if (turmaId && papel === "mentorado") {
           await supabaseAdmin.from("matriculas").insert({
             usuario_id: usuarioDb.id,
             turma_id: turmaId,
