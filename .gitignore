@@ -10,3 +10,6 @@ yarn-error.log*
 coverage
 .turbo
 *.tsbuildinfo
+
+# Backups do banco (contêm dados pessoais)
+supabase/backups/
