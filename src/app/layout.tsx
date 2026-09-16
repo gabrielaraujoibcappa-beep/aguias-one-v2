@@ -1,5 +1,5 @@
 import type { Metadata } from "next";
-import { Navbar } from "@/components/Navbar";
+import { Sidebar } from "@/components/Sidebar";
 import { Breadcrumbs } from "@/components/Breadcrumbs";
 import "./globals.css";
 
@@ -24,27 +24,29 @@ export default function RootLayout({
         />
       </head>
       <body>
-        <div className="layout-root">
-          <Navbar />
-          <Breadcrumbs />
-          <main style={{ minHeight: "calc(100vh - 120px)", paddingBottom: "var(--espaco-section)" }}>
-            {children}
-          </main>
-          <footer style={{
-            borderTop: "1px solid var(--cor-border-light)",
-            backgroundColor: "var(--cor-canvas)",
-            padding: "var(--espaco-xl) var(--espaco-lg)",
-            textAlign: "center",
-            fontSize: "13px",
-            color: "var(--cor-muted)",
-          }}>
-            <div style={{ maxWidth: "1200px", margin: "0 auto" }}>
-              <strong>ÁGUIAS ONE</strong> · Pós-Graduação em Gestão Estratégica de Negócios Periciais (IBCAPPA / UniBCAPPA)
-              <div style={{ marginTop: "4px", fontSize: "12px" }}>
-                Sistema de Acompanhamento, Check-in Modular, Faturamento & Comprovantes ZIP.
+        <div className="app-shell">
+          <Sidebar />
+          <div className="app-main">
+            <Breadcrumbs />
+            <main style={{ flex: 1, minHeight: "calc(100vh - 120px)", paddingBottom: "var(--espaco-section)" }}>
+              {children}
+            </main>
+            <footer style={{
+              borderTop: "1px solid var(--cor-border-light)",
+              backgroundColor: "var(--cor-canvas)",
+              padding: "var(--espaco-xl) var(--espaco-lg)",
+              textAlign: "center",
+              fontSize: "13px",
+              color: "var(--cor-muted)",
+            }}>
+              <div style={{ maxWidth: "1200px", margin: "0 auto" }}>
+                <strong>ÁGUIAS ONE</strong> · Pós-Graduação em Gestão Estratégica de Negócios Periciais (IBCAPPA / UniBCAPPA)
+                <div style={{ marginTop: "4px", fontSize: "12px" }}>
+                  Sistema de Acompanhamento, Check-in Modular, Faturamento & Comprovantes ZIP.
+                </div>
               </div>
-            </div>
-          </footer>
+            </footer>
+          </div>
         </div>
       </body>
     </html>
