@@ -1,170 +1,138 @@
 "use client";
 
-import React, { useEffect, useState, useRef } from "react";
-import { IconCheckCircle, IconX } from "@/components/ui/Icons";
+import React, { useEffect, useRef, useState } from "react";
+import { IconAlertCircle, IconCheckCircle, IconX } from "@/components/ui/Icons";
 
 export interface ToastDesfazerProps {
   /** Se a notificação está visível */
   visivel: boolean;
-  /** Mensagem descrevendo o que aconteceu (ex: "Aluno 'Dr. Roberto' desativado com sucesso.") */
+  /** O que aconteceu, com o objeto afetado (ex: "Declaração de agosto de Dr. Roberto Silva aprovada.") */
   mensagem: string;
-  /** Rótulo do botão de reversão (padrão: "Desfazer") */
+  /** Texto visível do botão de reversão. Omitido quando não há ação a desfazer. */
   rotuloDesfazer?: string;
-  /** Duração em milissegundos antes do toast desaparecer (padrão: 7000ms / 7 segundos) */
+  /** Nome acessível do botão, com ação e objeto (ex: "Desfazer aprovação da declaração de agosto"). */
+  rotuloAcessivelDesfazer?: string;
+  /** Tempo até a notificação sumir. Pausa enquanto o ponteiro ou o foco estão sobre ela. */
   duracaoMs?: number;
-  /** Função de callback chamada quando a pessoa clica em Desfazer */
-  onDesfazer: () => void;
-  /** Função de callback chamada quando a notificação expira ou é fechada */
+  /** Tom visual do ícone */
+  tom?: "sucesso" | "info" | "erro";
+  /**
+   * Se o próprio toast deve se anunciar como região de status.
+   * Use `false` quando uma região de status persistente já anuncia a mensagem.
+   */
+  anunciar?: boolean;
+  /** Mostra a dica do atalho de teclado Ctrl+Z ao lado do botão */
+  mostrarAtalho?: boolean;
+  /** Identificador da notificação; reinicia a contagem quando muda, mesmo com a mesma mensagem */
+  idNotificacao?: number | string;
+  /** Chamado quando a pessoa aciona "Desfazer" */
+  onDesfazer?: () => void;
+  /** Chamado quando a notificação expira ou é dispensada */
   onFechar: () => void;
 }
+
+const COR_ICONE = { sucesso: "#10b981", info: "#60a5fa", erro: "#f87171" };
 
 export function ToastDesfazer({
   visivel,
   mensagem,
   rotuloDesfazer = "Desfazer",
+  rotuloAcessivelDesfazer,
   duracaoMs = 7000,
+  tom = "sucesso",
+  anunciar = true,
+  mostrarAtalho = false,
+  idNotificacao,
   onDesfazer,
   onFechar,
 }: ToastDesfazerProps) {
-  const [tempoRestante, setTempoRestante] = useState(duracaoMs);
   const [pausado, setPausado] = useState(false);
-  const timerRef = useRef<NodeJS.Timeout | null>(null);
+  const restanteRef = useRef(duracaoMs);
+  const inicioRef = useRef(0);
+  const onFecharRef = useRef(onFechar);
+  onFecharRef.current = onFechar;
+  const botaoFecharRef = useRef<HTMLButtonElement>(null);
+  const devolverFocoRef = useRef(false);
 
+  // Reinicia a contagem a cada nova notificação
   useEffect(() => {
-    if (!visivel) {
-      setTempoRestante(duracaoMs);
-      return;
+    restanteRef.current = duracaoMs;
+    setPausado(false);
+  }, [visivel, mensagem, duracaoMs, idNotificacao]);
+
+  // Quem acionou "Desfazer" pelo teclado continua com o foco dentro da notificação,
+  // no botão de dispensar, em vez de cair no início da página
+  useEffect(() => {
+    if (devolverFocoRef.current && visivel) {
+      devolverFocoRef.current = false;
+      botaoFecharRef.current?.focus();
     }
+  }, [visivel, mensagem, idNotificacao]);
 
-    if (pausado) {
-      if (timerRef.current) clearInterval(timerRef.current);
-      return;
-    }
-
-    const intervalo = 100;
-    timerRef.current = setInterval(() => {
-      setTempoRestante((prev) => {
-        if (prev <= intervalo) {
-          clearInterval(timerRef.current!);
-          onFechar();
-          return 0;
-        }
-        return prev - intervalo;
-      });
-    }, intervalo);
-
+  // Contagem pausável: ao pausar, guarda o tempo que ainda falta
+  useEffect(() => {
+    if (!visivel || pausado) return;
+    inicioRef.current = Date.now();
+    const temporizador = setTimeout(() => onFecharRef.current(), restanteRef.current);
     return () => {
-      if (timerRef.current) clearInterval(timerRef.current);
+      clearTimeout(temporizador);
+      restanteRef.current = Math.max(0, restanteRef.current - (Date.now() - inicioRef.current));
     };
-  }, [visivel, pausado, duracaoMs, onFechar]);
+  }, [visivel, pausado, mensagem, duracaoMs, idNotificacao]);
 
   if (!visivel) return null;
 
-  const porcentagemRestante = (tempoRestante / duracaoMs) * 100;
+  const temAcao = Boolean(onDesfazer);
+  const Icone = tom === "erro" ? IconAlertCircle : IconCheckCircle;
 
   return (
     <div
-      role="status"
-      aria-live="polite"
+      className="toast-desfazer"
+      {...(anunciar ? { role: "status", "aria-live": "polite" as const } : {})}
       onMouseEnter={() => setPausado(true)}
       onMouseLeave={() => setPausado(false)}
       onFocus={() => setPausado(true)}
-      onBlur={() => setPausado(false)}
-      style={{
-        position: "fixed",
-        bottom: "24px",
-        right: "24px",
-        zIndex: 9998,
-        maxWidth: "420px",
-        backgroundColor: "var(--cor-dark-deep, #0a0a0b)",
-        color: "#ffffff",
-        borderRadius: "var(--radius-sm, 8px)",
-        boxShadow: "0 12px 30px rgba(0, 0, 0, 0.4)",
-        border: "1px solid rgba(255, 255, 255, 0.15)",
-        overflow: "hidden",
-        animation: "slideInUp 0.2s ease-out",
-        fontFamily: "var(--font-family-ui)",
+      onBlur={(e) => {
+        if (!e.currentTarget.contains(e.relatedTarget as Node | null)) setPausado(false);
       }}
     >
-      <div
-        style={{
-          display: "flex",
-          alignItems: "center",
-          gap: "12px",
-          padding: "12px 16px",
-        }}
-      >
-        <span style={{ color: "#10b981", display: "flex", alignItems: "center" }} aria-hidden="true">
-          <IconCheckCircle size={20} />
+      <div style={{ display: "flex", alignItems: "center", gap: "12px", padding: "12px 12px 12px 16px" }}>
+        <span style={{ color: COR_ICONE[tom], display: "flex", alignItems: "center", flexShrink: 0 }} aria-hidden="true">
+          <Icone size={20} />
         </span>
 
-        <span style={{ fontSize: "13px", lineHeight: 1.4, flex: 1 }}>{mensagem}</span>
+        <span style={{ fontSize: "14px", lineHeight: 1.4, flex: 1, minWidth: 0 }}>{mensagem}</span>
 
-        {/* Botão Desfazer (Ação de reversão rápida) */}
-        <button
-          type="button"
-          onClick={() => {
-            onDesfazer();
-            onFechar();
-          }}
-          style={{
-            background: "none",
-            border: "1px solid var(--cor-action-glow, #00c2ff)",
-            color: "var(--cor-action-glow, #00c2ff)",
-            borderRadius: "var(--radius-xs, 4px)",
-            padding: "5px 12px",
-            fontSize: "12px",
-            fontWeight: 700,
-            cursor: "pointer",
-            textTransform: "uppercase",
-            letterSpacing: "0.5px",
-            transition: "all 0.15s ease",
-            whiteSpace: "nowrap",
-          }}
-          onMouseEnter={(e) => {
-            e.currentTarget.style.backgroundColor = "rgba(0, 194, 255, 0.15)";
-          }}
-          onMouseLeave={(e) => {
-            e.currentTarget.style.backgroundColor = "transparent";
-          }}
-        >
-          {rotuloDesfazer}
-        </button>
+        {temAcao && (
+          <button
+            type="button"
+            className="toast-desfazer-acao"
+            aria-label={rotuloAcessivelDesfazer}
+            aria-keyshortcuts={mostrarAtalho ? "Control+Z" : undefined}
+            onClick={(e) => {
+              devolverFocoRef.current = document.activeElement === e.currentTarget;
+              onDesfazer?.();
+            }}
+          >
+            {rotuloDesfazer}
+            {mostrarAtalho && (
+              <kbd aria-hidden="true" style={{ marginLeft: "8px", fontSize: "11px", fontFamily: "inherit", opacity: 0.7 }}>
+                Ctrl Z
+              </kbd>
+            )}
+          </button>
+        )}
 
-        {/* Botão Fechar Toast */}
-        <button
-          type="button"
-          onClick={onFechar}
-          aria-label="Fechar notificação"
-          style={{
-            background: "none",
-            border: "none",
-            color: "rgba(255, 255, 255, 0.5)",
-            padding: "4px",
-            cursor: "pointer",
-            display: "flex",
-            alignItems: "center",
-          }}
-        >
-          <IconX size={14} />
+        <button ref={botaoFecharRef} type="button" className="toast-desfazer-fechar" onClick={() => onFecharRef.current()} aria-label="Dispensar notificação">
+          <IconX size={16} />
         </button>
       </div>
 
-      {/* Linha de Progresso Visual de Tempo Restante */}
-      <div
-        style={{
-          height: "3px",
-          backgroundColor: "rgba(255, 255, 255, 0.1)",
-          width: "100%",
-        }}
-      >
+      <div className="toast-desfazer-trilho" aria-hidden="true">
         <div
-          style={{
-            height: "100%",
-            backgroundColor: "var(--cor-action-vibrant, #0052ff)",
-            width: `${porcentagemRestante}%`,
-            transition: "width 0.1s linear",
-          }}
+          key={`${idNotificacao ?? ""}-${mensagem}-${duracaoMs}`}
+          className="toast-desfazer-progresso"
+          style={{ animationDuration: `${duracaoMs}ms`, animationPlayState: pausado ? "paused" : "running" }}
         />
       </div>
     </div>

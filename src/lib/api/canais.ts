@@ -8,6 +8,16 @@ export const CANAIS_OFICIAIS = [
   "Google Ads",
 ] as const;
 
+export const CANAIS_TEMPLATE = [
+  "Vara Judicial / Cadastro TJ",
+  "Escritórios de Advocacia Parceiros",
+  "LinkedIn Especializado",
+  "Google Perfil da Empresa (Meu Negócio)",
+  "Networking / Indicações de Colegas",
+  "Instagram Institucional / Artigos",
+  "Palestras / Associações de Classe",
+];
+
 export type NomeCanalOficial = (typeof CANAIS_OFICIAIS)[number];
 
 export interface CanalItem {

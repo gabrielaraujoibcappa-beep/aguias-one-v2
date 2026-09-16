@@ -448,3 +448,87 @@ button:focus-visible {
 .progresso-indeterminado-barra {
   animation: progressoIndeterminado 1.5s infinite ease-in-out;
 }
+
+/* ---------------------------------------------------------------------------
+   Notificação temporária com "Desfazer" (Câmara UX: Quando oferecer Desfazer)
+   --------------------------------------------------------------------------- */
+.toast-desfazer {
+  position: fixed;
+  right: 24px;
+  bottom: 24px;
+  z-index: 9998;
+  width: min(460px, calc(100vw - 48px));
+  background-color: var(--cor-dark-deep, #0a0a0b);
+  color: #ffffff;
+  border: 1px solid rgba(255, 255, 255, 0.15);
+  border-radius: var(--radius-sm, 8px);
+  box-shadow: 0 12px 30px rgba(0, 0, 0, 0.35);
+  overflow: hidden;
+}
+
+.toast-desfazer-acao {
+  display: inline-flex;
+  align-items: center;
+  min-height: 36px;
+  padding: 6px 12px;
+  border-radius: var(--radius-xs, 4px);
+  border: 1px solid rgba(0, 194, 255, 0.6);
+  background: transparent;
+  color: var(--cor-action-glow, #00c2ff);
+  font-size: 13px;
+  font-weight: 600;
+  white-space: nowrap;
+}
+
+.toast-desfazer-acao:hover {
+  background-color: rgba(0, 194, 255, 0.12);
+}
+
+.toast-desfazer-fechar {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  min-width: 36px;
+  min-height: 36px;
+  border-radius: var(--radius-xs, 4px);
+  color: rgba(255, 255, 255, 0.7);
+}
+
+.toast-desfazer-fechar:hover {
+  background-color: rgba(255, 255, 255, 0.08);
+  color: #ffffff;
+}
+
+.toast-desfazer-trilho {
+  height: 3px;
+  background-color: rgba(255, 255, 255, 0.1);
+}
+
+.toast-desfazer-progresso {
+  height: 100%;
+  background-color: var(--cor-action-vibrant, #0052ff);
+  transform-origin: left center;
+  animation-name: toast-desfazer-contagem;
+  animation-timing-function: linear;
+  animation-fill-mode: forwards;
+}
+
+@keyframes toast-desfazer-contagem {
+  from { transform: scaleX(1); }
+  to { transform: scaleX(0); }
+}
+
+@media (max-width: 640px) {
+  .toast-desfazer {
+    right: 16px;
+    left: 16px;
+    bottom: 16px;
+    width: auto;
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .toast-desfazer-trilho {
+    display: none;
+  }
+}

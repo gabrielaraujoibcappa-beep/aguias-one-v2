@@ -52,6 +52,9 @@ export default function LoginPage() {
 
     try {
       // 1. Tenta autenticação no Supabase se houver senha preenchida
+      let authUserRole: PapelUsuario | null = null;
+      let sessionToken: string | null = null;
+
       if (senha && senha.length >= 6) {
         try {
           const { data: authData, error: authError } = await supabase.auth.signInWithPassword({
@@ -62,24 +65,35 @@ export default function LoginPage() {
           if (authError && !CONTAS_DEMO.some((c) => c.email.toLowerCase() === emailAlvo.toLowerCase())) {
             throw new Error("Email ou senha inválidos. Por favor verifique seus dados.");
           }
-        } catch {
+
+          if (authData?.user) {
+            sessionToken = authData.session?.access_token || null;
+            if (authData.user.user_metadata?.papel) {
+              authUserRole = authData.user.user_metadata.papel as PapelUsuario;
+            }
+          }
+        } catch (errAuth: any) {
           // Se for conta demo, permite fallback gracioso para avaliação
           if (!CONTAS_DEMO.some((c) => c.email.toLowerCase() === emailAlvo.toLowerCase())) {
-            throw new Error("Email ou senha incorretos.");
+            throw new Error(errAuth?.message || "Email ou senha incorretos.");
           }
         }
       }
 
-      // 2. Resolve papel do usuário com base nas contas cadastradas
+      // 2. Resolve papel do usuário com base nas contas cadastradas ou banco
       const contaEncontrada = CONTAS_DEMO.find(
         (c) => c.email.toLowerCase() === emailAlvo.toLowerCase()
       );
-      const papelFinal: PapelUsuario = papelAlvo || contaEncontrada?.papel || "mentorado";
+      const papelFinal: PapelUsuario = papelAlvo || authUserRole || contaEncontrada?.papel || "mentorado";
 
       // 3. Atualiza estado e cookies de sessão
       mudarPapel(papelFinal);
       document.cookie = `user-role=${papelFinal}; path=/; max-age=86400; SameSite=Lax`;
-      document.cookie = `sb-access-token=session-active-${papelFinal}; path=/; max-age=86400; SameSite=Lax`;
+      if (sessionToken) {
+        document.cookie = `sb-access-token=${sessionToken}; path=/; max-age=86400; SameSite=Lax`;
+      } else {
+        document.cookie = `sb-access-token=session-active-${papelFinal}; path=/; max-age=86400; SameSite=Lax`;
+      }
 
       // 4. Redireciona conforme papel
       if (papelFinal === "mentorado") {

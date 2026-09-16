@@ -10,19 +10,35 @@ import {
   DeclaracaoFaturamento,
   consolidarFaturamentoTurma,
   filtrarFaturamentosPorAluno,
+  formatarMesReferencia,
   formatarMoedaReal,
   obterMetaAnualAluno,
 } from "@/lib/api/faturamento";
-import { useSistemaStore } from "@/lib/store/sistema-store";
+import { lerEstadoSistema, useSistemaStore } from "@/lib/store/sistema-store";
+import { notificar } from "@/lib/notificacoes";
 
 const ANO_ATUAL = new Date().getFullYear();
 
+/** "Agosto de 2026" → "agosto de 2026", para uso no meio da frase. */
+function mesNaFrase(mesReferencia: string): string {
+  const texto = formatarMesReferencia(mesReferencia);
+  return texto.charAt(0).toLowerCase() + texto.slice(1);
+}
+
 export default function PainelFaturamentoPage() {
-  const { estado, carregado, salvarFaturamento, excluirFaturamento, auditarFaturamento, definirMetaFaturamentoAnual } = useSistemaStore();
+  const {
+    estado,
+    carregado,
+    salvarFaturamento,
+    excluirFaturamento,
+    auditarFaturamento,
+    definirMetaFaturamentoAnual,
+    reverterFaturamento,
+    reverterMetaFaturamento,
+  } = useSistemaStore();
 
   const [alunoSelecionadoId, setAlunoSelecionadoId] = useState<string | null>(null);
   const [modal, setModal] = useState<{ aberto: boolean; declaracao: DeclaracaoFaturamento | null; alunoFixoId?: string }>({ aberto: false, declaracao: null });
-  const [toast, setToast] = useState<string | null>(null);
 
   const alunosBase = useMemo(
     () => estado.alunos.map((a) => ({ id: a.id ?? "", nome: a.nome, email: a.email })).filter((a) => a.id),

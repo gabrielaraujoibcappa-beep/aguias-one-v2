@@ -1,5 +1,7 @@
 # Sistema de Mentoria ÁGUIAS ONE (v2)
 
+**Spec vigente de diagnóstico + papéis do palco 15/09:** [`../SPEC-DIAGNOSTICO-E-ACOMPANHAMENTO.md`](../SPEC-DIAGNOSTICO-E-ACOMPANHAMENTO.md). Não implementar onboarding, Anjo, Concierge ou painel do Mentor sem ler esse arquivo — ele separa Anjo ≠ Resgate (Adelayne) ≠ Concierge ≠ Mentor e define o formulário de entrada (ICP + placar).
+
 Sistema institucional e operacional de gestão e acompanhamento da **Mentoria ÁGUIAS ONE**, estruturado com base nas **Personas da HOUS3**, no **PPC do ÁGUIAS ONE** e na identidade visual editorial **Cohere Enterprise 2026** (`DESIGN.md`).
 
 ---
