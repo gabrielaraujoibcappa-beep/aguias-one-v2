@@ -1,38 +1,35 @@
 import { NextResponse } from "next/server";
 import type { NextRequest } from "next/server";
+import { COOKIE_SESSAO, ehEquipe, resolverPerfil } from "@/lib/auth/sessao-core";
 
-export function middleware(request: NextRequest) {
-  const { pathname } = request.nextUrl;
+function redirecionar(request: NextRequest, pathname: string, params?: Record<string, string>) {
+  const url = request.nextUrl.clone();
+  url.pathname = pathname;
+  url.search = "";
+  Object.entries(params ?? {}).forEach(([k, v]) => url.searchParams.set(k, v));
+  return NextResponse.redirect(url);
+}
 
-  // Rotas públicas (login, assets, api pública)
-  if (
-    pathname.startsWith("/_next") ||
-    pathname.startsWith("/api/public") ||
-    pathname === "/login" ||
-    pathname === "/acesso-bloqueado" ||
-    pathname === "/"
-  ) {
-    return NextResponse.next();
+export async function middleware(request: NextRequest) {
+  const { pathname, search } = request.nextUrl;
+
+  // Sessão validada no Supabase; o papel vem de public.usuarios (nunca de cookie)
+  const perfil = await resolverPerfil(request.cookies.get(COOKIE_SESSAO)?.value).catch(() => null);
+
+  if (!perfil) {
+    const resposta = redirecionar(request, "/login", { redirect: pathname + search });
+    resposta.cookies.delete(COOKIE_SESSAO);
+    return resposta;
   }
 
-  // Obter cookie de autenticação / sessão
-  const token = request.cookies.get("sb-access-token")?.value;
-  const userRole = request.cookies.get("user-role")?.value;
-  const acessoBloqueado = request.cookies.get("acesso-bloqueado")?.value === "1";
+  const equipe = ehEquipe(perfil.papel);
 
-  // Mentorado com acesso bloqueado pela equipe: barra qualquer área do sistema
-  if (userRole === "mentorado" && acessoBloqueado) {
-    const url = request.nextUrl.clone();
-    url.pathname = "/acesso-bloqueado";
-    return NextResponse.redirect(url);
+  if (!equipe && perfil.status === "bloqueado") {
+    return redirecionar(request, "/acesso-bloqueado");
   }
 
-  // Se houver autenticação formal com token e usuário for mentorado tentando acessar área de equipe
-  if (token && userRole === "mentorado" && (pathname.startsWith("/painel") || pathname.startsWith("/admin"))) {
-    // Redireciona para o dashboard do aluno
-    const url = request.nextUrl.clone();
-    url.pathname = "/dashboard";
-    return NextResponse.redirect(url);
+  if (!equipe && (pathname.startsWith("/painel") || pathname.startsWith("/admin"))) {
+    return redirecionar(request, "/dashboard");
   }
 
   return NextResponse.next();

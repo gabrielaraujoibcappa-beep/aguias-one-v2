@@ -28,7 +28,8 @@ export default function RootLayout({
           rel="stylesheet"
         />
       </head>
-      <body>
+      {/* Extensões do navegador injetam atributos no <body> antes da hidratação */}
+      <body suppressHydrationWarning>
         <AppShell>{children}</AppShell>
       </body>
     </html>

@@ -1,4 +1,5 @@
 import { NextRequest, NextResponse } from "next/server";
+import { exigirSessao, PAPEIS_EQUIPE } from "@/lib/auth/sessao-api";
 import { supabaseAdmin } from "@/lib/supabase/admin";
 
 interface RouteParams {
@@ -6,10 +7,12 @@ interface RouteParams {
 }
 
 export async function PATCH(req: NextRequest, { params }: RouteParams) {
+  const auth = await exigirSessao(req, PAPEIS_EQUIPE);
+  if (auth.erro) return auth.erro;
   try {
     const { id } = await params;
     const body = await req.json();
-    const { statusAuditoria, parecerAuditoria, auditadoPorEmail } = body;
+    const { statusAuditoria, parecerAuditoria } = body;
 
     if (!statusAuditoria || !["aprovado", "ajuste_solicitado", "pendente"].includes(statusAuditoria)) {
       return NextResponse.json(
@@ -18,15 +21,8 @@ export async function PATCH(req: NextRequest, { params }: RouteParams) {
       );
     }
 
-    let auditadoPorId: string | null = null;
-    if (auditadoPorEmail) {
-      const { data: u } = await supabaseAdmin
-        .from("usuarios")
-        .select("id")
-        .eq("email", auditadoPorEmail.toLowerCase())
-        .maybeSingle();
-      auditadoPorId = u?.id || null;
-    }
+    // Auditor é sempre o usuário autenticado (e-mail do body não é confiável)
+    const auditadoPorId: string | null = auth.sessao.usuarioId;
 
     const { data: faturamento, error } = await supabaseAdmin
       .from("faturamentos")

@@ -1,11 +1,17 @@
 import { NextRequest, NextResponse } from "next/server";
+import { exigirSessao, PAPEIS_EQUIPE } from "@/lib/auth/sessao-api";
 import { supabaseAdmin } from "@/lib/supabase/admin";
 
 export async function POST(req: NextRequest) {
+  const auth = await exigirSessao(req, PAPEIS_EQUIPE);
+  if (auth.erro) return auth.erro;
   try {
     const body = await req.json();
-    const { turmaId, moduloId, moduloNumero, status = "liberado", liberadoPorEmail } = body;
+    const { turmaId, moduloId, moduloNumero, status = "liberado" } = body;
 
+    if (!["liberado", "bloqueado"].includes(status)) {
+      return NextResponse.json({ sucesso: false, erro: "Status deve ser 'liberado' ou 'bloqueado'." }, { status: 400 });
+    }
     let targetModuloId = moduloId;
 
     // Se passou moduloNumero em vez de UUID
@@ -26,15 +32,7 @@ export async function POST(req: NextRequest) {
     }
 
     // Busca usuário que realizou a liberação se fornecido
-    let liberadoPorId: string | null = null;
-    if (liberadoPorEmail) {
-      const { data: u } = await supabaseAdmin
-        .from("usuarios")
-        .select("id")
-        .eq("email", liberadoPorEmail.toLowerCase())
-        .maybeSingle();
-      liberadoPorId = u?.id || null;
-    }
+    const liberadoPorId: string | null = auth.sessao.usuarioId;
 
     // Upsert na tabela public.modulo_liberacoes
     const { data: upsertData, error } = await supabaseAdmin

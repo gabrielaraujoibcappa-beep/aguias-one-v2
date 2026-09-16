@@ -1,7 +1,10 @@
 import { NextRequest, NextResponse } from "next/server";
+import { exigirSessao, PAPEIS_EQUIPE } from "@/lib/auth/sessao-api";
 import { supabaseAdmin } from "@/lib/supabase/admin";
 
 export async function GET(req: NextRequest) {
+  const auth = await exigirSessao(req, PAPEIS_EQUIPE);
+  if (auth.erro) return auth.erro;
   try {
     const { searchParams } = new URL(req.url);
     const turmaId = searchParams.get("turmaId");
@@ -66,7 +69,7 @@ export async function POST(req: NextRequest) {
 
   return fetch(url.toString(), {
     method: "POST",
-    headers: { "Content-Type": "application/json" },
+    headers: { "Content-Type": "application/json", cookie: req.headers.get("cookie") ?? "" },
     body: JSON.stringify(body),
   });
 }

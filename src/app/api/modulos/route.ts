@@ -1,10 +1,17 @@
 import { NextRequest, NextResponse } from "next/server";
+import { exigirSessao } from "@/lib/auth/sessao-api";
 import { supabaseAdmin } from "@/lib/supabase/admin";
 
 export async function GET(req: NextRequest) {
+  const auth = await exigirSessao(req);
+  if (auth.erro) return auth.erro;
   try {
     const { searchParams } = new URL(req.url);
-    let turmaId = searchParams.get("turmaId");
+    // Mentorado vê apenas a própria turma
+    let turmaId = auth.sessao.equipe ? searchParams.get("turmaId") : auth.sessao.turmaIds[0] ?? null;
+    if (!auth.sessao.equipe && !turmaId) {
+      return NextResponse.json({ sucesso: true, turmaId: null, modulos: [] });
+    }
 
     // Se turmaId não foi passada, pega a primeira turma em andamento
     if (!turmaId) {

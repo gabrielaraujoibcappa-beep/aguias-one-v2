@@ -1,12 +1,24 @@
 import { NextRequest, NextResponse } from "next/server";
+import { exigirSessao } from "@/lib/auth/sessao-api";
 import { supabaseAdmin } from "@/lib/supabase/admin";
 
 export async function POST(req: NextRequest) {
+  const auth = await exigirSessao(req);
+  if (auth.erro) return auth.erro;
   try {
     const formData = await req.formData();
     const file = formData.get("file") as File | null;
     const bucket = (formData.get("bucket") as string) || "evidencias";
-    const subfolder = (formData.get("subfolder") as string) || "uploads";
+    if (!["evidencias", "comprovantes"].includes(bucket)) {
+      return NextResponse.json({ sucesso: false, erro: "Bucket não permitido." }, { status: 400 });
+    }
+    // Pasta sanitizada; mentorado grava sempre sob o próprio usuário
+    const pastaInformada = ((formData.get("subfolder") as string) || "uploads")
+      .split("/")
+      .map((p) => p.replace(/[^a-zA-Z0-9_-]/g, ""))
+      .filter(Boolean)
+      .join("/") || "uploads";
+    const subfolder = auth.sessao.equipe ? pastaInformada : `${auth.sessao.usuarioId}/${pastaInformada}`;
 
     if (!file) {
       return NextResponse.json(

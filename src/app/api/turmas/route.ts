@@ -1,7 +1,10 @@
 import { NextRequest, NextResponse } from "next/server";
+import { exigirSessao, PAPEIS_GESTAO } from "@/lib/auth/sessao-api";
 import { supabaseAdmin } from "@/lib/supabase/admin";
 
-export async function GET() {
+export async function GET(req: NextRequest) {
+  const auth = await exigirSessao(req);
+  if (auth.erro) return auth.erro;
   try {
     const { data: turmas, error } = await supabaseAdmin
       .from("turmas")
@@ -32,6 +35,8 @@ export async function GET() {
 }
 
 export async function POST(req: NextRequest) {
+  const auth = await exigirSessao(req, PAPEIS_GESTAO);
+  if (auth.erro) return auth.erro;
   try {
     const body = await req.json();
     const { nome, codigo, dataInicio, dataFim, horarioEncontro, limiteVagas = 40 } = body;

@@ -5,35 +5,15 @@ import { useRouter } from "next/navigation";
 import Link from "next/link";
 import { useSistemaStore } from "@/lib/store/sistema-store";
 import { supabase } from "@/lib/supabase/client";
-import { PapelUsuario } from "@/lib/auth/roles";
+import {
+  CONTAS_DEMO,
+  MODO_DEMO,
+  encerrarSessao,
+  gravarTokenSessao,
+  iniciarSessaoDemo,
+  obterUsuarioLogado,
+} from "@/lib/auth/sessao-cliente";
 import { IconCheckCircle, IconAlertCircle } from "@/components/ui/Icons";
-
-const CONTAS_DEMO: { nome: string; email: string; papel: PapelUsuario; cargo: string }[] = [
-  {
-    nome: "Dr. Roberto Silva",
-    email: "roberto.silva@pericia.com.br",
-    papel: "mentorado",
-    cargo: "Perito Solo (Mentorado)",
-  },
-  {
-    nome: "Flávio Lopes",
-    email: "flavio.lopes@unibcappa.com.br",
-    papel: "concierge",
-    cargo: "Concierge da Turma",
-  },
-  {
-    nome: "Ana Carolina",
-    email: "ana.carolina@unibcappa.com.br",
-    papel: "anjo",
-    cargo: "Anjo & Auditoria",
-  },
-  {
-    nome: "Prof. Edilson Aguiais",
-    email: "edilson.aguiais@unibcappa.com.br",
-    papel: "mentor",
-    cargo: "Coordenação & Mentoria",
-  },
-];
 
 export default function LoginPage() {
   const router = useRouter();
@@ -46,63 +26,50 @@ export default function LoginPage() {
   const [carregando, setCarregando] = useState(false);
   const [erro, setErro] = useState<string | null>(null);
 
-  const executarLogin = async (emailAlvo: string, papelAlvo?: PapelUsuario) => {
+  /** Com a sessão já gravada em cookie, busca o papel no servidor e redireciona. */
+  const concluirLogin = async () => {
+    const usuario = await obterUsuarioLogado();
+    if (!usuario) {
+      await encerrarSessao();
+      throw new Error("Conta sem perfil ativo no sistema. Fale com o Concierge.");
+    }
+
+    mudarPapel(usuario.papel);
+
+    const destino = new URLSearchParams(window.location.search).get("redirect");
+    const destinoSeguro = destino && destino.startsWith("/") && !destino.startsWith("//") ? destino : null;
+    router.replace(destinoSeguro ?? (usuario.papel === "mentorado" ? "/dashboard" : "/painel/turma"));
+  };
+
+  const executarLogin = async (emailAlvo: string) => {
     setCarregando(true);
     setErro(null);
-
     try {
-      // 1. Tenta autenticação no Supabase se houver senha preenchida
-      let authUserRole: PapelUsuario | null = null;
-      let sessionToken: string | null = null;
-
-      if (senha && senha.length >= 6) {
-        try {
-          const { data: authData, error: authError } = await supabase.auth.signInWithPassword({
-            email: emailAlvo,
-            password: senha,
-          });
-
-          if (authError && !CONTAS_DEMO.some((c) => c.email.toLowerCase() === emailAlvo.toLowerCase())) {
-            throw new Error("Email ou senha inválidos. Por favor verifique seus dados.");
-          }
-
-          if (authData?.user) {
-            sessionToken = authData.session?.access_token || null;
-            if (authData.user.user_metadata?.papel) {
-              authUserRole = authData.user.user_metadata.papel as PapelUsuario;
-            }
-          }
-        } catch (errAuth: any) {
-          // Se for conta demo, permite fallback gracioso para avaliação
-          if (!CONTAS_DEMO.some((c) => c.email.toLowerCase() === emailAlvo.toLowerCase())) {
-            throw new Error(errAuth?.message || "Email ou senha incorretos.");
-          }
-        }
+      const { data, error } = await supabase.auth.signInWithPassword({
+        email: emailAlvo.trim().toLowerCase(),
+        password: senha,
+      });
+      if (error || !data.session) {
+        throw new Error("Email ou senha inválidos. Por favor verifique seus dados.");
       }
-
-      // 2. Resolve papel do usuário com base nas contas cadastradas ou banco
-      const contaEncontrada = CONTAS_DEMO.find(
-        (c) => c.email.toLowerCase() === emailAlvo.toLowerCase()
-      );
-      const papelFinal: PapelUsuario = papelAlvo || authUserRole || contaEncontrada?.papel || "mentorado";
-
-      // 3. Atualiza estado e cookies de sessão
-      mudarPapel(papelFinal);
-      document.cookie = `user-role=${papelFinal}; path=/; max-age=86400; SameSite=Lax`;
-      if (sessionToken) {
-        document.cookie = `sb-access-token=${sessionToken}; path=/; max-age=86400; SameSite=Lax`;
-      } else {
-        document.cookie = `sb-access-token=session-active-${papelFinal}; path=/; max-age=86400; SameSite=Lax`;
-      }
-
-      // 4. Redireciona conforme papel
-      if (papelFinal === "mentorado") {
-        router.push("/dashboard");
-      } else {
-        router.push("/painel/turma");
-      }
+      gravarTokenSessao(data.session.access_token, data.session.expires_in);
+      await concluirLogin();
     } catch (err: any) {
       setErro(err.message || "Ocorreu um erro ao realizar o login.");
+    } finally {
+      setCarregando(false);
+    }
+  };
+
+  const entrarComContaDemo = async (conta: (typeof CONTAS_DEMO)[number]) => {
+    setCarregando(true);
+    setErro(null);
+    try {
+      await supabase.auth.signOut().catch(() => {});
+      iniciarSessaoDemo(conta.email);
+      await concluirLogin();
+    } catch (err: any) {
+      setErro(err.message || "Não foi possível entrar com a conta de demonstração.");
     } finally {
       setCarregando(false);
     }
@@ -119,12 +86,6 @@ export default function LoginPage() {
       return;
     }
     await executarLogin(email);
-  };
-
-  const selecionarContaDemo = (conta: typeof CONTAS_DEMO[0]) => {
-    setEmail(conta.email);
-    setSenha("123456");
-    setErro(null);
   };
 
   return (
@@ -378,6 +339,9 @@ export default function LoginPage() {
             </button>
           </form>
 
+          {/* Login demo sem senha: somente em desenvolvimento (NODE_ENV=development) */}
+          {MODO_DEMO && (
+          <>
           {/* Divisor Visual */}
           <div
             style={{
@@ -391,7 +355,7 @@ export default function LoginPage() {
             }}
           >
             <div style={{ flex: 1, height: "1px", backgroundColor: "var(--cor-border-light, #e5e7eb)" }} />
-            <span style={{ padding: "0 10px" }}>Acesso Rápido de Demonstração</span>
+            <span style={{ padding: "0 10px" }}>Demonstração · apenas em desenvolvimento</span>
             <div style={{ flex: 1, height: "1px", backgroundColor: "var(--cor-border-light, #e5e7eb)" }} />
           </div>
 
@@ -401,7 +365,8 @@ export default function LoginPage() {
               <button
                 key={c.email}
                 type="button"
-                onClick={() => selecionarContaDemo(c)}
+                onClick={() => entrarComContaDemo(c)}
+                disabled={carregando}
                 style={{
                   padding: "8px 10px",
                   borderRadius: "var(--radius-xs, 4px)",
@@ -416,11 +381,13 @@ export default function LoginPage() {
                   {c.nome}
                 </div>
                 <div style={{ fontSize: "10px", color: "var(--cor-text-muted, #4b5563)" }}>
-                  {c.papel === "mentorado" ? "Mentorado" : "Equipe"}
+                  {c.cargo}
                 </div>
               </button>
             ))}
           </div>
+          </>
+          )}
         </div>
 
         {/* Rodapé Seguro e Suporte */}

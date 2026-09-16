@@ -341,6 +341,28 @@ export function useSistemaStore() {
     salvarEstado({ ...estadoGlobal, papelAtual: novoPapel });
   };
 
+  /** Alinha papel e identidade da interface com a sessão validada no servidor. */
+  const definirUsuarioLogado = (usuario: { nome: string; email: string; papel: PapelUsuario; turmaNome?: string }) => {
+    const atual = estadoGlobal.usuarioAtual;
+    if (
+      estadoGlobal.papelAtual === usuario.papel &&
+      atual?.email === usuario.email &&
+      atual?.nome === usuario.nome &&
+      (usuario.turmaNome === undefined || atual?.turmaNome === usuario.turmaNome)
+    ) {
+      return;
+    }
+    salvarEstado({
+      ...estadoGlobal,
+      papelAtual: usuario.papel,
+      usuarioAtual: {
+        nome: usuario.nome,
+        email: usuario.email,
+        turmaNome: usuario.turmaNome ?? atual?.turmaNome ?? "",
+      },
+    });
+  };
+
   const alternarModulo = (moduloId: string, novoStatus: "liberado" | "bloqueado") => {
     const modulosAtualizados = estadoGlobal.modulos.map((m) =>
       m.id === moduloId ? { ...m, status: novoStatus, liberadoEm: novoStatus === "liberado" ? new Date().toISOString() : undefined } : m
@@ -676,6 +698,7 @@ export function useSistemaStore() {
     estado,
     carregado,
     mudarPapel,
+    definirUsuarioLogado,
     alternarModulo,
     submeterCheckin,
     auditarEntrega,

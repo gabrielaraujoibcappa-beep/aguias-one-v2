@@ -2,6 +2,7 @@
 
 import React from "react";
 import { useRouter } from "next/navigation";
+import { encerrarSessao } from "@/lib/auth/sessao-cliente";
 import { BloqueioAcesso, ROTULOS_MOTIVO_BLOQUEIO, formatarDataBloqueio } from "@/lib/api/bloqueio-acesso";
 
 interface TelaAcessoBloqueadoProps {
@@ -12,10 +13,8 @@ interface TelaAcessoBloqueadoProps {
 export function TelaAcessoBloqueado({ bloqueio }: TelaAcessoBloqueadoProps) {
   const router = useRouter();
 
-  const sair = () => {
-    document.cookie = "sb-access-token=; path=/; max-age=0";
-    document.cookie = "user-role=; path=/; max-age=0";
-    document.cookie = "acesso-bloqueado=; path=/; max-age=0";
+  const sair = async () => {
+    await encerrarSessao();
     router.push("/login");
   };
 

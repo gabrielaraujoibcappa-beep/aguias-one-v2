@@ -1,7 +1,10 @@
 import { NextRequest, NextResponse } from "next/server";
+import { exigirSessao, PAPEIS_EQUIPE } from "@/lib/auth/sessao-api";
 import { TEMPLATES_CATALOGO, obterTemplatePorId } from "@/lib/email/dados-exemplo";
 
 export async function GET(req: NextRequest) {
+  const auth = await exigirSessao(req, PAPEIS_EQUIPE);
+  if (auth.erro) return auth.erro;
   try {
     const { searchParams } = new URL(req.url);
     const templateId = searchParams.get("id");
