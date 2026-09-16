@@ -274,18 +274,46 @@ export function resetarStoreParaTestes() {
   carregadoGlobal = false;
 }
 
-async function sincronizarComBackend() {
-  if (typeof window === "undefined") return;
+// Vários componentes usam o store ao mesmo tempo: uma única sincronização por vez,
+// repetida no máximo a cada INTERVALO_SYNC_MS após sucesso.
+const INTERVALO_SYNC_MS = 10_000;
+const ROTAS_SEM_SYNC = ["/", "/login", "/acesso-bloqueado"];
+let syncEmAndamento: Promise<void> | null = null;
+let ultimaSyncOk = 0;
+
+function sincronizarComBackend(): Promise<void> {
+  if (typeof window === "undefined") return Promise.resolve();
+  if (ROTAS_SEM_SYNC.includes(window.location.pathname)) return Promise.resolve();
+  if (syncEmAndamento) return syncEmAndamento;
+  if (Date.now() - ultimaSyncOk < INTERVALO_SYNC_MS) return Promise.resolve();
+
+  syncEmAndamento = executarSincronizacao().finally(() => {
+    syncEmAndamento = null;
+  });
+  return syncEmAndamento;
+}
+
+async function executarSincronizacao() {
   try {
+    // Sem sessão válida não há o que buscar (evita rajadas de 401)
+    const resMe = await fetch("/api/auth/me", { cache: "no-store" });
+    const me = resMe.ok ? await resMe.json() : null;
+    if (!me?.autenticado) return;
+    const equipe = me.usuario?.papel !== "mentorado";
+
+    const buscar = (url: string, apenasEquipe = false) =>
+      apenasEquipe && !equipe ? Promise.resolve(null) : fetch(url).then((r) => (r.ok ? r.json() : null));
+
     const [resTurmas, resAlunos, resModulos, resSemaforo, resFat, resBloqueios, resEntregas] = await Promise.allSettled([
-      fetch("/api/turmas").then((r) => (r.ok ? r.json() : null)),
-      fetch("/api/alunos").then((r) => (r.ok ? r.json() : null)),
-      fetch("/api/modulos").then((r) => (r.ok ? r.json() : null)),
-      fetch("/api/semaforo").then((r) => (r.ok ? r.json() : null)),
-      fetch("/api/faturamentos").then((r) => (r.ok ? r.json() : null)),
-      fetch("/api/bloqueios").then((r) => (r.ok ? r.json() : null)),
-      fetch("/api/checkins?pendentes=true").then((r) => (r.ok ? r.json() : null)),
+      buscar("/api/turmas"),
+      buscar("/api/alunos", true),
+      buscar("/api/modulos"),
+      buscar("/api/semaforo", true),
+      buscar("/api/faturamentos"),
+      buscar("/api/bloqueios"),
+      buscar("/api/checkins?pendentes=true", true),
     ]);
+    ultimaSyncOk = Date.now();
 
     const novoEstado = { ...estadoGlobal };
     let mudou = false;
