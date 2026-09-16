@@ -6,37 +6,52 @@ import { TabelaHistoricoAuditoria } from "@/components/equipe/TabelaHistoricoAud
 import { VisualizadorEntrega } from "@/components/equipe/VisualizadorEntrega";
 import { Tabs, TabItem } from "@/components/ui/Tabs";
 import { EntregaPendente } from "@/lib/api/auditoria";
-import { useSistemaStore } from "@/lib/store/sistema-store";
+import { lerEstadoSistema, useSistemaStore } from "@/lib/store/sistema-store";
+import { notificar } from "@/lib/notificacoes";
 
 export default function PainelAuditoriaPage() {
-  const { estado, auditarEntrega, carregado } = useSistemaStore();
+  const { estado, auditarEntrega, reverterEntrega, carregado } = useSistemaStore();
   const [entregaSelecionada, setEntregaSelecionada] = useState<EntregaPendente | null>(null);
-  const [toastMensagem, setToastMensagem] = useState<string | null>(null);
 
   if (!carregado) return null;
 
-  const mostrarToast = (msg: string) => {
-    setToastMensagem(msg);
-    setTimeout(() => setToastMensagem(null), 4000);
-  };
+  /**
+   * A decisão aparece na hora e a entrega sai da fila, mas o envio ao backend só
+   * acontece quando a janela de "Desfazer" termina. A API não aceita devolver uma
+   * entrega para "aguardando avaliação", então adiar o envio é o que torna o
+   * "Desfazer" real.
+   */
+  const auditarComDesfazer = (id: string, decisao: "aprovado" | "ajuste_solicitado", motivo?: string) => {
+    const lista = lerEstadoSistema().entregas;
+    const indice = lista.findIndex((e) => e.id === id);
+    const anterior = lista[indice];
+    if (!anterior) return;
 
-  const handleAprovar = (id: string) => {
-    const alvo = estado.entregas.find((e) => e.id === id);
-    if (!alvo) return;
-
-    auditarEntrega(id, "aprovado");
+    const efetivar = auditarEntrega(id, decisao, motivo, { adiarPersistencia: true });
+    const posterior = lerEstadoSistema().entregas.find((e) => e.id === id);
     setEntregaSelecionada(null);
-    mostrarToast(`Entrega de ${alvo.alunoNome} aprovada.`);
+
+    const objeto = `entrega de ${anterior.alunoNome} no ${anterior.moduloTitulo}`;
+    const aprovacao = decisao === "aprovado";
+    const rotulo = aprovacao ? "Desfazer aprovação" : "Desfazer pedido de ajuste";
+
+    notificar(aprovacao ? `Entrega de ${anterior.alunoNome} aprovada.` : `Ajuste solicitado na entrega de ${anterior.alunoNome}.`, {
+      efetivar,
+      desfazer: {
+        rotulo,
+        rotuloAcessivel: `${rotulo} da ${objeto}`,
+        executar: () => reverterEntrega({ anterior, posterior, indice }),
+        mensagemAposDesfazer:
+          anterior.status === "aguardando_avaliacao"
+            ? `${aprovacao ? "Aprovação desfeita" : "Pedido de ajuste desfeito"}. A entrega de ${anterior.alunoNome} voltou para a fila.`
+            : `${aprovacao ? "Aprovação desfeita" : "Pedido de ajuste desfeito"}. A entrega de ${anterior.alunoNome} voltou à situação anterior.`,
+      },
+    });
   };
 
-  const handleSolicitarAjuste = (id: string, motivo: string) => {
-    const alvo = estado.entregas.find((e) => e.id === id);
-    if (!alvo) return;
+  const handleAprovar = (id: string) => auditarComDesfazer(id, "aprovado");
 
-    auditarEntrega(id, "ajuste_solicitado", motivo);
-    setEntregaSelecionada(null);
-    mostrarToast(`Ajuste solicitado para ${alvo.alunoNome}.`);
-  };
+  const handleSolicitarAjuste = (id: string, motivo: string) => auditarComDesfazer(id, "ajuste_solicitado", motivo);
 
   const entregasAguardando = estado.entregas.filter((e) => e.status === "aguardando_avaliacao");
   const entregasAvaliadas = estado.entregas.filter((e) => e.status !== "aguardando_avaliacao");
@@ -74,20 +89,6 @@ export default function PainelAuditoriaPage() {
           Validação pelo Anjo (Ana Carolina) e Concierge (Flávio): confira prints, teste links e aprove ou solicite ajustes.
         </p>
       </div>
-
-      {toastMensagem && (
-        <div style={{
-          backgroundColor: "#ecfdf5",
-          border: "1px solid #a7f3d0",
-          color: "#065f46",
-          padding: "12px 16px",
-          borderRadius: "var(--radius-sm)",
-          marginBottom: "var(--espaco-md)",
-          fontWeight: 500,
-        }}>
-          {toastMensagem}
-        </div>
-      )}
 
       {entregaSelecionada ? (
         <VisualizadorEntrega

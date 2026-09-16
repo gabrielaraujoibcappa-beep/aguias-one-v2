@@ -5,6 +5,7 @@ import { usePathname } from "next/navigation";
 import { Sidebar } from "./Sidebar";
 import { Breadcrumbs } from "./Breadcrumbs";
 import { TelaAcessoBloqueado } from "./TelaAcessoBloqueado";
+import { RegiaoNotificacoes } from "./ui/RegiaoNotificacoes";
 import { useSistemaStore } from "@/lib/store/sistema-store";
 
 const ROTAS_SEM_SHELL = ["/login", "/acesso-bloqueado"];
@@ -56,6 +57,7 @@ export function AppShell({ children }: { children: React.ReactNode }) {
           </div>
         </footer>
       </div>
+      <RegiaoNotificacoes />
     </div>
   );
 }

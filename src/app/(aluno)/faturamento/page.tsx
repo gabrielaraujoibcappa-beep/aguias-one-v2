@@ -5,13 +5,39 @@ import { useRouter } from "next/navigation";
 import { FormularioFaturamento } from "@/components/faturamento/FormularioFaturamento";
 import { TabelaHistoricoFaturamento } from "@/components/faturamento/TabelaHistoricoFaturamento";
 import { MetaFaturamentoAnual } from "@/components/faturamento/MetaFaturamentoAnual";
-import { useSistemaStore } from "@/lib/store/sistema-store";
+import { ALUNO_ATUAL_ID, lerEstadoSistema, useSistemaStore } from "@/lib/store/sistema-store";
+import { formatarMoedaReal, obterMetaAnualAluno } from "@/lib/api/faturamento";
+import { notificar } from "@/lib/notificacoes";
 
 export default function FaturamentoAlunoPage() {
   const router = useRouter();
-  const { adicionarFaturamento, definirMetaFaturamentoAnual, faturamentosAlunoAtual, metaAnualAlunoAtual, carregado } = useSistemaStore();
+  const {
+    adicionarFaturamento,
+    definirMetaFaturamentoAnual,
+    reverterMetaFaturamento,
+    faturamentosAlunoAtual,
+    metaAnualAlunoAtual,
+    carregado,
+  } = useSistemaStore();
 
   if (!carregado) return null;
+
+  const handleDefinirMeta = (valor: number) => {
+    const anterior = lerEstadoSistema().metasFaturamentoAlunos[ALUNO_ATUAL_ID];
+    const valorAnteriorExibido = obterMetaAnualAluno(lerEstadoSistema().metasFaturamentoAlunos, ALUNO_ATUAL_ID);
+    definirMetaFaturamentoAnual(valor);
+    const posterior = lerEstadoSistema().metasFaturamentoAlunos[ALUNO_ATUAL_ID];
+    if (anterior === posterior) return;
+
+    notificar(`Sua meta anual foi alterada para ${formatarMoedaReal(posterior)}.`, {
+      desfazer: {
+        rotulo: "Desfazer alteração",
+        rotuloAcessivel: "Desfazer alteração da sua meta anual de faturamento",
+        executar: () => reverterMetaFaturamento(ALUNO_ATUAL_ID, anterior, posterior),
+        mensagemAposDesfazer: `Alteração desfeita. Sua meta anual voltou para ${formatarMoedaReal(valorAnteriorExibido)}.`,
+      },
+    });
+  };
 
   return (
     <div style={{ maxWidth: "1000px", margin: "0 auto", padding: "var(--espaco-xl)" }}>
@@ -40,7 +66,7 @@ export default function FaturamentoAlunoPage() {
       <MetaFaturamentoAnual
         faturamentos={faturamentosAlunoAtual}
         metaAnual={metaAnualAlunoAtual}
-        onDefinirMeta={(valor) => definirMetaFaturamentoAnual(valor)}
+        onDefinirMeta={handleDefinirMeta}
       />
 
       <FormularioFaturamento onSalvar={adicionarFaturamento} />

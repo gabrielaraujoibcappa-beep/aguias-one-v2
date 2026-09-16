@@ -96,12 +96,12 @@ export function ToastDesfazer({
         if (!e.currentTarget.contains(e.relatedTarget as Node | null)) setPausado(false);
       }}
     >
-      <div style={{ display: "flex", alignItems: "center", gap: "12px", padding: "12px 12px 12px 16px" }}>
+      <div className="toast-desfazer-linha">
         <span style={{ color: COR_ICONE[tom], display: "flex", alignItems: "center", flexShrink: 0 }} aria-hidden="true">
           <Icone size={20} />
         </span>
 
-        <span style={{ fontSize: "14px", lineHeight: 1.4, flex: 1, minWidth: 0 }}>{mensagem}</span>
+        <span className="toast-desfazer-mensagem">{mensagem}</span>
 
         {temAcao && (
           <button
@@ -116,7 +116,7 @@ export function ToastDesfazer({
           >
             {rotuloDesfazer}
             {mostrarAtalho && (
-              <kbd aria-hidden="true" style={{ marginLeft: "8px", fontSize: "11px", fontFamily: "inherit", opacity: 0.7 }}>
+              <kbd aria-hidden="true" className="toast-desfazer-atalho">
                 Ctrl Z
               </kbd>
             )}

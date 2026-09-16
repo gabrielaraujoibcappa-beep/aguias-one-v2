@@ -5,17 +5,18 @@ import { TabelaAlunos } from "@/components/admin/TabelaAlunos";
 import { ModalAluno } from "@/components/admin/ModalAluno";
 import { ModalBloqueioAcesso } from "@/components/admin/ModalBloqueioAcesso";
 import { ModalConfirmacaoDestrutiva } from "@/components/ui/ModalConfirmacaoDestrutiva";
-import { ToastDesfazer } from "@/components/ui/ToastDesfazer";
 import { AlunoCadastro } from "@/lib/api/alunos";
-import { useSistemaStore } from "@/lib/store/sistema-store";
+import { lerEstadoSistema, useSistemaStore } from "@/lib/store/sistema-store";
+import { DURACAO_COM_DESFAZER_MS, notificar } from "@/lib/notificacoes";
+
+const SEGUNDOS_PARA_DESFAZER = Math.round(DURACAO_COM_DESFAZER_MS / 1000);
 
 export default function AdminAlunosPage() {
-  const { estado, salvarAluno, excluirAluno, bloquearAcesso, desbloquearAcesso, carregado } = useSistemaStore();
+  const { estado, salvarAluno, excluirAluno, reverterAluno, bloquearAcesso, desbloquearAcesso, carregado } = useSistemaStore();
   const [modalAberto, setModalAberto] = useState(false);
   const [alunoEmEdicao, setAlunoEmEdicao] = useState<AlunoCadastro | null>(null);
   const [alunoAcesso, setAlunoAcesso] = useState<AlunoCadastro | null>(null);
   const [alunoParaExcluir, setAlunoParaExcluir] = useState<AlunoCadastro | null>(null);
-  const [toastUndo, setToastUndo] = useState<{ visivel: boolean; mensagem: string; alunoBackup?: AlunoCadastro } | null>(null);
 
   if (!carregado) return null;
 
@@ -34,17 +35,33 @@ export default function AdminAlunosPage() {
     setAlunoParaExcluir(aluno);
   };
 
+  /**
+   * Exclusão com confirmação + atraso controlado.
+   * No backend a exclusão é definitiva (usuário, acesso e histórico em cascata), por isso
+   * o DELETE só é enviado quando a janela de "Desfazer" termina. Desfazer devolve o
+   * cadastro à mesma posição da lista sem que nada tenha sido apagado.
+   */
   const handleConfirmarExcluir = () => {
-    if (alunoParaExcluir && alunoParaExcluir.id) {
-      const backup = { ...alunoParaExcluir };
-      excluirAluno(alunoParaExcluir.id);
-      setAlunoParaExcluir(null);
-      setToastUndo({
-        visivel: true,
-        mensagem: `Cadastro de "${backup.nome}" removido.`,
-        alunoBackup: backup,
-      });
-    }
+    const alvoId = alunoParaExcluir?.id;
+    if (!alvoId) return;
+
+    const lista = lerEstadoSistema().alunos;
+    const indice = lista.findIndex((a) => a.id === alvoId);
+    const anterior = lista[indice];
+    setAlunoParaExcluir(null);
+    if (!anterior) return;
+
+    const efetivar = excluirAluno(alvoId, { adiarPersistencia: true });
+
+    notificar(`Cadastro de ${anterior.nome} excluído.`, {
+      efetivar,
+      desfazer: {
+        rotulo: "Desfazer exclusão",
+        rotuloAcessivel: `Desfazer exclusão do cadastro de ${anterior.nome}`,
+        executar: () => reverterAluno({ anterior, indice }),
+        mensagemAposDesfazer: `Exclusão desfeita. O cadastro de ${anterior.nome} foi mantido, com acesso e histórico intactos.`,
+      },
+    });
   };
 
   const handleNovo = () => {
@@ -96,28 +113,13 @@ export default function AdminAlunosPage() {
         aberto={Boolean(alunoParaExcluir)}
         titulo="Excluir cadastro do aluno"
         objetoNome={alunoParaExcluir?.nome}
-        mensagem="Esta ação é permanente. O perito será desvinculado da turma e seu histórico de check-ins e faturamento não aparecerá mais nos relatórios de auditoria."
+        mensagem={`O login, a matrícula, os check-ins, as declarações de faturamento, os canais e os bloqueios deste aluno serão apagados definitivamente. Depois de confirmar, você terá ${SEGUNDOS_PARA_DESFAZER} segundos para desfazer. Passado esse tempo, não é possível recuperar.`}
         rotuloAcao="Excluir aluno"
         rotuloCancelar="Cancelar"
         tipoIcone="lixeira"
         onConfirmar={handleConfirmarExcluir}
         onCancelar={() => setAlunoParaExcluir(null)}
       />
-
-      {/* Notificação de Desfazer (Undo) para Ações Reversíveis */}
-      {toastUndo && (
-        <ToastDesfazer
-          visivel={toastUndo.visivel}
-          mensagem={toastUndo.mensagem}
-          rotuloDesfazer="Desfazer"
-          onDesfazer={() => {
-            if (toastUndo.alunoBackup) {
-              salvarAluno(toastUndo.alunoBackup);
-            }
-          }}
-          onFechar={() => setToastUndo(null)}
-        />
-      )}
     </div>
   );
 }

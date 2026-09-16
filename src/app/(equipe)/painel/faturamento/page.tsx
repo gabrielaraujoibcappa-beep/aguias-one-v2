@@ -83,7 +83,10 @@ export default function PainelFaturamentoPage() {
         rotulo: aprovacao ? "Desfazer aprovação" : "Desfazer pedido de ajuste",
         rotuloAcessivel: `${aprovacao ? "Desfazer aprovação" : "Desfazer pedido de ajuste"} da ${objeto}`,
         executar: () => reverterFaturamento({ anterior, posterior, indice }),
-        mensagemAposDesfazer: `${aprovacao ? "Aprovação desfeita" : "Pedido de ajuste desfeito"}. A ${objeto} voltou para a fila de auditoria.`,
+        mensagemAposDesfazer:
+          (anterior.statusAuditoria ?? "pendente") === "pendente"
+            ? `${aprovacao ? "Aprovação desfeita" : "Pedido de ajuste desfeito"}. A ${objeto} voltou para a fila de auditoria.`
+            : `${aprovacao ? "Aprovação desfeita" : "Pedido de ajuste desfeito"}. A ${objeto} voltou à situação anterior.`,
       },
     });
   };
@@ -140,7 +143,7 @@ export default function PainelFaturamentoPage() {
         rotulo: "Desfazer alteração",
         rotuloAcessivel: `Desfazer alteração da meta anual de ${nome}`,
         executar: () => reverterMetaFaturamento(alunoId, anterior, posterior),
-        mensagemAposDesfazer: `Alteração desfeita. A meta anual de ${nome} voltou para ${formatarMoedaReal(obterMetaAnualAluno(lerEstadoSistema().metasFaturamentoAlunos, alunoId))}.`,
+        mensagemAposDesfazer: `Alteração desfeita. A meta anual de ${nome} voltou para ${formatarMoedaReal(anterior ?? obterMetaAnualAluno({}, alunoId))}.`,
       },
     });
   };
@@ -257,4 +260,8 @@ function Indicador({ rotulo, valor, detalhe }: { rotulo: string; valor: string; 
       {detalhe && <div style={{ fontSize: "12px", color: "var(--cor-muted)", marginTop: "6px" }}>{detalhe}</div>}
     </div>
   );
+}
+
+function capitalizar(texto: string): string {
+  return texto.charAt(0).toUpperCase() + texto.slice(1);
 }
