@@ -30,27 +30,27 @@ const ROTAS_MAP: Record<string, BreadcrumbItem[]> = {
     { rotulo: "Canais de Atração", href: "/canais" },
   ],
   "/painel/turma": [
-    { rotulo: "Turma & Acompanhamento", href: "/painel/turma" },
+    { rotulo: "Operação da Turma", href: "/painel/turma" },
     { rotulo: "Semáforo & Resgate" },
   ],
   "/painel/modulos": [
-    { rotulo: "Ciclo de Entregas" },
+    { rotulo: "Operação da Turma" },
     { rotulo: "Liberação de Módulos", href: "/painel/modulos" },
   ],
   "/painel/auditoria": [
-    { rotulo: "Ciclo de Entregas" },
+    { rotulo: "Operação da Turma" },
     { rotulo: "Fila de Auditoria", href: "/painel/auditoria" },
   ],
   "/painel/faturamento": [
-    { rotulo: "Operação" },
+    { rotulo: "Operação da Turma" },
     { rotulo: "Metas & Faturamento", href: "/painel/faturamento" },
   ],
   "/admin/alunos": [
-    { rotulo: "Cadastros" },
+    { rotulo: "Gestão & Cadastros" },
     { rotulo: "Gestão de Alunos", href: "/admin/alunos" },
   ],
   "/admin/turmas": [
-    { rotulo: "Cadastros" },
+    { rotulo: "Gestão & Cadastros" },
     { rotulo: "Turmas & Matrículas", href: "/admin/turmas" },
   ],
 };

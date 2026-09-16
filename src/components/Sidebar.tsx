@@ -178,7 +178,7 @@ export function Sidebar() {
 
   const linksStaff: GrupoSidebar[] = [
     {
-      secao: "Operação",
+      secao: "Operação da Turma",
       itens: [
         { rotulo: "Turma & Semáforo", href: "/painel/turma", icone: IconUsers },
         { rotulo: "Liberação Módulos", href: "/painel/modulos", icone: IconUnlock },
@@ -187,7 +187,7 @@ export function Sidebar() {
       ],
     },
     {
-      secao: "Cadastros",
+      secao: "Gestão & Cadastros",
       itens: [
         { rotulo: "Gestão de Alunos", href: "/admin/alunos", icone: IconUserPlus },
         { rotulo: "Gestão de Turmas", href: "/admin/turmas", icone: IconBuilding },

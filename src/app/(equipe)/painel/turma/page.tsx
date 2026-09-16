@@ -3,17 +3,22 @@
 import React, { useState } from "react";
 import { PainelKpisTurma } from "@/components/equipe/PainelKpisTurma";
 import { TabelaSemaforoTurma } from "@/components/equipe/TabelaSemaforoTurma";
+import { ModalAluno } from "@/components/admin/ModalAluno";
 import { FiltroPeriodo } from "@/components/ui/FiltroPeriodo";
+import { IconUserPlus } from "@/components/ui/Icons";
 import { criarPeriodoPadrao, PeriodoFiltroState } from "@/lib/periodo/calculo-periodo";
 import { useSistemaStore } from "@/lib/store/sistema-store";
 
 export default function PainelTurmaPage() {
-  const { estado, carregado } = useSistemaStore();
+  const { estado, salvarAluno, carregado } = useSistemaStore();
   const [turma] = useState("Águias ONE — Turma 2026.1");
+  const [modalMatriculaAberto, setModalMatriculaAberto] = useState(false);
   const [periodo, setPeriodo] = useState<PeriodoFiltroState>(() =>
     criarPeriodoPadrao("Global (Turma 2026.1)")
   );
   const [carregandoPeriodo, setCarregandoPeriodo] = useState(false);
+
+  const turmasDisponiveis = estado.turmas.map((t) => ({ id: t.id, nome: t.nome }));
 
   const handleAtualizarDados = () => {
     setCarregandoPeriodo(true);
@@ -35,14 +40,26 @@ export default function PainelTurmaPage() {
           </p>
         </div>
 
-        <div style={{
-          backgroundColor: "var(--cor-soft-stone)",
-          padding: "6px 14px",
-          borderRadius: "var(--radius-pill)",
-          fontWeight: 600,
-          fontSize: "13px",
-        }}>
-          {turma}
+        <div style={{ display: "flex", gap: "10px", alignItems: "center", flexWrap: "wrap" }}>
+          <div style={{
+            backgroundColor: "var(--cor-soft-stone)",
+            padding: "6px 14px",
+            borderRadius: "var(--radius-pill)",
+            fontWeight: 600,
+            fontSize: "13px",
+          }}>
+            {turma}
+          </div>
+
+          <button
+            type="button"
+            onClick={() => setModalMatriculaAberto(true)}
+            className="btn-primary btn-sm"
+            style={{ display: "inline-flex", alignItems: "center", gap: "6px" }}
+          >
+            <IconUserPlus size={15} />
+            <span>+ Matricular Aluno</span>
+          </button>
         </div>
       </div>
 
@@ -63,6 +80,18 @@ export default function PainelTurmaPage() {
       />
 
       <TabelaSemaforoTurma alunos={estado.alunosSemaforo} />
+
+      {/* Modal de Matrícula / Criação de Usuário pela Operação */}
+      {modalMatriculaAberto && (
+        <ModalAluno
+          aberto={modalMatriculaAberto}
+          turmas={turmasDisponiveis}
+          onSalvar={(novoAluno) => {
+            salvarAluno(novoAluno);
+          }}
+          onFechar={() => setModalMatriculaAberto(false)}
+        />
+      )}
     </div>
   );
 }

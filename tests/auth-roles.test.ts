@@ -1,5 +1,5 @@
 import { describe, it, expect } from "vitest";
-import { isStaff, canAudit, canManageCohorts, PapelUsuario } from "../src/lib/auth/roles";
+import { isStaff, canAudit, canManageCohorts, canManageUsers, PapelUsuario } from "../src/lib/auth/roles";
 
 describe("RBAC Permissions (ÁGUIAS ONE v2)", () => {
   it("deve identificar papeis de equipe corretamente", () => {
@@ -24,4 +24,13 @@ describe("RBAC Permissions (ÁGUIAS ONE v2)", () => {
     expect(canManageCohorts("anjo" as PapelUsuario)).toBe(false);
     expect(canManageCohorts("mentorado" as PapelUsuario)).toBe(false);
   });
+
+  it("tanto admin quanto concierge (operação) podem criar e gerenciar usuários", () => {
+    expect(canManageUsers("admin" as PapelUsuario)).toBe(true);
+    expect(canManageUsers("concierge" as PapelUsuario)).toBe(true);
+    expect(canManageUsers("anjo" as PapelUsuario)).toBe(false);
+    expect(canManageUsers("mentor" as PapelUsuario)).toBe(false);
+    expect(canManageUsers("mentorado" as PapelUsuario)).toBe(false);
+  });
 });
+

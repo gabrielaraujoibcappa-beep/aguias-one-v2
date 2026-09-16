@@ -21,5 +21,5 @@ export function canManageCohorts(papel: PapelUsuario): boolean {
 }
 
 export function canManageUsers(papel: PapelUsuario): boolean {
-  return papel === "admin";
+  return ["admin", "concierge"].includes(papel);
 }
