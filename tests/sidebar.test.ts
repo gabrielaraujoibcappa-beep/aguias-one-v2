@@ -22,13 +22,13 @@ describe("Componente Sidebar (Arquitetura de Navegação Unificada ÁGUIAS ONE v
     expect(html).toContain("IBCAPPA · UniBCAPPA");
 
     // 3. Atalho de Busca Rápida Ctrl+K
-    expect(html).toContain("Buscar no sistema...");
+    expect(html).toContain(">Buscar<");
     expect(html).toContain("Ctrl K");
 
     // 4. Seções estruturadas da Sidebar
-    expect(html).toContain("PRINCIPAL");
-    expect(html).toContain("JORNADA");
-    expect(html).toContain("MEU NEGÓCIO");
+    expect(html).toContain("Principal");
+    expect(html).toContain("Jornada");
+    expect(html).toContain("Meu negócio");
 
     // 5. Links principais do Mentorado
     expect(html).toContain('href="/dashboard"');
@@ -44,5 +44,28 @@ describe("Componente Sidebar (Arquitetura de Navegação Unificada ÁGUIAS ONE v
 
     // 8. Botão hambúrguer acessível para mobile
     expect(html).toContain('aria-label="Abrir menu de navegação"');
+  });
+
+  it("deve seguir o padrão de navegação principal acessível (nav rotulado, lista, controles ligados)", () => {
+    const html = renderToStaticMarkup(React.createElement(Sidebar));
+
+    // nav com rótulo próprio e links organizados em lista
+    expect(html).toContain('<nav aria-label="Navegação principal"');
+    expect(html).toContain('<ul class="sidebar-nav-list"');
+    expect(html).toContain("<li>");
+
+    // Hambúrguer aponta para o drawer que controla
+    expect(html).toContain('aria-controls="sidebar-principal"');
+    expect(html).toContain('id="sidebar-principal"');
+
+    // Seções agrupadas e rotuladas para leitores de tela
+    expect(html).toContain('role="group"');
+    expect(html).toContain('aria-labelledby="sidebar-secao-0"');
+
+    // Links de navegação usam a classe com área de toque mínima
+    expect(html).toContain('class="sidebar-link"');
+
+    // Botões de ícone usam a classe de 44px
+    expect(html).toContain('class="sidebar-icon-btn"');
   });
 });

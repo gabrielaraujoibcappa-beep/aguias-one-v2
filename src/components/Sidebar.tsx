@@ -8,7 +8,6 @@ import { PapelUsuario } from "@/lib/auth/roles";
 import { BuscaRapidaModal } from "./BuscaRapidaModal";
 import { ModalAluno } from "./admin/ModalAluno";
 import {
-  LogoEmblem,
   IconDashboard,
   IconCheckCircle,
   IconCurrency,
@@ -48,9 +47,58 @@ export function Sidebar() {
   const [personaAberta, setPersonaAberta] = useState(false);
   const [buscaAberta, setBuscaAberta] = useState(false);
   const [modalNovoAlunoAberto, setModalNovoAlunoAberto] = useState(false);
+  const [viewportMobile, setViewportMobile] = useState(false);
 
   const personaRef = useRef<HTMLDivElement>(null);
   const sidebarRef = useRef<HTMLElement>(null);
+  const hamburgerRef = useRef<HTMLButtonElement>(null);
+  const fecharDrawerRef = useRef<HTMLButtonElement>(null);
+  const drawerEstavaAberto = useRef(false);
+
+  // Detecta viewport mobile (< 1024px) para controlar `inert` do drawer
+  useEffect(() => {
+    const mq = window.matchMedia("(max-width: 1023px)");
+    const atualizar = () => setViewportMobile(mq.matches);
+    atualizar();
+    mq.addEventListener("change", atualizar);
+    return () => mq.removeEventListener("change", atualizar);
+  }, []);
+
+  // Drawer fechado no mobile fica fora da ordem de tabulação e da árvore de acessibilidade
+  useEffect(() => {
+    const el = sidebarRef.current;
+    if (!el) return;
+    el.toggleAttribute("inert", viewportMobile && !mobileAberta);
+  }, [viewportMobile, mobileAberta]);
+
+  // Gerencia foco ao abrir/fechar o drawer: entra no botão Fechar, volta ao hambúrguer
+  useEffect(() => {
+    if (mobileAberta) {
+      drawerEstavaAberto.current = true;
+      fecharDrawerRef.current?.focus();
+    } else if (drawerEstavaAberto.current) {
+      drawerEstavaAberto.current = false;
+      hamburgerRef.current?.focus();
+    }
+  }, [mobileAberta]);
+
+  // Prende o foco dentro do drawer enquanto estiver aberto no mobile
+  const handleSidebarKeyDown = (e: React.KeyboardEvent<HTMLElement>) => {
+    if (!mobileAberta || !viewportMobile || e.key !== "Tab" || !sidebarRef.current) return;
+    const focaveis = sidebarRef.current.querySelectorAll<HTMLElement>(
+      'a[href], button:not([disabled]), input, select, textarea, [tabindex]:not([tabindex="-1"])'
+    );
+    if (focaveis.length === 0) return;
+    const primeiro = focaveis[0];
+    const ultimo = focaveis[focaveis.length - 1];
+    if (e.shiftKey && document.activeElement === primeiro) {
+      e.preventDefault();
+      ultimo.focus();
+    } else if (!e.shiftKey && document.activeElement === ultimo) {
+      e.preventDefault();
+      primeiro.focus();
+    }
+  };
 
   // Fecha menus ao clicar fora
   useEffect(() => {
@@ -108,19 +156,19 @@ export function Sidebar() {
 
   const linksMentorado: GrupoSidebar[] = [
     {
-      secao: "PRINCIPAL",
+      secao: "Principal",
       itens: [
         { rotulo: "Visão Geral", href: "/dashboard", icone: IconDashboard },
       ],
     },
     {
-      secao: "JORNADA",
+      secao: "Jornada",
       itens: [
         { rotulo: "Check-in Modular", href: "/checkin/mod-1", icone: IconCheckCircle },
       ],
     },
     {
-      secao: "MEU NEGÓCIO",
+      secao: "Meu negócio",
       itens: [
         { rotulo: "Faturamento & ZIP", href: "/faturamento", icone: IconCurrency },
         { rotulo: "7 Canais de Atração", href: "/canais", icone: IconGlobe },
@@ -130,7 +178,7 @@ export function Sidebar() {
 
   const linksStaff: GrupoSidebar[] = [
     {
-      secao: "OPERAÇÃO",
+      secao: "Operação",
       itens: [
         { rotulo: "Turma & Semáforo", href: "/painel/turma", icone: IconUsers },
         { rotulo: "Liberação Módulos", href: "/painel/modulos", icone: IconUnlock },
@@ -138,7 +186,7 @@ export function Sidebar() {
       ],
     },
     {
-      secao: "CADASTROS",
+      secao: "Cadastros",
       itens: [
         { rotulo: "Gestão de Alunos", href: "/admin/alunos", icone: IconUserPlus },
         { rotulo: "Gestão de Turmas", href: "/admin/turmas", icone: IconBuilding },
@@ -153,18 +201,18 @@ export function Sidebar() {
       {/* Barra de Topo Mobile (< 1024px) */}
       <header className="sidebar-mobile-bar">
         <button
+          ref={hamburgerRef}
           type="button"
           onClick={() => setMobileAberta(true)}
           aria-label="Abrir menu de navegação"
           aria-expanded={mobileAberta}
+          aria-controls="sidebar-principal"
+          className="sidebar-icon-btn"
           style={{
             background: "transparent",
             border: "none",
             color: "#ffffff",
             cursor: "pointer",
-            display: "flex",
-            alignItems: "center",
-            padding: "4px",
           }}
         >
           <IconMenu size={22} />
@@ -187,12 +235,12 @@ export function Sidebar() {
           type="button"
           onClick={() => setBuscaAberta(true)}
           aria-label="Buscar no sistema"
+          className="sidebar-icon-btn"
           style={{
             background: "transparent",
             border: "none",
             color: "#ffffff",
             cursor: "pointer",
-            padding: "4px",
           }}
         >
           <IconSearch size={18} />
@@ -210,9 +258,11 @@ export function Sidebar() {
 
       {/* Container Principal da Sidebar */}
       <aside
+        id="sidebar-principal"
         ref={sidebarRef}
         className={`sidebar-container ${recolhida ? "recolhida" : ""} ${mobileAberta ? "mobile-aberta" : ""}`}
         aria-label="Navegação lateral principal"
+        onKeyDown={handleSidebarKeyDown}
       >
         {/* Cabeçalho da Sidebar com Logomarca e Botão Fechar Mobile */}
         <div
@@ -248,7 +298,7 @@ export function Sidebar() {
                   alt="ÁGUIAS ONE"
                   style={{ height: "30px", maxWidth: "170px", objectFit: "contain" }}
                 />
-                <span style={{ fontSize: "9px", color: "rgba(255,255,255,0.45)", textTransform: "uppercase", letterSpacing: "0.6px", marginTop: "2px", fontFamily: "var(--font-family-mono)" }}>
+                <span style={{ fontSize: "11px", color: "rgba(255,255,255,0.6)", marginTop: "2px" }}>
                   IBCAPPA · UniBCAPPA
                 </span>
               </div>
@@ -257,17 +307,17 @@ export function Sidebar() {
 
           {/* Botão Fechar no Mobile */}
           <button
+            ref={fecharDrawerRef}
             type="button"
             onClick={() => setMobileAberta(false)}
             aria-label="Fechar menu de navegação"
+            className="sidebar-icon-btn"
             style={{
               background: "transparent",
               border: "none",
               color: "rgba(255,255,255,0.7)",
               cursor: "pointer",
               display: mobileAberta ? "flex" : "none",
-              alignItems: "center",
-              padding: "4px",
             }}
           >
             <IconX size={20} />
@@ -318,8 +368,6 @@ export function Sidebar() {
                   fontSize: "12px",
                   fontWeight: 700,
                   flexShrink: 0,
-                  border: "1px solid rgba(0, 194, 255, 0.4)",
-                  boxShadow: "0 0 8px rgba(0, 194, 255, 0.3)",
                 }}
               >
                 {personaAtiva.nomeExemplo.charAt(0)}
@@ -356,8 +404,8 @@ export function Sidebar() {
                 minWidth: "220px",
               }}
             >
-              <div style={{ fontSize: "10px", fontWeight: 600, color: "rgba(255,255,255,0.4)", padding: "4px 8px", textTransform: "uppercase" }}>
-                Alternar Perfil
+              <div style={{ fontSize: "11px", fontWeight: 600, color: "rgba(255,255,255,0.65)", padding: "4px 8px" }}>
+                Alternar perfil
               </div>
               {personasConfig.map((p) => {
                 const ativo = p.id === estado.papelAtual;
@@ -366,16 +414,16 @@ export function Sidebar() {
                     key={p.id}
                     type="button"
                     onClick={() => handleTrocaPapel(p.id)}
+                    aria-current={ativo ? "true" : undefined}
                     style={{
                       width: "100%",
                       display: "flex",
                       alignItems: "center",
-                      justifyContent: "space-between",
                       padding: "8px 10px",
                       borderRadius: "var(--radius-xs)",
                       border: "none",
-                      backgroundColor: ativo ? "rgba(0, 82, 255, 0.2)" : "transparent",
-                      color: ativo ? "var(--cor-action-glow, #00c2ff)" : "#ffffff",
+                      backgroundColor: ativo ? "rgba(255, 255, 255, 0.1)" : "transparent",
+                      color: "#ffffff",
                       fontSize: "12px",
                       cursor: "pointer",
                       textAlign: "left",
@@ -383,11 +431,10 @@ export function Sidebar() {
                   >
                     <div>
                       <div style={{ fontWeight: ativo ? 600 : 400 }}>{p.nomeExemplo}</div>
-                      <div style={{ fontSize: "10px", color: "rgba(255,255,255,0.5)" }}>
+                      <div style={{ fontSize: "11px", color: "rgba(255,255,255,0.6)" }}>
                         {p.rotulo} · {p.cargo}
                       </div>
                     </div>
-                    {ativo && <span style={{ fontSize: "11px", color: "var(--cor-action-glow, #00c2ff)" }}>✓</span>}
                   </button>
                 );
               })}
@@ -419,7 +466,7 @@ export function Sidebar() {
           >
             <div style={{ display: "flex", alignItems: "center", gap: "8px" }}>
               <IconSearch size={15} />
-              {!recolhida && <span>Buscar no sistema...</span>}
+              {!recolhida && <span>Buscar</span>}
             </div>
             {!recolhida && (
               <kbd
@@ -427,8 +474,8 @@ export function Sidebar() {
                   backgroundColor: "rgba(255, 255, 255, 0.08)",
                   padding: "2px 5px",
                   borderRadius: "3px",
-                  fontSize: "10px",
-                  fontFamily: "var(--font-family-mono)",
+                  fontSize: "11px",
+                  fontFamily: "inherit",
                 }}
               >
                 Ctrl K
@@ -439,6 +486,7 @@ export function Sidebar() {
 
         {/* Navegação Hierárquica por Seções */}
         <nav
+          aria-label="Navegação principal"
           style={{
             flex: 1,
             overflowY: "auto",
@@ -448,76 +496,82 @@ export function Sidebar() {
             gap: "16px",
           }}
         >
-          {gruposNavegacao.map((grupo, idx) => (
-            <div key={idx}>
-              {!recolhida && (
+          {gruposNavegacao.map((grupo, idx) => {
+            const secaoId = `sidebar-secao-${idx}`;
+            return (
+              <div key={idx} role="group" aria-labelledby={secaoId}>
                 <div
-                  style={{
-                    fontSize: "10px",
-                    fontWeight: 700,
-                    textTransform: "uppercase",
-                    letterSpacing: "0.8px",
-                    color: "rgba(255, 255, 255, 0.35)",
-                    padding: "4px 8px 6px 8px",
-                    fontFamily: "var(--font-family-mono)",
-                  }}
+                  id={secaoId}
+                  className={recolhida ? "sr-only" : undefined}
+                  style={
+                    recolhida
+                      ? undefined
+                      : {
+                          fontSize: "11px",
+                          fontWeight: 600,
+                          color: "rgba(255, 255, 255, 0.6)",
+                          padding: "4px 10px 6px 10px",
+                        }
+                  }
                 >
                   {grupo.secao}
                 </div>
-              )}
 
-              <div style={{ display: "flex", flexDirection: "column", gap: "3px" }}>
-                {grupo.itens.map((item) => {
-                  const ativo = pathname === item.href || (item.href !== "/dashboard" && pathname.startsWith(item.href));
-                  const IconComp = item.icone;
+                <ul className="sidebar-nav-list">
+                  {grupo.itens.map((item) => {
+                    const ativo = pathname === item.href || (item.href !== "/dashboard" && pathname.startsWith(item.href));
+                    const IconComp = item.icone;
+                    const temBadge = item.badge !== undefined && item.badge > 0;
 
-                  return (
-                    <Link
-                      key={item.href}
-                      href={item.href}
-                      aria-current={ativo ? "page" : undefined}
-                      title={recolhida ? item.rotulo : undefined}
-                      style={{
-                        display: "flex",
-                        alignItems: "center",
-                        justifyContent: recolhida ? "center" : "space-between",
-                        padding: recolhida ? "9px 0" : "8px 10px",
-                        borderRadius: "var(--radius-xs)",
-                        backgroundColor: ativo ? "rgba(0, 82, 255, 0.16)" : "transparent",
-                        color: ativo ? "var(--cor-action-glow, #00c2ff)" : "rgba(255, 255, 255, 0.8)",
-                        fontWeight: ativo ? 600 : 400,
-                        fontSize: "13px",
-                        textDecoration: "none",
-                        transition: "all 0.15s ease",
-                        borderLeft: ativo ? "3px solid var(--cor-action-vibrant, #0052ff)" : "3px solid transparent",
-                      }}
-                    >
-                      <div style={{ display: "flex", alignItems: "center", gap: "10px" }}>
-                        <IconComp size={17} style={{ flexShrink: 0 }} />
-                        {!recolhida && <span>{item.rotulo}</span>}
-                      </div>
-
-                      {!recolhida && item.badge !== undefined && item.badge > 0 && (
-                        <span
+                    return (
+                      <li key={item.href}>
+                        <Link
+                          href={item.href}
+                          aria-current={ativo ? "page" : undefined}
+                          title={recolhida ? item.rotulo : undefined}
+                          className="sidebar-link"
                           style={{
-                            backgroundColor: "#b91c1c",
-                            color: "#ffffff",
-                            fontSize: "10px",
-                            fontWeight: 700,
-                            padding: "1px 6px",
-                            borderRadius: "var(--radius-pill)",
-                            fontFamily: "var(--font-family-mono)",
+                            display: "flex",
+                            alignItems: "center",
+                            borderRadius: "var(--radius-xs)",
+                            backgroundColor: ativo ? "rgba(255, 255, 255, 0.1)" : "transparent",
+                            color: ativo ? "#ffffff" : "rgba(255, 255, 255, 0.8)",
+                            fontWeight: ativo ? 600 : 400,
+                            fontSize: "13px",
+                            textDecoration: "none",
+                            transition: "background-color 0.15s ease, color 0.15s ease",
                           }}
                         >
-                          {item.badge}
-                        </span>
-                      )}
-                    </Link>
-                  );
-                })}
+                          <div style={{ display: "flex", alignItems: "center", gap: "10px" }}>
+                            <IconComp size={17} style={{ flexShrink: 0 }} />
+                            {/* Rótulo sempre presente no DOM: visível expandido, apenas para leitores de tela recolhido */}
+                            <span className={recolhida ? "sr-only" : undefined}>{item.rotulo}</span>
+                          </div>
+
+                          {temBadge && !recolhida && (
+                            <span
+                              aria-label={`${item.badge} pendentes`}
+                              style={{
+                                backgroundColor: "#b91c1c",
+                                color: "#ffffff",
+                                fontSize: "11px",
+                                fontWeight: 600,
+                                padding: "1px 6px",
+                                borderRadius: "var(--radius-pill)",
+                              }}
+                            >
+                              {item.badge}
+                            </span>
+                          )}
+                          {temBadge && recolhida && <span className="sr-only">, {item.badge} pendentes</span>}
+                        </Link>
+                      </li>
+                    );
+                  })}
+                </ul>
               </div>
-            </div>
-          ))}
+            );
+          })}
         </nav>
 
         {/* Ação Primária Contextual */}
@@ -527,7 +581,7 @@ export function Sidebar() {
               type="button"
               onClick={() => setModalNovoAlunoAberto(true)}
               className="btn-primary"
-              title={recolhida ? "+ Novo Mentorado" : undefined}
+              title={recolhida ? "Novo mentorado" : undefined}
               style={{
                 width: "100%",
                 fontSize: "12px",
@@ -540,13 +594,13 @@ export function Sidebar() {
               }}
             >
               <IconUserPlus size={14} />
-              {!recolhida && <span>+ Novo Mentorado</span>}
+              <span className={recolhida ? "sr-only" : undefined}>Novo mentorado</span>
             </button>
           ) : (
             <Link
               href="/faturamento"
               className="btn-primary"
-              title={recolhida ? "+ Faturamento" : undefined}
+              title={recolhida ? "Lançar faturamento" : undefined}
               style={{
                 width: "100%",
                 fontSize: "12px",
@@ -560,7 +614,7 @@ export function Sidebar() {
               }}
             >
               <IconCurrency size={14} />
-              {!recolhida && <span>+ Faturamento</span>}
+              <span className={recolhida ? "sr-only" : undefined}>Lançar faturamento</span>
             </Link>
           )}
         </div>
@@ -574,29 +628,25 @@ export function Sidebar() {
             alignItems: "center",
             justifyContent: recolhida ? "center" : "space-between",
             fontSize: "11px",
-            color: "rgba(255, 255, 255, 0.4)",
+            color: "rgba(255, 255, 255, 0.6)",
           }}
         >
           {!recolhida && (
-            <span style={{ fontFamily: "var(--font-family-mono)" }}>
-              Turma 2026.1
-            </span>
+            <span>Turma 2026.1</span>
           )}
 
           <button
             type="button"
             onClick={() => setRecolhida(!recolhida)}
             aria-label={recolhida ? "Expandir barra lateral" : "Recolher barra lateral"}
+            aria-expanded={!recolhida}
             title={recolhida ? "Expandir barra" : "Recolher barra"}
+            className="sidebar-icon-btn"
             style={{
               background: "transparent",
               border: "none",
-              color: "rgba(255, 255, 255, 0.5)",
+              color: "rgba(255, 255, 255, 0.7)",
               cursor: "pointer",
-              padding: "4px",
-              display: "flex",
-              alignItems: "center",
-              justifyContent: "center",
               borderRadius: "var(--radius-xs)",
             }}
           >
