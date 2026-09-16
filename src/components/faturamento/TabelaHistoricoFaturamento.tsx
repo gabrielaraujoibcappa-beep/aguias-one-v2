@@ -2,6 +2,7 @@
 
 import React from "react";
 import { DeclaracaoFaturamento, formatarMoedaReal } from "@/lib/api/faturamento";
+import { BadgeStatusAuditoria } from "./BadgeStatusAuditoria";
 
 interface TabelaHistoricoFaturamentoProps {
   historico: DeclaracaoFaturamento[];
@@ -25,12 +26,13 @@ export function TabelaHistoricoFaturamento({ historico }: TabelaHistoricoFaturam
             <th style={{ padding: "12px 8px" }}>Valor Bruto Declarado</th>
             <th style={{ padding: "12px 8px" }}>Comprovantes / ZIP</th>
             <th style={{ padding: "12px 8px" }}>Data do Envio</th>
+            <th style={{ padding: "12px 8px" }}>Auditoria</th>
           </tr>
         </thead>
         <tbody>
           {historico.length === 0 ? (
             <tr>
-              <td colSpan={4} style={{ padding: "24px 0", textAlign: "center", color: "var(--cor-muted)" }}>
+              <td colSpan={5} style={{ padding: "24px 0", textAlign: "center", color: "var(--cor-muted)" }}>
                 Nenhuma declaração lançada até o momento.
               </td>
             </tr>
@@ -63,6 +65,14 @@ export function TabelaHistoricoFaturamento({ historico }: TabelaHistoricoFaturam
                 </td>
                 <td style={{ padding: "14px 8px", fontSize: "13px", color: "var(--cor-muted)" }}>
                   {item.criadoEm ? new Date(item.criadoEm).toLocaleDateString("pt-BR") : "Hoje"}
+                </td>
+                <td style={{ padding: "14px 8px" }}>
+                  <BadgeStatusAuditoria status={item.statusAuditoria} />
+                  {item.statusAuditoria === "ajuste_solicitado" && item.parecerAuditoria && (
+                    <div style={{ fontSize: "12px", color: "var(--cor-text-muted)", marginTop: "4px", maxWidth: "260px" }}>
+                      {item.parecerAuditoria}
+                    </div>
+                  )}
                 </td>
               </tr>
             ))

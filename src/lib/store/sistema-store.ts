@@ -1,16 +1,43 @@
 "use client";
 
-import { useState, useEffect } from "react";
+import { useEffect, useSyncExternalStore } from "react";
 import { AlunoCadastro } from "../api/alunos";
 import { TurmaCadastro } from "../api/turmas";
 import { ModuloItem, MODULOS_PADRAO_AGUIAS_ONE } from "../api/modulos-liberacao";
-import { DeclaracaoFaturamento, FATURAMENTOS_HISTORICO_MOCK, META_FATURAMENTO_ANUAL_PADRAO } from "../api/faturamento";
+import {
+  DeclaracaoFaturamento,
+  FATURAMENTOS_HISTORICO_MOCK,
+  META_FATURAMENTO_ANUAL_PADRAO,
+  METAS_FATURAMENTO_ALUNOS_MOCK,
+  StatusAuditoriaFaturamento,
+  filtrarFaturamentosPorAluno,
+  obterMetaAnualAluno,
+  processarAuditoriaFaturamento,
+} from "../api/faturamento";
 import { CanalItem, CANAIS_INICIAIS_MOCK } from "../api/canais";
 import { EntregaPendente, ENTREGAS_MOCK } from "../api/auditoria";
 import { AlunoSemaforoStatus, ALUNOS_SEMAFORO_MOCK } from "../api/turma-semaforo";
 import { PapelUsuario } from "../auth/roles";
+import {
+  BloqueioAcesso,
+  DadosNovoBloqueio,
+  criarBloqueio,
+  encerrarBloqueio,
+  obterBloqueioVigente,
+} from "../api/bloqueio-acesso";
 
 const STORAGE_KEY = "aguias_one_v2_store";
+
+/** Id do aluno da sessão de demonstração (Dr. Roberto Silva). */
+export const ALUNO_ATUAL_ID = "1";
+
+const NOMES_AVALIADORES: Record<PapelUsuario, string> = {
+  admin: "Coordenação UniBCAPPA (Admin)",
+  concierge: "Flávio Lopes (Concierge)",
+  anjo: "Ana Carolina (Anjo)",
+  mentor: "Prof. Edilson Aguiais (Mentor)",
+  mentorado: "Mentorado",
+};
 
 export interface SistemaState {
   papelAtual: PapelUsuario;
@@ -22,7 +49,12 @@ export interface SistemaState {
   modulos: ModuloItem[];
   entregas: EntregaPendente[];
   faturamentos: DeclaracaoFaturamento[];
-  metaFaturamentoAnual: number;
+  /** Meta anual de faturamento por aluno (id do aluno → valor em reais). */
+  metasFaturamentoAlunos: Record<string, number>;
+  /** Bloqueio de acesso vigente (ou último) por aluno. */
+  bloqueiosAcesso: Record<string, BloqueioAcesso>;
+  /** Trilha completa de bloqueios e desbloqueios, mais recente primeiro. */
+  historicoBloqueios: BloqueioAcesso[];
   canais: CanalItem[];
   alunos: AlunoCadastro[];
   turmas: TurmaCadastro[];
@@ -39,7 +71,9 @@ const estadoInicial: SistemaState = {
   modulos: MODULOS_PADRAO_AGUIAS_ONE,
   entregas: ENTREGAS_MOCK,
   faturamentos: FATURAMENTOS_HISTORICO_MOCK,
-  metaFaturamentoAnual: META_FATURAMENTO_ANUAL_PADRAO,
+  metasFaturamentoAlunos: METAS_FATURAMENTO_ALUNOS_MOCK,
+  bloqueiosAcesso: {},
+  historicoBloqueios: [],
   canais: CANAIS_INICIAIS_MOCK,
   alunos: [
     {
@@ -101,111 +135,269 @@ const estadoInicial: SistemaState = {
   alunosSemaforo: ALUNOS_SEMAFORO_MOCK,
 };
 
+/**
+ * Reconcilia um estado salvo em versões anteriores com o formato atual:
+ * campos novos recebem o valor inicial, declarações sem aluno passam a pertencer
+ * ao aluno da sessão e a antiga meta única vira a meta desse aluno.
+ */
+export function migrarEstadoSalvo(salvo: Partial<SistemaState> & { metaFaturamentoAnual?: number }): SistemaState {
+  const base: SistemaState = { ...estadoInicial, ...salvo } as SistemaState;
+  const versaoAntiga = !salvo.metasFaturamentoAlunos; // salvo antes da auditoria de faturamento existir
+  const mockPorId = new Map(estadoInicial.faturamentos.map((f) => [f.id, f]));
+
+  const faturamentos: DeclaracaoFaturamento[] = (salvo.faturamentos ?? estadoInicial.faturamentos).map((f) => {
+    const demo = versaoAntiga && f.id ? mockPorId.get(f.id) : undefined;
+    return {
+      ...f,
+      alunoId: f.alunoId ?? demo?.alunoId ?? ALUNO_ATUAL_ID,
+      statusAuditoria: f.statusAuditoria ?? demo?.statusAuditoria ?? "pendente",
+      parecerAuditoria: f.parecerAuditoria ?? demo?.parecerAuditoria,
+      auditadoPor: f.auditadoPor ?? demo?.auditadoPor,
+      auditadoEm: f.auditadoEm ?? demo?.auditadoEm,
+    };
+  });
+
+  // Uma única vez, na migração da versão antiga: completa com as declarações de demonstração ausentes
+  if (versaoAntiga) {
+    const idsSalvos = new Set(faturamentos.map((f) => f.id));
+    for (const demo of estadoInicial.faturamentos) {
+      if (!idsSalvos.has(demo.id)) faturamentos.push(demo);
+    }
+  }
+
+  const metas: Record<string, number> = { ...estadoInicial.metasFaturamentoAlunos, ...(salvo.metasFaturamentoAlunos ?? {}) };
+  if (versaoAntiga && Number.isFinite(salvo.metaFaturamentoAnual) && (salvo.metaFaturamentoAnual as number) > 0) {
+    metas[ALUNO_ATUAL_ID] = salvo.metaFaturamentoAnual as number;
+  }
+
+  return { ...base, faturamentos, metasFaturamentoAlunos: metas };
+}
+
+/** Cookie lido pelo middleware para barrar o mentorado bloqueado já no servidor. */
+function sincronizarCookieBloqueio(estado: SistemaState) {
+  if (typeof document === "undefined") return;
+  const bloqueado = estado.papelAtual === "mentorado" && Boolean(obterBloqueioVigente(estado.bloqueiosAcesso ?? {}, ALUNO_ATUAL_ID));
+  document.cookie = `acesso-bloqueado=${bloqueado ? "1" : "0"}; path=/; max-age=31536000; SameSite=Lax`;
+}
+
+// ---------------------------------------------------------------------------
+// Store compartilhado: um único estado em memória, persistido no localStorage,
+// ao qual todos os componentes se inscrevem. Uma ação em qualquer componente
+// (sidebar, página, modal) é vista imediatamente pelos demais.
+// ---------------------------------------------------------------------------
+let estadoGlobal: SistemaState = estadoInicial;
+let carregadoGlobal = false;
+const ouvintes = new Set<() => void>();
+
+function notificar() {
+  ouvintes.forEach((ouvinte) => ouvinte());
+}
+
+function inscrever(ouvinte: () => void) {
+  ouvintes.add(ouvinte);
+  return () => {
+    ouvintes.delete(ouvinte);
+  };
+}
+
+const lerEstado = () => estadoGlobal;
+const lerCarregado = () => carregadoGlobal;
+const lerEstadoNoServidor = () => estadoInicial;
+const lerCarregadoNoServidor = () => false;
+
+function carregarDoArmazenamento() {
+  if (carregadoGlobal || typeof window === "undefined") return;
+  try {
+    const salvo = localStorage.getItem(STORAGE_KEY);
+    if (salvo) {
+      const dados = migrarEstadoSalvo(JSON.parse(salvo));
+      estadoGlobal = dados;
+      if (typeof document !== "undefined" && dados.papelAtual) {
+        document.cookie = `user-role=${dados.papelAtual}; path=/; max-age=31536000; SameSite=Lax`;
+      }
+      sincronizarCookieBloqueio(dados);
+    } else if (typeof document !== "undefined") {
+      document.cookie = `user-role=mentorado; path=/; max-age=31536000; SameSite=Lax`;
+    }
+  } catch {
+    // fallback para estado inicial
+  }
+  carregadoGlobal = true;
+  notificar();
+}
+
+function salvarEstado(novo: SistemaState) {
+  estadoGlobal = novo;
+  try {
+    localStorage.setItem(STORAGE_KEY, JSON.stringify(novo));
+    if (typeof document !== "undefined" && novo.papelAtual) {
+      document.cookie = `user-role=${novo.papelAtual}; path=/; max-age=31536000; SameSite=Lax`;
+    }
+    sincronizarCookieBloqueio(novo);
+  } catch {
+    // ignore
+  }
+  notificar();
+}
+
+/** Somente para testes: volta o estado em memória ao inicial. */
+export function resetarStoreParaTestes() {
+  estadoGlobal = estadoInicial;
+  carregadoGlobal = false;
+}
+
 export function useSistemaStore() {
-  const [estado, setEstado] = useState<SistemaState>(estadoInicial);
-  const [carregado, setCarregado] = useState(false);
+  const estado = useSyncExternalStore(inscrever, lerEstado, lerEstadoNoServidor);
+  const carregado = useSyncExternalStore(inscrever, lerCarregado, lerCarregadoNoServidor);
 
   useEffect(() => {
-    try {
-      const salvo = localStorage.getItem(STORAGE_KEY);
-      if (salvo) {
-        const dados = { ...estadoInicial, ...JSON.parse(salvo) } as SistemaState;
-        setEstado(dados);
-        if (typeof document !== "undefined" && dados.papelAtual) {
-          document.cookie = `user-role=${dados.papelAtual}; path=/; max-age=31536000; SameSite=Lax`;
-        }
-      } else {
-        if (typeof document !== "undefined") {
-          document.cookie = `user-role=mentorado; path=/; max-age=31536000; SameSite=Lax`;
-        }
-      }
-    } catch {
-      // fallback para estado inicial
-    }
-    setCarregado(true);
+    carregarDoArmazenamento();
   }, []);
 
-  const salvarEstado = (novo: SistemaState) => {
-    setEstado(novo);
-    try {
-      localStorage.setItem(STORAGE_KEY, JSON.stringify(novo));
-      if (typeof document !== "undefined" && novo.papelAtual) {
-        document.cookie = `user-role=${novo.papelAtual}; path=/; max-age=31536000; SameSite=Lax`;
-      }
-    } catch {
-      // ignore
-    }
-  };
-
   const mudarPapel = (novoPapel: PapelUsuario) => {
-    salvarEstado({ ...estado, papelAtual: novoPapel });
+    salvarEstado({ ...estadoGlobal, papelAtual: novoPapel });
   };
 
   const alternarModulo = (moduloId: string, novoStatus: "liberado" | "bloqueado") => {
-    const modulosAtualizados = estado.modulos.map((m) =>
+    const modulosAtualizados = estadoGlobal.modulos.map((m) =>
       m.id === moduloId ? { ...m, status: novoStatus, liberadoEm: novoStatus === "liberado" ? new Date().toISOString() : undefined } : m
     );
-    salvarEstado({ ...estado, modulos: modulosAtualizados });
+    salvarEstado({ ...estadoGlobal, modulos: modulosAtualizados });
   };
 
   const submeterCheckin = (entrega: EntregaPendente) => {
     salvarEstado({
-      ...estado,
-      entregas: [entrega, ...estado.entregas.filter((e) => e.id !== entrega.id)],
+      ...estadoGlobal,
+      entregas: [entrega, ...estadoGlobal.entregas.filter((e) => e.id !== entrega.id)],
     });
   };
 
   const auditarEntrega = (id: string, decisao: "aprovado" | "ajuste_solicitado", parecer?: string) => {
-    const entregasAtualizadas = estado.entregas.map((e) =>
+    const entregasAtualizadas = estadoGlobal.entregas.map((e) =>
       e.id === id
         ? {
             ...e,
             status: decisao,
             parecerTexto: parecer,
             avaliadoEm: new Date().toISOString(),
-            avaliadoPor: estado.papelAtual === "anjo" ? "Ana Carolina (Anjo)" : "Flávio Lopes (Concierge)",
+            avaliadoPor: estadoGlobal.papelAtual === "anjo" ? "Ana Carolina (Anjo)" : "Flávio Lopes (Concierge)",
           }
         : e
     );
-    salvarEstado({ ...estado, entregas: entregasAtualizadas });
+    salvarEstado({ ...estadoGlobal, entregas: entregasAtualizadas });
   };
 
   const adicionarFaturamento = (faturamento: DeclaracaoFaturamento) => {
+    const nova: DeclaracaoFaturamento = {
+      ...faturamento,
+      id: faturamento.id || `fat-${Date.now()}`,
+      alunoId: faturamento.alunoId ?? ALUNO_ATUAL_ID,
+      statusAuditoria: faturamento.statusAuditoria ?? "pendente",
+      criadoEm: faturamento.criadoEm ?? new Date().toISOString(),
+    };
     salvarEstado({
-      ...estado,
-      faturamentos: [faturamento, ...estado.faturamentos],
+      ...estadoGlobal,
+      faturamentos: [nova, ...estadoGlobal.faturamentos],
     });
   };
 
-  const definirMetaFaturamentoAnual = (valor: number) => {
-    const metaValida = Number.isFinite(valor) && valor > 0 ? valor : META_FATURAMENTO_ANUAL_PADRAO;
-    salvarEstado({ ...estado, metaFaturamentoAnual: metaValida });
+  /** Equipe: cria ou atualiza uma declaração em nome do aluno (upsert por id). */
+  const salvarFaturamento = (faturamento: DeclaracaoFaturamento) => {
+    const editor = NOMES_AVALIADORES[estadoGlobal.papelAtual];
+    const existe = faturamento.id && estadoGlobal.faturamentos.some((f) => f.id === faturamento.id);
+    if (existe) {
+      salvarEstado({
+        ...estadoGlobal,
+        faturamentos: estadoGlobal.faturamentos.map((f) => (f.id === faturamento.id ? { ...f, ...faturamento, editadoPor: editor } : f)),
+      });
+      return;
+    }
+    const nova: DeclaracaoFaturamento = {
+      ...faturamento,
+      id: faturamento.id || `fat-${Date.now()}`,
+      alunoId: faturamento.alunoId ?? ALUNO_ATUAL_ID,
+      statusAuditoria: faturamento.statusAuditoria ?? "pendente",
+      criadoEm: faturamento.criadoEm ?? new Date().toISOString(),
+      editadoPor: editor,
+    };
+    salvarEstado({ ...estadoGlobal, faturamentos: [nova, ...estadoGlobal.faturamentos] });
   };
 
+  const excluirFaturamento = (id: string) => {
+    salvarEstado({ ...estadoGlobal, faturamentos: estadoGlobal.faturamentos.filter((f) => f.id !== id) });
+  };
+
+  const auditarFaturamento = (id: string, decisao: "aprovado" | "ajuste_solicitado", parecer?: string) => {
+    const avaliador = NOMES_AVALIADORES[estadoGlobal.papelAtual];
+    salvarEstado({
+      ...estadoGlobal,
+      faturamentos: estadoGlobal.faturamentos.map((f) => (f.id === id ? processarAuditoriaFaturamento(f, decisao, parecer, avaliador) : f)),
+    });
+  };
+
+  const definirMetaFaturamentoAnual = (valor: number, alunoId: string = ALUNO_ATUAL_ID) => {
+    const metaValida = Number.isFinite(valor) && valor > 0 ? valor : META_FATURAMENTO_ANUAL_PADRAO;
+    salvarEstado({
+      ...estadoGlobal,
+      metasFaturamentoAlunos: { ...estadoGlobal.metasFaturamentoAlunos, [alunoId]: metaValida },
+    });
+  };
+
+  /** Equipe: bloqueia o acesso de um aluno ao sistema. Substitui um bloqueio vigente, se houver. */
+  const bloquearAcesso = (dados: DadosNovoBloqueio) => {
+    const autor = NOMES_AVALIADORES[estadoGlobal.papelAtual];
+    const novo = criarBloqueio(dados, autor);
+    salvarEstado({
+      ...estadoGlobal,
+      bloqueiosAcesso: { ...estadoGlobal.bloqueiosAcesso, [dados.alunoId]: novo },
+      historicoBloqueios: [novo, ...estadoGlobal.historicoBloqueios],
+    });
+  };
+
+  /** Equipe: encerra o bloqueio vigente do aluno, registrando quem liberou e por quê. */
+  const desbloquearAcesso = (alunoId: string, observacao?: string) => {
+    const vigente = estadoGlobal.bloqueiosAcesso[alunoId];
+    if (!vigente || vigente.desbloqueadoEm) return;
+    const encerrado = encerrarBloqueio(vigente, NOMES_AVALIADORES[estadoGlobal.papelAtual], observacao);
+    salvarEstado({
+      ...estadoGlobal,
+      bloqueiosAcesso: { ...estadoGlobal.bloqueiosAcesso, [alunoId]: encerrado },
+      historicoBloqueios: estadoGlobal.historicoBloqueios.map((b) => (b.id === encerrado.id ? encerrado : b)),
+    });
+  };
+
+  // Seletores do aluno da sessão
+  const bloqueioAlunoAtual = obterBloqueioVigente(estadoGlobal.bloqueiosAcesso ?? {}, ALUNO_ATUAL_ID);
+  const faturamentosAlunoAtual = filtrarFaturamentosPorAluno(estadoGlobal.faturamentos, ALUNO_ATUAL_ID);
+  const metaAnualAlunoAtual = obterMetaAnualAluno(estadoGlobal.metasFaturamentoAlunos, ALUNO_ATUAL_ID);
+  const faturamentosPendentesAuditoria = estadoGlobal.faturamentos.filter(
+    (f) => ((f.statusAuditoria ?? "pendente") as StatusAuditoriaFaturamento) === "pendente"
+  ).length;
+
   const atualizarCanal = (nomeCanal: string, status: "ativo" | "nao_iniciado", url?: string) => {
-    const canaisAtualizados = estado.canais.map((c) =>
+    const canaisAtualizados = estadoGlobal.canais.map((c) =>
       c.nome === nomeCanal ? { ...c, status, url: url ?? c.url, atualizadoEm: new Date().toISOString() } : c
     );
-    salvarEstado({ ...estado, canais: canaisAtualizados });
+    salvarEstado({ ...estadoGlobal, canais: canaisAtualizados });
   };
 
   const salvarAluno = (aluno: AlunoCadastro) => {
-    const existe = estado.alunos.some((a) => a.id === aluno.id);
+    const existe = estadoGlobal.alunos.some((a) => a.id === aluno.id);
     let novosAlunos: AlunoCadastro[];
     if (existe) {
-      novosAlunos = estado.alunos.map((a) => (a.id === aluno.id ? aluno : a));
+      novosAlunos = estadoGlobal.alunos.map((a) => (a.id === aluno.id ? aluno : a));
     } else {
-      novosAlunos = [{ ...aluno, id: aluno.id || String(Date.now()) }, ...estado.alunos];
+      novosAlunos = [{ ...aluno, id: aluno.id || String(Date.now()) }, ...estadoGlobal.alunos];
     }
-    salvarEstado({ ...estado, alunos: novosAlunos });
+    salvarEstado({ ...estadoGlobal, alunos: novosAlunos });
   };
 
   const excluirAluno = (id: string) => {
-    salvarEstado({ ...estado, alunos: estado.alunos.filter((a) => a.id !== id) });
+    salvarEstado({ ...estadoGlobal, alunos: estadoGlobal.alunos.filter((a) => a.id !== id) });
   };
 
   const salvarTurma = (turma: TurmaCadastro) => {
-    salvarEstado({ ...estado, turmas: [turma, ...estado.turmas] });
+    salvarEstado({ ...estadoGlobal, turmas: [turma, ...estadoGlobal.turmas] });
   };
 
   return {
@@ -216,7 +408,16 @@ export function useSistemaStore() {
     submeterCheckin,
     auditarEntrega,
     adicionarFaturamento,
+    salvarFaturamento,
+    excluirFaturamento,
+    auditarFaturamento,
     definirMetaFaturamentoAnual,
+    bloquearAcesso,
+    desbloquearAcesso,
+    bloqueioAlunoAtual,
+    faturamentosAlunoAtual,
+    metaAnualAlunoAtual,
+    faturamentosPendentesAuditoria,
     atualizarCanal,
     salvarAluno,
     excluirAluno,

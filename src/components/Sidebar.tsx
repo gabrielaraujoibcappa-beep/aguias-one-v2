@@ -40,7 +40,7 @@ interface GrupoSidebar {
 export function Sidebar() {
   const pathname = usePathname();
   const router = useRouter();
-  const { estado, mudarPapel, carregado } = useSistemaStore();
+  const { estado, mudarPapel, carregado, faturamentosPendentesAuditoria } = useSistemaStore();
 
   const [recolhida, setRecolhida] = useState(false);
   const [mobileAberta, setMobileAberta] = useState(false);
@@ -183,6 +183,7 @@ export function Sidebar() {
         { rotulo: "Turma & Semáforo", href: "/painel/turma", icone: IconUsers },
         { rotulo: "Liberação Módulos", href: "/painel/modulos", icone: IconUnlock },
         { rotulo: "Fila de Auditoria", href: "/painel/auditoria", icone: IconAudit, badge: entregasPendentes },
+        { rotulo: "Metas & Faturamento", href: "/painel/faturamento", icone: IconCurrency, badge: faturamentosPendentesAuditoria },
       ],
     },
     {

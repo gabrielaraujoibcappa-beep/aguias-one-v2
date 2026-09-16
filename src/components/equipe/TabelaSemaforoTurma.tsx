@@ -1,6 +1,7 @@
 "use client";
 
 import React, { useState } from "react";
+import Link from "next/link";
 import { AlunoSemaforoStatus } from "@/lib/api/turma-semaforo";
 import { BotaoResgateWhatsApp } from "./BotaoResgateWhatsApp";
 import { StatusDot } from "../ui/StatusDot";
@@ -139,7 +140,13 @@ export function TabelaSemaforoTurma({ alunos }: TabelaSemaforoTurmaProps) {
               alunosFiltrados.map((aluno) => (
                 <tr key={aluno.id} style={{ borderBottom: "1px solid var(--cor-border-light)" }}>
                   <td style={{ padding: "12px 8px" }}>
-                    <div style={{ fontWeight: 600, color: "var(--cor-ink)" }}>{aluno.nome}</div>
+                    <Link
+                      href={`/painel/aluno/${encodeURIComponent(aluno.id.replace(/^aluno-/, ""))}?contexto=turma-semaforo`}
+                      title="Abrir ficha completa do mentorado"
+                      style={{ fontWeight: 600, color: "var(--cor-ink)", textDecoration: "none" }}
+                    >
+                      {aluno.nome}
+                    </Link>
                     <div style={{ fontSize: "11px", color: "var(--cor-muted)", fontFamily: "var(--font-family-mono)" }}>
                       {aluno.whatsapp}
                     </div>

@@ -1,16 +1,20 @@
 "use client";
 
 import React, { useState } from "react";
+import Link from "next/link";
 import { AlunoCadastro, filtrarAlunosPorBusca } from "@/lib/api/alunos";
+import { BloqueioAcesso, bloqueioEstaVigente } from "@/lib/api/bloqueio-acesso";
 
 interface TabelaAlunosProps {
   alunos: AlunoCadastro[];
   onEditar: (aluno: AlunoCadastro) => void;
-  onExcluir: (id: string) => void;
+  onExcluir: (aluno: AlunoCadastro) => void;
   onNovo: () => void;
+  bloqueios?: Record<string, BloqueioAcesso>;
+  onGerenciarAcesso?: (aluno: AlunoCadastro) => void;
 }
 
-export function TabelaAlunos({ alunos, onEditar, onExcluir, onNovo }: TabelaAlunosProps) {
+export function TabelaAlunos({ alunos, onEditar, onExcluir, onNovo, bloqueios = {}, onGerenciarAcesso }: TabelaAlunosProps) {
   const [busca, setBusca] = useState("");
   const alunosFiltrados = filtrarAlunosPorBusca(alunos, busca);
 
@@ -67,7 +71,9 @@ export function TabelaAlunos({ alunos, onEditar, onExcluir, onNovo }: TabelaAlun
                 </td>
               </tr>
             ) : (
-              alunosFiltrados.map((aluno) => (
+              alunosFiltrados.map((aluno) => {
+                const bloqueado = aluno.id ? bloqueioEstaVigente(bloqueios[aluno.id]) : false;
+                return (
                 <tr key={aluno.id || aluno.email} style={{ borderBottom: "1px solid var(--cor-border-light)" }}>
                   <td style={{ padding: "14px 8px", fontWeight: 500 }}>{aluno.nome}</td>
                   <td style={{ padding: "14px 8px" }}>
@@ -88,8 +94,38 @@ export function TabelaAlunos({ alunos, onEditar, onExcluir, onNovo }: TabelaAlun
                     }}>
                       {aluno.status.toUpperCase()}
                     </span>
+                    {bloqueado && (
+                      <span style={{
+                        display: "inline-block",
+                        marginLeft: "6px",
+                        padding: "2px 8px",
+                        borderRadius: "var(--radius-pill)",
+                        fontSize: "12px",
+                        fontWeight: 600,
+                        backgroundColor: "#111827",
+                        color: "#ffffff",
+                      }}>
+                        ACESSO BLOQUEADO
+                      </span>
+                    )}
                   </td>
-                  <td style={{ padding: "14px 8px", textAlign: "right" }}>
+                  <td style={{ padding: "14px 8px", textAlign: "right", whiteSpace: "nowrap" }}>
+                    {aluno.id && (
+                      <Link
+                        href={`/painel/aluno/${encodeURIComponent(aluno.id)}?contexto=gestao-alunos`}
+                        style={{ color: "var(--cor-ink)", marginRight: "12px", fontWeight: 500 }}
+                      >
+                        Ficha
+                      </Link>
+                    )}
+                    {aluno.id && onGerenciarAcesso && (
+                      <button
+                        onClick={() => onGerenciarAcesso(aluno)}
+                        style={{ color: bloqueado ? "#065f46" : "var(--cor-ink)", marginRight: "12px", fontWeight: 500 }}
+                      >
+                        {bloqueado ? "Desbloquear" : "Bloquear acesso"}
+                      </button>
+                    )}
                     <button
                       onClick={() => onEditar(aluno)}
                       style={{ color: "var(--cor-action-blue)", marginRight: "12px", fontWeight: 500 }}
@@ -97,14 +133,23 @@ export function TabelaAlunos({ alunos, onEditar, onExcluir, onNovo }: TabelaAlun
                       Editar
                     </button>
                     <button
-                      onClick={() => aluno.id && onExcluir(aluno.id)}
-                      style={{ color: "var(--cor-error)", fontWeight: 500 }}
+                      type="button"
+                      onClick={() => onExcluir(aluno)}
+                      aria-label={`Excluir cadastro de ${aluno.nome}`}
+                      style={{
+                        color: "#dc2626",
+                        fontWeight: 500,
+                        background: "none",
+                        border: "none",
+                        cursor: "pointer",
+                      }}
                     >
                       Excluir
                     </button>
                   </td>
                 </tr>
-              ))
+                );
+              })
             )}
           </tbody>
         </table>

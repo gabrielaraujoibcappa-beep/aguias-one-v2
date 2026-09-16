@@ -82,6 +82,14 @@ const ITENS_CATALOGO: ItemBusca[] = [
     icone: IconAudit,
   },
   {
+    id: "metas-faturamento",
+    categoria: "Gestão",
+    titulo: "Metas & Faturamento da Turma",
+    descricao: "Auditoria das declarações mensais e edição de metas por mentorado",
+    rota: "/painel/faturamento",
+    icone: IconCurrency,
+  },
+  {
     id: "crud-aluno",
     categoria: "Ação",
     titulo: "Cadastrar Novo Mentorado",

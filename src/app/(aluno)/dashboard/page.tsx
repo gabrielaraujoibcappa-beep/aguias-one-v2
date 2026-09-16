@@ -10,7 +10,7 @@ import { filtrarModulosVisiveis } from "@/lib/api/modulos-liberacao";
 import { calcularMetaMensal } from "@/lib/api/faturamento";
 
 export default function DashboardAlunoPage() {
-  const { estado, carregado } = useSistemaStore();
+  const { estado, carregado, faturamentosAlunoAtual, metaAnualAlunoAtual } = useSistemaStore();
 
   if (!carregado) return null;
 
@@ -29,12 +29,12 @@ export default function DashboardAlunoPage() {
 
       {/* 2. Indicadores & Metas do Perito (KPIs 360) */}
       <PainelKpisAluno
-        faturamentos={estado.faturamentos}
+        faturamentos={faturamentosAlunoAtual}
         canais={estado.canais}
         modulos={estado.modulos}
         entregas={estado.entregas}
         semaforo="verde"
-        metaMensal={calcularMetaMensal(estado.metaFaturamentoAnual)}
+        metaMensal={calcularMetaMensal(metaAnualAlunoAtual)}
       />
 
       {/* 2. Atalhos Centrais (Check-in, Canais, Faturamento) */}

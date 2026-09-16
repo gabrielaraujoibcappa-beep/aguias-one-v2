@@ -41,6 +41,10 @@ const ROTAS_MAP: Record<string, BreadcrumbItem[]> = {
     { rotulo: "Ciclo de Entregas" },
     { rotulo: "Fila de Auditoria", href: "/painel/auditoria" },
   ],
+  "/painel/faturamento": [
+    { rotulo: "Operação" },
+    { rotulo: "Metas & Faturamento", href: "/painel/faturamento" },
+  ],
   "/admin/alunos": [
     { rotulo: "Cadastros" },
     { rotulo: "Gestão de Alunos", href: "/admin/alunos" },
@@ -56,9 +60,10 @@ export function Breadcrumbs() {
 
   if (!pathname || pathname === "/") return null;
 
-  const itens = ROTAS_MAP[pathname] || [
-    { rotulo: pathname.replace("/", "").replace("-", " ") },
-  ];
+  const itens: BreadcrumbItem[] = ROTAS_MAP[pathname]
+    || (pathname.startsWith("/painel/aluno/")
+      ? [{ rotulo: "Operação" }, { rotulo: "Ficha do Mentorado" }]
+      : [{ rotulo: pathname.replace("/", "").replace("-", " ") }]);
 
   return (
     <nav

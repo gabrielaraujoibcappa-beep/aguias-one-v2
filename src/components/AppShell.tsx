@@ -4,13 +4,22 @@ import React from "react";
 import { usePathname } from "next/navigation";
 import { Sidebar } from "./Sidebar";
 import { Breadcrumbs } from "./Breadcrumbs";
+import { TelaAcessoBloqueado } from "./TelaAcessoBloqueado";
+import { useSistemaStore } from "@/lib/store/sistema-store";
+
+const ROTAS_SEM_SHELL = ["/login", "/acesso-bloqueado"];
 
 export function AppShell({ children }: { children: React.ReactNode }) {
   const pathname = usePathname();
-  const isLoginPage = pathname === "/login";
+  const { estado, carregado, bloqueioAlunoAtual } = useSistemaStore();
 
-  if (isLoginPage) {
+  if (ROTAS_SEM_SHELL.includes(pathname ?? "")) {
     return <main style={{ minHeight: "100vh", backgroundColor: "var(--cor-dark-deep, #0a0a0b)" }}>{children}</main>;
+  }
+
+  // Mentorado com bloqueio vigente: nenhuma área do sistema é renderizada
+  if (carregado && estado.papelAtual === "mentorado" && bloqueioAlunoAtual && pathname !== "/") {
+    return <TelaAcessoBloqueado bloqueio={bloqueioAlunoAtual} />;
   }
 
   return (

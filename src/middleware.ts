@@ -9,6 +9,7 @@ export function middleware(request: NextRequest) {
     pathname.startsWith("/_next") ||
     pathname.startsWith("/api/public") ||
     pathname === "/login" ||
+    pathname === "/acesso-bloqueado" ||
     pathname === "/"
   ) {
     return NextResponse.next();
@@ -17,6 +18,14 @@ export function middleware(request: NextRequest) {
   // Obter cookie de autenticação / sessão
   const token = request.cookies.get("sb-access-token")?.value;
   const userRole = request.cookies.get("user-role")?.value;
+  const acessoBloqueado = request.cookies.get("acesso-bloqueado")?.value === "1";
+
+  // Mentorado com acesso bloqueado pela equipe: barra qualquer área do sistema
+  if (userRole === "mentorado" && acessoBloqueado) {
+    const url = request.nextUrl.clone();
+    url.pathname = "/acesso-bloqueado";
+    return NextResponse.redirect(url);
+  }
 
   // Se houver autenticação formal com token e usuário for mentorado tentando acessar área de equipe
   if (token && userRole === "mentorado" && (pathname.startsWith("/painel") || pathname.startsWith("/admin"))) {

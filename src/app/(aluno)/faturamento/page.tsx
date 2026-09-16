@@ -9,7 +9,7 @@ import { useSistemaStore } from "@/lib/store/sistema-store";
 
 export default function FaturamentoAlunoPage() {
   const router = useRouter();
-  const { estado, adicionarFaturamento, definirMetaFaturamentoAnual, carregado } = useSistemaStore();
+  const { adicionarFaturamento, definirMetaFaturamentoAnual, faturamentosAlunoAtual, metaAnualAlunoAtual, carregado } = useSistemaStore();
 
   if (!carregado) return null;
 
@@ -38,13 +38,13 @@ export default function FaturamentoAlunoPage() {
       </div>
 
       <MetaFaturamentoAnual
-        faturamentos={estado.faturamentos}
-        metaAnual={estado.metaFaturamentoAnual}
-        onDefinirMeta={definirMetaFaturamentoAnual}
+        faturamentos={faturamentosAlunoAtual}
+        metaAnual={metaAnualAlunoAtual}
+        onDefinirMeta={(valor) => definirMetaFaturamentoAnual(valor)}
       />
 
       <FormularioFaturamento onSalvar={adicionarFaturamento} />
-      <TabelaHistoricoFaturamento historico={estado.faturamentos} />
+      <TabelaHistoricoFaturamento historico={faturamentosAlunoAtual} />
     </div>
   );
 }
