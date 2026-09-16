@@ -1,36 +1,46 @@
 :root {
-  /* Cores Principais (DESIGN.md - Cohere Enterprise 2026) */
-  --cor-primary: #17171c;
+  /* Cores de Destaque e Ação */
+  --cor-action-vibrant: #0052ff;
+  --cor-action-blue: #0052ff;
+  --cor-action-glow: #00c2ff;
+  --gradiente-cta: linear-gradient(135deg, #0052ff 0%, #00c2ff 100%);
+  --gradiente-cta-hover: linear-gradient(135deg, #1a60ff 0%, #4da9ff 100%);
+
+  /* Cores de Fundo e Base */
+  --cor-canvas: #ffffff;      /* Branco Puro: cards e containers */
+  --cor-card-bg: #ffffff;
+  --cor-bg-page: #f8f9fa;     /* Cinza Ultraclaro / Off-White: fundo geral */
+  --cor-soft-stone: #f5f6f8;  /* Off-White neutro de apoio */
+  --cor-dark-deep: #0a0a0b;   /* Preto Profundo: Sidebar e blocos escuros */
   --cor-black: #000000;
-  --cor-ink: #212121;
-  --cor-deep-green: #003c33;
+  --cor-deep-green: #003c33;  /* Cor institucional histórica de acento */
   --cor-dark-navy: #071829;
-  --cor-canvas: #ffffff;
-  --cor-soft-stone: #eeece7;
   --cor-pale-green: #edfce9;
   --cor-pale-blue: #f1f5ff;
 
-  /* Bordas e Linhas */
-  --cor-hairline: #d9d9dd;
-  --cor-border-light: #e5e7eb;
-  --cor-card-border: #f2f2f2;
-
-  /* Neutros e Apoio */
-  --cor-muted: #93939f;
-  --cor-slate: #75758a;
-  --cor-body-muted: #616161;
+  /* Cores de Texto e Tipografia */
+  --cor-primary: #111827;     /* Preto / Cinza Escuro: títulos principais */
+  --cor-ink: #111827;         /* Textos principais de alto contraste */
+  --cor-text-muted: #4b5563;  /* Cinza Médio: subtítulos e descrições */
+  --cor-muted: #6b7280;       /* Cinza Médio secundário */
+  --cor-slate: #6b7280;
+  --cor-body-muted: #4b5563;
   --cor-on-primary: #ffffff;
   --cor-on-dark: #ffffff;
 
-  /* Acentos Semânticos */
-  --cor-action-blue: #1863dc;
-  --cor-focus-blue: #4c6ee6;
+  /* Bordas e Linhas */
+  --cor-border-light: #e5e7eb; /* Bordas sutis */
+  --cor-hairline: #e5e7eb;
+  --cor-card-border: #e5e7eb;
+
+  /* Acentos Semânticos & Status */
+  --cor-focus-blue: #0052ff;
   --cor-coral: #ff7759;
   --cor-coral-soft: #ffad9b;
-  --cor-form-focus: #9b60aa;
-  --cor-error: #b30000;
-  --cor-success: #1b8a5a;
-  --cor-warning: #e09f00;
+  --cor-form-focus: #0052ff;
+  --cor-error: #b91c1c;
+  --cor-success: #10b981;
+  --cor-warning: #f59e0b;
 
   /* Semáforo ÁGUIAS ONE */
   --semaforo-verde: #10b981;
@@ -40,9 +50,9 @@
   /* Arredondamentos (Radii) */
   --radius-xs: 4px;
   --radius-sm: 8px;
-  --radius-md: 16px;
-  --radius-lg: 22px;
-  --radius-xl: 30px;
+  --radius-md: 14px;
+  --radius-lg: 20px;
+  --radius-xl: 28px;
   --radius-pill: 32px;
   --radius-full: 9999px;
 

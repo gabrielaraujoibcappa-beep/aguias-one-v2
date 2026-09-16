@@ -296,15 +296,16 @@ export function Sidebar() {
                   width: "28px",
                   height: "28px",
                   borderRadius: "50%",
-                  backgroundColor: "#003c33",
-                  color: "#5eead4",
+                  backgroundColor: "var(--cor-action-vibrant, #0052ff)",
+                  color: "#ffffff",
                   display: "flex",
                   alignItems: "center",
                   justifyContent: "center",
                   fontSize: "12px",
                   fontWeight: 700,
                   flexShrink: 0,
-                  border: "1px solid rgba(94, 234, 212, 0.3)",
+                  border: "1px solid rgba(0, 194, 255, 0.4)",
+                  boxShadow: "0 0 8px rgba(0, 194, 255, 0.3)",
                 }}
               >
                 {personaAtiva.nomeExemplo.charAt(0)}
@@ -332,7 +333,7 @@ export function Sidebar() {
                 left: "14px",
                 right: "14px",
                 marginTop: "4px",
-                backgroundColor: "#162521",
+                backgroundColor: "var(--cor-primary, #111827)",
                 border: "1px solid rgba(255, 255, 255, 0.15)",
                 borderRadius: "var(--radius-sm)",
                 boxShadow: "0 10px 25px rgba(0,0,0,0.5)",
@@ -359,8 +360,8 @@ export function Sidebar() {
                       padding: "8px 10px",
                       borderRadius: "var(--radius-xs)",
                       border: "none",
-                      backgroundColor: ativo ? "rgba(94, 234, 212, 0.1)" : "transparent",
-                      color: ativo ? "#5eead4" : "#ffffff",
+                      backgroundColor: ativo ? "rgba(0, 82, 255, 0.2)" : "transparent",
+                      color: ativo ? "var(--cor-action-glow, #00c2ff)" : "#ffffff",
                       fontSize: "12px",
                       cursor: "pointer",
                       textAlign: "left",
@@ -372,7 +373,7 @@ export function Sidebar() {
                         {p.rotulo} · {p.cargo}
                       </div>
                     </div>
-                    {ativo && <span style={{ fontSize: "11px", color: "#5eead4" }}>✓</span>}
+                    {ativo && <span style={{ fontSize: "11px", color: "var(--cor-action-glow, #00c2ff)" }}>✓</span>}
                   </button>
                 );
               })}
@@ -468,13 +469,13 @@ export function Sidebar() {
                         justifyContent: recolhida ? "center" : "space-between",
                         padding: recolhida ? "9px 0" : "8px 10px",
                         borderRadius: "var(--radius-xs)",
-                        backgroundColor: ativo ? "var(--cor-deep-green)" : "transparent",
-                        color: ativo ? "#5eead4" : "rgba(255, 255, 255, 0.8)",
+                        backgroundColor: ativo ? "rgba(0, 82, 255, 0.16)" : "transparent",
+                        color: ativo ? "var(--cor-action-glow, #00c2ff)" : "rgba(255, 255, 255, 0.8)",
                         fontWeight: ativo ? 600 : 400,
                         fontSize: "13px",
                         textDecoration: "none",
                         transition: "all 0.15s ease",
-                        borderLeft: ativo ? "3px solid #5eead4" : "3px solid transparent",
+                        borderLeft: ativo ? "3px solid var(--cor-action-vibrant, #0052ff)" : "3px solid transparent",
                       }}
                     >
                       <div style={{ display: "flex", alignItems: "center", gap: "10px" }}>

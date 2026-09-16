@@ -7,8 +7,8 @@
 }
 
 body {
-  background-color: var(--cor-canvas);
-  color: var(--cor-ink);
+  background-color: var(--cor-bg-page, #f8f9fa);
+  color: var(--cor-ink, #111827);
   font-family: var(--font-family-ui);
   font-size: 15px;
   line-height: 1.5;
@@ -19,7 +19,7 @@ body {
 h1, h2, h3, h4, h5, h6 {
   font-family: var(--font-family-display);
   font-weight: 500;
-  color: var(--cor-primary);
+  color: var(--cor-primary, #111827);
   line-height: 1.2;
 }
 
@@ -41,26 +41,31 @@ input, select, textarea {
   font-size: 14px;
 }
 
-/* Componentes Base no Padrão Cohere */
+/* Componentes Base no Padrão ÁGUIAS ONE */
 .btn-primary {
   display: inline-flex;
   align-items: center;
   justify-content: center;
   gap: var(--espaco-sm);
-  background-color: var(--cor-primary);
-  color: var(--cor-on-primary);
+  background: var(--gradiente-cta, linear-gradient(135deg, #0052ff 0%, #00c2ff 100%));
+  color: #ffffff;
   padding: 10px 20px;
   border-radius: var(--radius-pill);
-  font-weight: 500;
-  transition: opacity 0.2s ease, transform 0.1s ease;
+  font-weight: 600;
+  border: none;
+  box-shadow: 0 2px 10px rgba(0, 82, 255, 0.25);
+  transition: all 0.2s cubic-bezier(0.4, 0, 0.2, 1);
 }
 
 .btn-primary:hover {
-  opacity: 0.92;
+  background: var(--gradiente-cta-hover, linear-gradient(135deg, #1a60ff 0%, #4da9ff 100%));
+  box-shadow: 0 4px 16px rgba(0, 82, 255, 0.38);
+  transform: translateY(-1px);
 }
 
 .btn-primary:active {
-  transform: scale(0.98);
+  transform: translateY(0) scale(0.98);
+  box-shadow: 0 2px 8px rgba(0, 82, 255, 0.25);
 }
 
 .btn-secondary {
@@ -68,25 +73,26 @@ input, select, textarea {
   align-items: center;
   justify-content: center;
   gap: var(--espaco-sm);
-  background-color: transparent;
-  color: var(--cor-ink);
-  border: 1px solid var(--cor-hairline);
+  background-color: var(--cor-canvas, #ffffff);
+  color: var(--cor-ink, #111827);
+  border: 1px solid var(--cor-border-light, #e5e7eb);
   padding: 8px 16px;
   border-radius: var(--radius-pill);
   font-weight: 500;
-  transition: background-color 0.2s ease, border-color 0.2s ease;
+  transition: all 0.2s ease;
 }
 
 .btn-secondary:hover {
-  background-color: var(--cor-soft-stone);
-  border-color: var(--cor-border-light);
+  background-color: var(--cor-soft-stone, #f5f6f8);
+  border-color: var(--cor-slate, #6b7280);
 }
 
 .card {
-  background-color: var(--cor-canvas);
-  border: 1px solid var(--cor-border-light);
+  background-color: var(--cor-canvas, #ffffff);
+  border: 1px solid var(--cor-border-light, #e5e7eb);
   border-radius: var(--radius-md);
   padding: var(--espaco-xl);
+  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.04);
 }
 
 .card-dark {
@@ -138,12 +144,12 @@ input, select, textarea {
   display: flex;
   flex-direction: column;
   min-width: 0;
-  background-color: var(--cor-background, #fcfcfc);
+  background-color: var(--cor-bg-page, #f8f9fa);
 }
 
 .sidebar-container {
   width: 260px;
-  background-color: #0c1815;
+  background-color: var(--cor-dark-deep, #0a0a0b);
   color: #e5e7eb;
   display: flex;
   flex-direction: column;
@@ -189,9 +195,9 @@ input, select, textarea {
   .sidebar-mobile-bar {
     display: flex;
     align-items: center;
-    justifyContent: space-between;
+    justify-content: space-between;
     padding: 10px 16px;
-    background-color: #0c1815;
+    background-color: var(--cor-dark-deep, #0a0a0b);
     color: #ffffff;
     border-bottom: 1px solid rgba(255, 255, 255, 0.1);
     position: sticky;
