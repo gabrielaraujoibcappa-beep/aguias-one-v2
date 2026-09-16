@@ -24,7 +24,9 @@ import {
   IconMenu,
   IconX,
   IconMail,
+  IconFolder
 } from "./ui/Icons";
+import { CONTAS_DEMO, MODO_DEMO, encerrarSessao, iniciarSessaoDemo } from "@/lib/auth/sessao-cliente";
 
 interface ItemSidebar {
   rotulo: string;
@@ -58,25 +60,18 @@ export function Sidebar() {
 
   // Detecta viewport mobile (< 1024px) para controlar `inert` do drawer
   useEffect(() => {
-    const mq = window.matchMedia("(max-width: 1023px)");
-    const atualizar = () => setViewportMobile(mq.matches);
-    atualizar();
-    mq.addEventListener("change", atualizar);
-    return () => mq.removeEventListener("change", atualizar);
+    const matcher = window.matchMedia("(max-width: 1023px)");
+    setViewportMobile(matcher.matches);
+    const onChange = (e: MediaQueryListEvent) => setViewportMobile(e.matches);
+    matcher.addEventListener("change", onChange);
+    return () => matcher.removeEventListener("change", onChange);
   }, []);
 
-  // Drawer fechado no mobile fica fora da ordem de tabulação e da árvore de acessibilidade
-  useEffect(() => {
-    const el = sidebarRef.current;
-    if (!el) return;
-    el.toggleAttribute("inert", viewportMobile && !mobileAberta);
-  }, [viewportMobile, mobileAberta]);
-
-  // Gerencia foco ao abrir/fechar o drawer: entra no botão Fechar, volta ao hambúrguer
+  // Foco no drawer quando abre no mobile
   useEffect(() => {
     if (mobileAberta) {
       drawerEstavaAberto.current = true;
-      fecharDrawerRef.current?.focus();
+      setTimeout(() => fecharDrawerRef.current?.focus(), 50);
     } else if (drawerEstavaAberto.current) {
       drawerEstavaAberto.current = false;
       hamburgerRef.current?.focus();
@@ -143,13 +138,25 @@ export function Sidebar() {
     { id: "admin", rotulo: "Admin", cargo: "Gestão", nomeExemplo: "Coordenação UniBCAPPA", rotaPadrao: "/admin/alunos" },
   ];
 
-  const personaAtiva = personasConfig.find((p) => p.id === estado.papelAtual) || personasConfig[0];
+  const configPapel = personasConfig.find((p) => p.id === estado.papelAtual) || personasConfig[0];
+  // Identidade exibida vem da sessão validada no servidor (SessaoSync)
+  const personaAtiva = { ...configPapel, nomeExemplo: estado.usuarioAtual?.nome || configPapel.nomeExemplo };
 
+  // Troca de persona = nova sessão demo; indisponível fora de desenvolvimento
   const handleTrocaPapel = (papelId: PapelUsuario) => {
+    const conta = CONTAS_DEMO.find((c) => c.papel === papelId);
+    const config = personasConfig.find((p) => p.id === papelId);
+    if (!MODO_DEMO || !conta || !config) return;
+    iniciarSessaoDemo(conta.email);
     mudarPapel(papelId);
     setPersonaAberta(false);
-    const config = personasConfig.find((p) => p.id === papelId);
-    if (config) router.push(config.rotaPadrao);
+    window.location.assign(config.rotaPadrao);
+  };
+
+  const handleSair = async () => {
+    setPersonaAberta(false);
+    await encerrarSessao();
+    window.location.assign("/login");
   };
 
   // Contagem dinâmica de entregas aguardando auditoria
@@ -192,6 +199,8 @@ export function Sidebar() {
       itens: [
         { rotulo: "Gestão de Alunos", href: "/admin/alunos", icone: IconUserPlus },
         { rotulo: "Gestão de Turmas", href: "/admin/turmas", icone: IconBuilding },
+        { rotulo: "Chamadas (Presenças)", href: "/admin/chamadas", icone: IconCheckCircle },
+        { rotulo: "Central de Relatórios", href: "/admin/relatorios", icone: IconFolder },
         { rotulo: "Templates de E-mail", href: "/admin/emails", icone: IconMail },
       ],
     },
@@ -407,8 +416,10 @@ export function Sidebar() {
                 minWidth: "220px",
               }}
             >
+              {MODO_DEMO && (
+              <>
               <div style={{ fontSize: "11px", fontWeight: 600, color: "rgba(255,255,255,0.65)", padding: "4px 8px" }}>
-                Alternar perfil
+                Alternar perfil (demo · dev)
               </div>
               {personasConfig.map((p) => {
                 const ativo = p.id === estado.papelAtual;
@@ -441,6 +452,28 @@ export function Sidebar() {
                   </button>
                 );
               })}
+              </>
+              )}
+              <button
+                type="button"
+                onClick={handleSair}
+                style={{
+                  width: "100%",
+                  marginTop: MODO_DEMO ? "4px" : 0,
+                  padding: "8px 10px",
+                  borderRadius: "var(--radius-xs)",
+                  border: "none",
+                  borderTop: MODO_DEMO ? "1px solid rgba(255, 255, 255, 0.1)" : "none",
+                  backgroundColor: "transparent",
+                  color: "#fca5a5",
+                  fontSize: "12px",
+                  fontWeight: 600,
+                  cursor: "pointer",
+                  textAlign: "left",
+                }}
+              >
+                Sair da conta
+              </button>
             </div>
           )}
         </div>

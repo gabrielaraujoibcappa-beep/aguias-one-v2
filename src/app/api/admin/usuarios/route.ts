@@ -1,7 +1,10 @@
 import { NextRequest, NextResponse } from "next/server";
+import { exigirSessao, PAPEIS_GESTAO } from "@/lib/auth/sessao-api";
 import { supabaseAdmin } from "@/lib/supabase/admin";
 
 export async function POST(req: NextRequest) {
+  const auth = await exigirSessao(req, PAPEIS_GESTAO);
+  if (auth.erro) return auth.erro;
   try {
     const body = await req.json();
     const {
@@ -15,6 +18,15 @@ export async function POST(req: NextRequest) {
       papel = "mentorado",
       status = "ativo",
     } = body;
+    if (!["admin", "concierge", "anjo", "mentor", "mentorado"].includes(papel)) {
+      return NextResponse.json({ sucesso: false, erro: "Papel inválido." }, { status: 400 });
+    }
+    if (papel !== "mentorado" && auth.sessao.papel !== "admin") {
+      return NextResponse.json(
+        { sucesso: false, erro: "Apenas administradores podem criar contas da equipe." },
+        { status: 403 }
+      );
+    }
 
     // 1. Validação dos campos obrigatórios
     if (!nome || typeof nome !== "string" || nome.trim().length < 3) {

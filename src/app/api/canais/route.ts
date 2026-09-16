@@ -1,11 +1,15 @@
 import { NextRequest, NextResponse } from "next/server";
+import { exigirSessao, podeAcessarMatricula, respostaProibida } from "@/lib/auth/sessao-api";
 import { supabaseAdmin } from "@/lib/supabase/admin";
 import { CANAIS_TEMPLATE } from "@/lib/api/canais";
 
 export async function GET(req: NextRequest) {
+  const auth = await exigirSessao(req);
+  if (auth.erro) return auth.erro;
   try {
     const { searchParams } = new URL(req.url);
     const matriculaId = searchParams.get("matriculaId");
+    if (matriculaId && !podeAcessarMatricula(auth.sessao, matriculaId)) return respostaProibida();
 
     let canaisDb: any[] = [];
     if (matriculaId) {
@@ -44,9 +48,12 @@ export async function GET(req: NextRequest) {
 }
 
 export async function POST(req: NextRequest) {
+  const auth = await exigirSessao(req);
+  if (auth.erro) return auth.erro;
   try {
     const body = await req.json();
     const { matriculaId, canalNome, status, urlCanal } = body;
+    if (matriculaId && !podeAcessarMatricula(auth.sessao, matriculaId)) return respostaProibida();
 
     if (!matriculaId || !canalNome) {
       return NextResponse.json(

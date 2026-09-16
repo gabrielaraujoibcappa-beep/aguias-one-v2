@@ -1,13 +1,18 @@
 import { NextRequest, NextResponse } from "next/server";
+import { exigirSessao, podeAcessarMatricula, respostaProibida } from "@/lib/auth/sessao-api";
 import { supabaseAdmin } from "@/lib/supabase/admin";
 
 export async function GET(req: NextRequest) {
+  const auth = await exigirSessao(req);
+  if (auth.erro) return auth.erro;
   try {
     const { searchParams } = new URL(req.url);
     const pendentes = searchParams.get("pendentes") === "true";
     const matriculaId = searchParams.get("matriculaId");
     const moduloNumero = searchParams.get("moduloNumero");
     const moduloId = searchParams.get("moduloId");
+    if (pendentes && !auth.sessao.equipe) return respostaProibida();
+    if (matriculaId && !podeAcessarMatricula(auth.sessao, matriculaId)) return respostaProibida();
 
     // 1. Fila de Auditoria da Equipe (/painel/auditoria)
     if (pendentes) {
@@ -62,6 +67,8 @@ export async function GET(req: NextRequest) {
 
     if (matriculaId) {
       query = query.eq("matricula_id", matriculaId);
+    } else if (!auth.sessao.equipe) {
+      query = query.in("matricula_id", auth.sessao.matriculaIds);
     }
 
     if (moduloId) {
@@ -87,9 +94,12 @@ export async function GET(req: NextRequest) {
 }
 
 export async function POST(req: NextRequest) {
+  const auth = await exigirSessao(req);
+  if (auth.erro) return auth.erro;
   try {
     const body = await req.json();
     const { matriculaId, moduloId, moduloNumero, travou, duvidaCall, evidencias = [] } = body;
+    if (matriculaId && !podeAcessarMatricula(auth.sessao, matriculaId)) return respostaProibida();
 
     let targetModuloId = moduloId;
 

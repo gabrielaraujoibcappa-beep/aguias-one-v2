@@ -1,10 +1,14 @@
 import { NextRequest, NextResponse } from "next/server";
+import { exigirSessao, PAPEIS_GESTAO } from "@/lib/auth/sessao-api";
 import { supabaseAdmin } from "@/lib/supabase/admin";
 
 export async function GET(req: NextRequest) {
+  const auth = await exigirSessao(req, undefined, { permitirBloqueado: true });
+  if (auth.erro) return auth.erro;
   try {
     const { searchParams } = new URL(req.url);
-    const usuarioId = searchParams.get("usuarioId");
+    // Mentorado só enxerga os próprios bloqueios
+    const usuarioId = auth.sessao.equipe ? searchParams.get("usuarioId") : auth.sessao.usuarioId;
 
     let query = supabaseAdmin
       .from("bloqueios_acesso")
@@ -43,6 +47,8 @@ export async function GET(req: NextRequest) {
 }
 
 export async function POST(req: NextRequest) {
+  const auth = await exigirSessao(req, PAPEIS_GESTAO);
+  if (auth.erro) return auth.erro;
   try {
     const body = await req.json();
     const {
@@ -50,9 +56,9 @@ export async function POST(req: NextRequest) {
       usuarioId,
       motivo,
       observacoes,
-      responsavelNome = "Coordenação ÁGUIAS ONE",
       justificativaDesbloqueio,
     } = body;
+    const responsavelNome = auth.sessao.nome;
 
     if (!usuarioId) {
       return NextResponse.json(

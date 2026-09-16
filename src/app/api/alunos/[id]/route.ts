@@ -1,4 +1,5 @@
 import { NextRequest, NextResponse } from "next/server";
+import { exigirSessao, PAPEIS_GESTAO } from "@/lib/auth/sessao-api";
 import { supabaseAdmin } from "@/lib/supabase/admin";
 
 interface RouteParams {
@@ -6,10 +7,18 @@ interface RouteParams {
 }
 
 export async function PATCH(req: NextRequest, { params }: RouteParams) {
+  const auth = await exigirSessao(req, PAPEIS_GESTAO);
+  if (auth.erro) return auth.erro;
   try {
     const { id } = await params;
     const body = await req.json();
     const { nome, email, whatsapp, cpf, areaPericial, papel, status, turmaId } = body;
+    if (papel && auth.sessao.papel !== "admin") {
+      return NextResponse.json(
+        { sucesso: false, erro: "Apenas administradores podem alterar o papel de um usuário." },
+        { status: 403 }
+      );
+    }
 
     const updates: Record<string, any> = {
       atualizado_em: new Date().toISOString(),
@@ -60,7 +69,9 @@ export async function PATCH(req: NextRequest, { params }: RouteParams) {
   }
 }
 
-export async function DELETE(_req: NextRequest, { params }: RouteParams) {
+export async function DELETE(req: NextRequest, { params }: RouteParams) {
+  const auth = await exigirSessao(req, PAPEIS_GESTAO);
+  if (auth.erro) return auth.erro;
   try {
     const { id } = await params;
 

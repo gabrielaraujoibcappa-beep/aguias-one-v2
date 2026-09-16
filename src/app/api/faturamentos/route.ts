@@ -1,11 +1,15 @@
 import { NextRequest, NextResponse } from "next/server";
+import { exigirSessao, podeAcessarMatricula, respostaProibida } from "@/lib/auth/sessao-api";
 import { supabaseAdmin } from "@/lib/supabase/admin";
 
 export async function GET(req: NextRequest) {
+  const auth = await exigirSessao(req);
+  if (auth.erro) return auth.erro;
   try {
     const { searchParams } = new URL(req.url);
     const matriculaId = searchParams.get("matriculaId");
     const turmaId = searchParams.get("turmaId");
+    if (matriculaId && !podeAcessarMatricula(auth.sessao, matriculaId)) return respostaProibida();
 
     let query = supabaseAdmin
       .from("faturamentos")
@@ -22,6 +26,8 @@ export async function GET(req: NextRequest) {
 
     if (matriculaId) {
       query = query.eq("matricula_id", matriculaId);
+    } else if (!auth.sessao.equipe) {
+      query = query.in("matricula_id", auth.sessao.matriculaIds);
     }
 
     const { data: faturamentos, error } = await query;
@@ -66,9 +72,12 @@ export async function GET(req: NextRequest) {
 }
 
 export async function POST(req: NextRequest) {
+  const auth = await exigirSessao(req);
+  if (auth.erro) return auth.erro;
   try {
     const body = await req.json();
     const { matriculaId, mesReferencia, valorBruto, storageZipPath } = body;
+    if (matriculaId && !podeAcessarMatricula(auth.sessao, matriculaId)) return respostaProibida();
 
     if (!matriculaId || !mesReferencia || valorBruto === undefined) {
       return NextResponse.json(
