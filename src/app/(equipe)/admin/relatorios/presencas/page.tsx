@@ -24,7 +24,7 @@ function RelatorioPresencas() {
   const [dados, setDados] = useState<DadosRelatorio | null>(null);
   const [carregando, setCarregando] = useState(true);
 
-  const turma = estado.turmas.find((t) => t.id === turmaId);
+  const turma = estado.turmas.find((t) => t.id === turmaId) || dados?.turma;
 
   useEffect(() => {
     if (!turmaId) {

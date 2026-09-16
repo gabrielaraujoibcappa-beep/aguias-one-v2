@@ -11,11 +11,12 @@ function RelatorioListaGeral() {
   const searchParams = useSearchParams();
   const turmaId = searchParams.get("turma");
   const { estado, carregado } = useSistemaStore();
+  const [turmaInfo, setTurmaInfo] = useState<{ id: string; nome: string; codigo?: string } | null>(null);
   const [alunos, setAlunos] = useState<any[]>([]);
   const [carregando, setCarregando] = useState(true);
   const [erro, setErro] = useState(false);
 
-  const turma = estado.turmas.find((t) => t.id === turmaId);
+  const turma = estado.turmas.find((t) => t.id === turmaId) || turmaInfo;
 
   useEffect(() => {
     async function carregar() {
@@ -26,8 +27,11 @@ function RelatorioListaGeral() {
       try {
         const res = await fetch(`/api/chamadas?turmaId=${encodeURIComponent(turmaId)}`);
         const json = await res.json();
-        if (json.sucesso && json.alunos) {
-          setAlunos(json.alunos);
+        if (json.sucesso) {
+          if (json.alunos) setAlunos(json.alunos);
+          if (json.turma) setTurmaInfo(json.turma);
+        } else {
+          setErro(true);
         }
       } catch (err) {
         console.error("Erro ao carregar alunos:", err);

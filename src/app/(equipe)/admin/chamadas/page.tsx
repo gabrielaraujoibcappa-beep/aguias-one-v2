@@ -51,10 +51,13 @@ export default function AdminChamadasPage() {
   const [salvando, setSalvando] = useState(false);
 
   useEffect(() => {
-    if (carregado && estado.turmas.length > 0 && !turmaSelecionada) {
-      setTurmaSelecionada(estado.turmas[0].id);
+    if (estado.turmas.length > 0) {
+      const existe = estado.turmas.some((t) => t.id === turmaSelecionada);
+      if (!turmaSelecionada || !existe) {
+        setTurmaSelecionada(estado.turmas[0].id);
+      }
     }
-  }, [carregado, estado.turmas, turmaSelecionada]);
+  }, [estado.turmas, turmaSelecionada]);
 
   const carregarDadosDaTurma = useCallback(async (id: string) => {
     setCarregando(true);

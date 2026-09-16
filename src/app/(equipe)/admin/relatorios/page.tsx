@@ -30,7 +30,8 @@ export default function AdminRelatoriosPage() {
 
   if (!carregado) return null;
 
-  const turmaAtualId = turmaSelecionada || estado.turmas[0]?.id || "";
+  const turmaValida = estado.turmas.some((t) => t.id === turmaSelecionada);
+  const turmaAtualId = turmaValida ? turmaSelecionada : estado.turmas[0]?.id || "";
 
   return (
     <div className="adm-pagina">

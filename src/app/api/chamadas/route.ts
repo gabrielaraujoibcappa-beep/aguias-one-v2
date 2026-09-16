@@ -18,7 +18,12 @@ export async function GET(req: NextRequest) {
       return NextResponse.json({ sucesso: true, encontros: [], alunos: [], presencas: [] });
     }
 
-    const [encontrosRes, matriculasRes] = await Promise.all([
+    const [turmaRes, encontrosRes, matriculasRes] = await Promise.all([
+      supabaseAdmin
+        .from("turmas")
+        .select("id, nome, codigo, data_inicio")
+        .eq("id", turmaId)
+        .maybeSingle(),
       supabaseAdmin
         .from("encontros_turma")
         .select("*")
@@ -60,7 +65,7 @@ export async function GET(req: NextRequest) {
         area_pericial: m.usuarios?.area_pericial ?? null,
       }));
 
-    return NextResponse.json({ sucesso: true, encontros, alunos, presencas });
+    return NextResponse.json({ sucesso: true, turma: turmaRes.data || null, encontros, alunos, presencas });
   } catch (err: any) {
     return NextResponse.json({ sucesso: false, erro: err?.message }, { status: 500 });
   }

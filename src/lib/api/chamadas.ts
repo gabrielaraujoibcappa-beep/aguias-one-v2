@@ -27,7 +27,15 @@ export interface Presenca {
   criado_em: string;
 }
 
+export interface TurmaResumida {
+  id: string;
+  nome: string;
+  codigo: string;
+  data_inicio?: string;
+}
+
 export interface DadosTurmaChamada {
+  turma?: TurmaResumida | null;
   encontros: Encontro[];
   alunos: AlunoDaTurma[];
   presencas: Presenca[];
@@ -54,17 +62,18 @@ export async function obterRelatorioPresencas(turma_id: string): Promise<DadosTu
 
     if (!json.sucesso) {
       console.error("Erro ao obter relatório de presenças:", json.erro);
-      return { encontros: [], alunos: [], presencas: [] };
+      return { turma: null, encontros: [], alunos: [], presencas: [] };
     }
 
     return {
+      turma: json.turma || null,
       encontros: json.encontros || [],
       alunos: json.alunos || [],
       presencas: json.presencas || [],
     };
   } catch (err) {
     console.error("Erro de rede ao obter relatório de presenças:", err);
-    return { encontros: [], alunos: [], presencas: [] };
+    return { turma: null, encontros: [], alunos: [], presencas: [] };
   }
 }
 
