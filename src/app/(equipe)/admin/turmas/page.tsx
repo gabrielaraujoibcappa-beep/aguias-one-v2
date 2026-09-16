@@ -63,7 +63,7 @@ export default function AdminTurmasPage() {
             </tr>
           </thead>
           <tbody>
-            {estado.turmas.map((turma) => (
+            {(estado.turmas || []).map((turma) => (
               <tr key={turma.id} style={{ borderBottom: "1px solid var(--cor-border-light)" }}>
                 <td style={{ padding: "14px 8px", fontFamily: "var(--font-family-mono)", fontSize: "13px" }}>{turma.codigo}</td>
                 <td style={{ padding: "14px 8px", fontWeight: 500 }}>{turma.nome}</td>

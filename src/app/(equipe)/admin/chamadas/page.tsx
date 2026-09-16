@@ -50,14 +50,16 @@ export default function AdminChamadasPage() {
   const [presencasAtuais, setPresencasAtuais] = useState<Record<string, StatusPresenca>>({});
   const [salvando, setSalvando] = useState(false);
 
+  const turmas = estado.turmas || [];
+
   useEffect(() => {
-    if (estado.turmas.length > 0) {
-      const existe = estado.turmas.some((t) => t.id === turmaSelecionada);
+    if (turmas.length > 0) {
+      const existe = turmas.some((t) => t.id === turmaSelecionada);
       if (!turmaSelecionada || !existe) {
-        setTurmaSelecionada(estado.turmas[0].id);
+        setTurmaSelecionada(turmas[0].id);
       }
     }
-  }, [estado.turmas, turmaSelecionada]);
+  }, [turmas, turmaSelecionada]);
 
   const carregarDadosDaTurma = useCallback(async (id: string) => {
     setCarregando(true);
@@ -105,8 +107,10 @@ export default function AdminChamadasPage() {
   const iniciarChamada = (encontro: Encontro) => {
     if (!dadosTurma) return;
     const mapa: Record<string, StatusPresenca> = {};
-    dadosTurma.alunos.forEach((aluno) => {
-      const p = dadosTurma.presencas.find(
+    const listaAlunos = dadosTurma.alunos || [];
+    const listaPresencas = dadosTurma.presencas || [];
+    listaAlunos.forEach((aluno) => {
+      const p = listaPresencas.find(
         (pr) => pr.encontro_id === encontro.id && pr.matricula_id === aluno.matricula_id
       );
       mapa[aluno.matricula_id] = p ? p.status : "falta";
@@ -172,18 +176,19 @@ export default function AdminChamadasPage() {
   ) : (
     <div className="adm-lista-encontros">
       {encontrosOrdenados.map((enc) => {
-        const presencasEnc = dadosTurma!.presencas.filter((p) => p.encontro_id === enc.id);
+        const presencasEnc = (dadosTurma?.presencas || []).filter((p) => p.encontro_id === enc.id);
         const presentes = presencasEnc.filter((p) => p.status === "presente").length;
         const justificadas = presencasEnc.filter((p) => p.status === "justificada").length;
         const faltas = presencasEnc.length - presentes - justificadas;
         const temChamada = presencasEnc.length > 0;
+        const totalAlunos = (dadosTurma?.alunos || []).length;
 
         return (
           <div key={enc.id} className="adm-encontro">
             <div>
               <h3>{enc.titulo}</h3>
               <p className="adm-encontro-meta">
-                {formatarData(enc.data_encontro)} · {presencasEnc.length}/{dadosTurma!.alunos.length} alunos registrados
+                {formatarData(enc.data_encontro)} · {presencasEnc.length}/{totalAlunos} alunos registrados
               </p>
               <div className="adm-chips">
                 {temChamada ? (
@@ -249,7 +254,7 @@ export default function AdminChamadasPage() {
           </h1>
           <p className="adm-subtitulo">Registre as presenças dos encontros ao vivo de cada turma.</p>
         </div>
-        {estado.turmas.length > 0 && (
+        {turmas.length > 0 && (
           <label className="adm-campo">
             <span className="adm-rotulo">Turma</span>
             <select
@@ -258,7 +263,7 @@ export default function AdminChamadasPage() {
               onChange={(e) => setTurmaSelecionada(e.target.value)}
               disabled={!!encontroEditando}
             >
-              {estado.turmas.map((t) => (
+              {turmas.map((t) => (
                 <option key={t.id} value={t.id}>
                   {t.nome}
                 </option>
@@ -274,7 +279,7 @@ export default function AdminChamadasPage() {
         </div>
       )}
 
-      {estado.turmas.length === 0 ? (
+      {turmas.length === 0 ? (
         <div className="card">
           <div className="adm-vazio">
             <h3>Nenhuma turma cadastrada</h3>
@@ -287,7 +292,7 @@ export default function AdminChamadasPage() {
             <div>
               <h2>{encontroEditando.titulo}</h2>
               <p className="adm-encontro-meta">
-                {formatarData(encontroEditando.data_encontro)} · {dadosTurma.alunos.length} alunos ·{" "}
+                {formatarData(encontroEditando.data_encontro)} · {(dadosTurma.alunos || []).length} alunos ·{" "}
                 {contagemAtual.presente} presentes, {contagemAtual.justificada} justificadas,{" "}
                 {contagemAtual.falta} faltas
               </p>
@@ -305,7 +310,7 @@ export default function AdminChamadasPage() {
             </div>
           </div>
 
-          {dadosTurma.alunos.length === 0 ? (
+          {(dadosTurma.alunos || []).length === 0 ? (
             <div style={{ padding: "var(--espaco-xl)" }}>
               <div className="adm-vazio">
                 <h3>Nenhum aluno matriculado</h3>
@@ -321,7 +326,7 @@ export default function AdminChamadasPage() {
                 </tr>
               </thead>
               <tbody>
-                {dadosTurma.alunos.map((aluno) => {
+                {(dadosTurma.alunos || []).map((aluno) => {
                   const statusAtual = presencasAtuais[aluno.matricula_id];
                   return (
                     <tr key={aluno.matricula_id}>

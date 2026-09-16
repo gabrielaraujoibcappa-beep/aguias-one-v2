@@ -67,9 +67,9 @@ export async function obterRelatorioPresencas(turma_id: string): Promise<DadosTu
 
     return {
       turma: json.turma || null,
-      encontros: json.encontros || [],
-      alunos: json.alunos || [],
-      presencas: json.presencas || [],
+      encontros: Array.isArray(json.encontros) ? json.encontros : [],
+      alunos: Array.isArray(json.alunos) ? json.alunos : [],
+      presencas: Array.isArray(json.presencas) ? json.presencas : [],
     };
   } catch (err) {
     console.error("Erro de rede ao obter relatório de presenças:", err);

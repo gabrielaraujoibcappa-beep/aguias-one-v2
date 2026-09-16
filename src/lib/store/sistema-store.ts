@@ -151,7 +151,11 @@ const estadoInicial: SistemaState = {
  * ao aluno da sessão e a antiga meta única vira a meta desse aluno.
  */
 export function migrarEstadoSalvo(salvo: Partial<SistemaState> & { metaFaturamentoAnual?: number }): SistemaState {
-  const base: SistemaState = { ...estadoInicial, ...salvo } as SistemaState;
+  const turmas = Array.isArray(salvo.turmas) ? salvo.turmas : estadoInicial.turmas;
+  const alunos = Array.isArray(salvo.alunos) ? salvo.alunos : estadoInicial.alunos;
+  const modulos = Array.isArray(salvo.modulos) ? salvo.modulos : estadoInicial.modulos;
+  const entregas = Array.isArray(salvo.entregas) ? salvo.entregas : estadoInicial.entregas;
+  const base: SistemaState = { ...estadoInicial, ...salvo, turmas, alunos, modulos, entregas } as SistemaState;
   const versaoAntiga = !salvo.metasFaturamentoAlunos; // salvo antes da auditoria de faturamento existir
   const mockPorId = new Map(estadoInicial.faturamentos.map((f) => [f.id, f]));
 

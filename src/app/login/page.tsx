@@ -1,6 +1,6 @@
 "use client";
 
-import React, { useState } from "react";
+import React, { useEffect, useState } from "react";
 import { useRouter } from "next/navigation";
 import Link from "next/link";
 import { useSistemaStore } from "@/lib/store/sistema-store";
@@ -25,6 +25,8 @@ export default function LoginPage() {
   const [lembrar, setLembrar] = useState(true);
   const [carregando, setCarregando] = useState(false);
   const [erro, setErro] = useState<string | null>(null);
+  const [enviandoLink, setEnviandoLink] = useState(false);
+  const [linkEnviadoPara, setLinkEnviadoPara] = useState<string | null>(null);
 
   /** Com a sessão já gravada em cookie, busca o papel no servidor e redireciona. */
   const concluirLogin = async () => {
@@ -74,6 +76,68 @@ export default function LoginPage() {
       setCarregando(false);
     }
   };
+
+  const enviarLinkMagico = async () => {
+    const emailAlvo = email.trim().toLowerCase();
+    if (!emailAlvo || !emailAlvo.includes("@")) {
+      setErro("Informe seu email para receber o link de acesso.");
+      return;
+    }
+    setEnviandoLink(true);
+    setErro(null);
+    setLinkEnviadoPara(null);
+    try {
+      const retorno = new URL("/login", window.location.origin);
+      const destino = new URLSearchParams(window.location.search).get("redirect");
+      if (destino) retorno.searchParams.set("redirect", destino);
+
+      const { error } = await supabase.auth.signInWithOtp({
+        email: emailAlvo,
+        options: { shouldCreateUser: false, emailRedirectTo: retorno.toString() },
+      });
+
+      // Conta inexistente recebe a mesma resposta, para não revelar quais e-mails existem
+      const contaInexistente = error && /signups not allowed|user not found/i.test(error.message);
+      if (error && !contaInexistente) {
+        throw new Error(
+          error.status === 429
+            ? "Muitas solicitações em pouco tempo. Aguarde alguns minutos e tente novamente."
+            : "Não foi possível enviar o link agora. Tente novamente em instantes."
+        );
+      }
+      setLinkEnviadoPara(emailAlvo);
+    } catch (err: any) {
+      setErro(err.message);
+    } finally {
+      setEnviandoLink(false);
+    }
+  };
+
+  // Retorno do link mágico: o supabase-js lê o token do fragmento da URL
+  useEffect(() => {
+    const fragmento = new URLSearchParams(window.location.hash.replace(/^#/, ""));
+    const erroNoLink = fragmento.get("error_description");
+    if (erroNoLink) {
+      setErro("Este link de acesso é inválido ou expirou. Solicite um novo.");
+      history.replaceState(null, "", window.location.pathname + window.location.search);
+      return;
+    }
+    if (!fragmento.get("access_token")) return;
+
+    setCarregando(true);
+    supabase.auth
+      .getSession()
+      .then(async ({ data }) => {
+        if (!data.session) throw new Error("Não foi possível validar o link de acesso. Solicite um novo.");
+        gravarTokenSessao(data.session.access_token, data.session.expires_in);
+        history.replaceState(null, "", window.location.pathname + window.location.search);
+        await concluirLogin();
+      })
+      .catch((err: any) => setErro(err.message))
+      .finally(() => setCarregando(false));
+    // Executa apenas na chegada à página
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -337,6 +401,43 @@ export default function LoginPage() {
             >
               {carregando ? "Autenticando..." : "Entrar no ÁGUIAS ONE"}
             </button>
+
+            {/* Link mágico: e-mail enviado pelo Supabase Auth via SMTP da Resend */}
+            <button
+              type="button"
+              onClick={enviarLinkMagico}
+              disabled={carregando || enviandoLink}
+              className="btn-secondary"
+              aria-busy={enviandoLink}
+              style={{
+                width: "100%",
+                padding: "11px",
+                fontSize: "14px",
+                fontWeight: 600,
+                borderRadius: "var(--radius-xs, 4px)",
+                cursor: carregando || enviandoLink ? "not-allowed" : "pointer",
+              }}
+            >
+              {enviandoLink ? "Enviando link..." : "Receber link de acesso por e-mail"}
+            </button>
+
+            {linkEnviadoPara && (
+              <div
+                role="status"
+                style={{
+                  backgroundColor: "#ecfdf5",
+                  border: "1px solid #a7f3d0",
+                  color: "#065f46",
+                  borderRadius: "var(--radius-xs, 4px)",
+                  padding: "10px 12px",
+                  fontSize: "13px",
+                  lineHeight: 1.45,
+                }}
+              >
+                Se <strong>{linkEnviadoPara}</strong> estiver cadastrado, você receberá um link de acesso em
+                instantes. Verifique também a caixa de spam. O link vale por 1 hora.
+              </div>
+            )}
           </form>
 
           {/* Login demo sem senha: somente em desenvolvimento (NODE_ENV=development) */}

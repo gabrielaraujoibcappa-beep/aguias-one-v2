@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from "next/server";
 import { exigirSessao, PAPEIS_EQUIPE } from "@/lib/auth/sessao-api";
 import { obterTemplatePorId } from "@/lib/email/dados-exemplo";
 import { supabaseAdmin } from "@/lib/supabase/admin";
+import { enviarEmail } from "@/lib/email/resend";
 
 export async function POST(req: NextRequest) {
   const auth = await exigirSessao(req, PAPEIS_EQUIPE);
@@ -34,6 +35,23 @@ export async function POST(req: NextRequest) {
 
     const emailRenderizado = template.renderizar();
 
+    // Envio real via Resend
+    let resendId: string | null = null;
+    let erroEnvio: string | null = null;
+    try {
+      const resultado = await enviarEmail({
+        para: destinatario.trim(),
+        assunto: emailRenderizado.assunto,
+        html: emailRenderizado.html,
+        texto: emailRenderizado.textoPuro,
+        tags: { template: templateId, categoria: template.categoria },
+      });
+      resendId = resultado.id;
+    } catch (e: any) {
+      erroEnvio = e?.message || "Falha desconhecida no envio.";
+      console.error("[Email Dispatcher] Falha no envio via Resend:", erroEnvio);
+    }
+
     // Log de envio / gravação na tabela de auditoria public.emails_enviados
     let logId: string | null = null;
     try {
@@ -44,11 +62,15 @@ export async function POST(req: NextRequest) {
           template_id: templateId,
           assunto: emailRenderizado.assunto,
           corpo_html: emailRenderizado.html,
-          status: "enviado",
+          status: erroEnvio ? "falha" : "enviado",
           metadados: {
             preheader: emailRenderizado.preheader,
             canal: "email",
             categoria: template.categoria,
+            provedor: "resend",
+            resend_id: resendId,
+            erro: erroEnvio,
+            enviado_por: auth.sessao.email,
           },
         })
         .select("id")
@@ -63,13 +85,21 @@ export async function POST(req: NextRequest) {
       console.warn("[Email Dispatcher] Erro ao persistir log:", e.message);
     }
 
-    console.log(`[Email Dispatcher] Enviando e-mail "${emailRenderizado.assunto}" para <${destinatario}> (log: ${logId || "local"})`);
+    if (erroEnvio) {
+      return NextResponse.json(
+        { sucesso: false, erro: `Não foi possível enviar o e-mail: ${erroEnvio}`, detalhes: { id: logId } },
+        { status: 502 }
+      );
+    }
+
+    console.log(`[Email Dispatcher] Enviado "${emailRenderizado.assunto}" para <${destinatario}> (resend: ${resendId}, log: ${logId || "local"})`);
 
     return NextResponse.json({
       sucesso: true,
       mensagem: `E-mail de teste "${template.nome}" enviado com sucesso para ${destinatario}.`,
       detalhes: {
         id: logId,
+        resendId,
         destinatario,
         assunto: emailRenderizado.assunto,
         preheader: emailRenderizado.preheader,

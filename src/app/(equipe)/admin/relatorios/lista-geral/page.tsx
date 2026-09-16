@@ -88,7 +88,7 @@ function RelatorioListaGeral() {
                   {agora.toLocaleTimeString("pt-BR", { hour: "2-digit", minute: "2-digit" })}
                 </p>
                 <p>
-                  Total de alunos: <strong>{alunos.length}</strong>
+                  Total de alunos: <strong>{(alunos || []).length}</strong>
                 </p>
               </div>
             </div>
@@ -105,12 +105,12 @@ function RelatorioListaGeral() {
                   </tr>
                 </thead>
                 <tbody>
-                  {alunos.length === 0 ? (
+                  {(alunos || []).length === 0 ? (
                     <tr>
                       <td colSpan={5} className="centro">Nenhum aluno matriculado.</td>
                     </tr>
                   ) : (
-                    alunos.map((aluno, index) => (
+                    (alunos || []).map((aluno, index) => (
                       <tr key={aluno.matricula_id}>
                         <td>{index + 1}</td>
                         <td>

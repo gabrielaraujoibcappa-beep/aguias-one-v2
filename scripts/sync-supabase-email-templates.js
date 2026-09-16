@@ -8,7 +8,12 @@ lines.forEach((l) => {
   if (k) conf[k] = v.join('=');
 });
 
-const token = 'sbp_fc4cd5e1d969cd4311e8794005ebe9cfb957686d';
+// Token pessoal do Supabase: nunca versionar. Use SUPABASE_ACCESS_TOKEN no ambiente ou no .env.local
+const token = process.env.SUPABASE_ACCESS_TOKEN || conf.SUPABASE_ACCESS_TOKEN;
+if (!token) {
+  console.error('Defina SUPABASE_ACCESS_TOKEN (variável de ambiente ou .env.local).');
+  process.exit(1);
+}
 const projectRef = 'btktoxgcwjxcheuquezn';
 
 function renderizarLayoutBasico({ preheader, tituloBadge, titulo, subtitulo, corpoHtml, ctaRotulo, ctaUrl, tom = 'padrao' }) {

@@ -82,7 +82,7 @@ function RelatorioPresencas() {
                   {agora.toLocaleTimeString("pt-BR", { hour: "2-digit", minute: "2-digit" })}
                 </p>
                 <p>
-                  Alunos: <strong>{dados.alunos.length}</strong> · Encontros: <strong>{encontros.length}</strong>
+                  Alunos: <strong>{(dados.alunos || []).length}</strong> · Encontros: <strong>{encontros.length}</strong>
                 </p>
               </div>
             </div>
@@ -104,17 +104,17 @@ function RelatorioPresencas() {
                   </tr>
                 </thead>
                 <tbody>
-                  {dados.alunos.length === 0 ? (
+                  {(dados.alunos || []).length === 0 ? (
                     <tr>
                       <td colSpan={encontros.length + 2} className="centro">Nenhum aluno matriculado.</td>
                     </tr>
                   ) : (
-                    dados.alunos.map((aluno) => {
+                    (dados.alunos || []).map((aluno) => {
                       let registrados = 0;
                       let comparecimentos = 0;
 
                       const celulas = encontros.map((enc) => {
-                        const presenca = dados.presencas.find(
+                        const presenca = (dados.presencas || []).find(
                           (p) => p.matricula_id === aluno.matricula_id && p.encontro_id === enc.id
                         );
                         if (presenca) {

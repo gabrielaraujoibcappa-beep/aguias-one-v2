@@ -30,8 +30,9 @@ export default function AdminRelatoriosPage() {
 
   if (!carregado) return null;
 
-  const turmaValida = estado.turmas.some((t) => t.id === turmaSelecionada);
-  const turmaAtualId = turmaValida ? turmaSelecionada : estado.turmas[0]?.id || "";
+  const turmas = estado.turmas || [];
+  const turmaValida = turmas.some((t) => t.id === turmaSelecionada);
+  const turmaAtualId = turmaValida ? turmaSelecionada : turmas[0]?.id || "";
 
   return (
     <div className="adm-pagina">
@@ -43,7 +44,7 @@ export default function AdminRelatoriosPage() {
           </h1>
           <p className="adm-subtitulo">Gere relatórios da turma prontos para imprimir ou salvar em PDF.</p>
         </div>
-        {estado.turmas.length > 0 && (
+        {turmas.length > 0 && (
           <label className="adm-campo">
             <span className="adm-rotulo">Turma</span>
             <select
@@ -51,7 +52,7 @@ export default function AdminRelatoriosPage() {
               value={turmaAtualId}
               onChange={(e) => setTurmaSelecionada(e.target.value)}
             >
-              {estado.turmas.map((t) => (
+              {turmas.map((t) => (
                 <option key={t.id} value={t.id}>
                   {t.nome}
                 </option>
@@ -61,7 +62,7 @@ export default function AdminRelatoriosPage() {
         )}
       </div>
 
-      {estado.turmas.length === 0 ? (
+      {turmas.length === 0 ? (
         <div className="card">
           <div className="adm-vazio">
             <h3>Nenhuma turma cadastrada</h3>
