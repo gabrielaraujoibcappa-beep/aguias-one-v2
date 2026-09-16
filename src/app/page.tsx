@@ -23,8 +23,30 @@ export default function HomePage() {
 
   return (
     <div style={{ maxWidth: "1100px", margin: "0 auto", padding: "var(--espaco-xxl) var(--espaco-lg)" }}>
-      {/* Header Editorial Cohere */}
+      {/* Header Editorial com Logomarca Oficial */}
       <div style={{ textAlign: "center", marginBottom: "var(--espaco-section)" }}>
+        <div style={{
+          display: "flex",
+          justifyContent: "center",
+          marginBottom: "var(--espaco-lg)",
+        }}>
+          <div style={{
+            backgroundColor: "var(--cor-dark-deep, #0a0a0b)",
+            padding: "16px 28px",
+            borderRadius: "var(--radius-md)",
+            display: "inline-flex",
+            alignItems: "center",
+            boxShadow: "0 10px 30px rgba(0, 82, 255, 0.15)",
+            border: "1px solid rgba(255, 255, 255, 0.08)",
+          }}>
+            <img
+              src="/logo-aguias-one.png"
+              alt="ÁGUIAS ONE Mentoria"
+              style={{ height: "46px", maxWidth: "260px", objectFit: "contain" }}
+            />
+          </div>
+        </div>
+
         <div style={{
           display: "inline-flex",
           alignItems: "center",
@@ -35,13 +57,13 @@ export default function HomePage() {
           textTransform: "uppercase",
           backgroundColor: "var(--cor-soft-stone)",
           color: "var(--cor-primary)",
-          padding: "4px 12px",
+          padding: "5px 14px",
           borderRadius: "var(--radius-xs)",
           marginBottom: "var(--espaco-md)",
           fontFamily: "var(--font-family-mono)",
         }}>
-          <LogoEmblem size={13} style={{ color: "var(--cor-deep-green)" }} />
-          <span>ÁGUIAS ONE · Pós-Graduação em Negócios Periciais</span>
+          <img src="/logo-simbolo.png" alt="" style={{ width: "16px", height: "16px", borderRadius: "3px" }} />
+          <span>ÁGUIAS ONE · Pós-Graduação em Gestão Estratégica de Negócios Periciais</span>
         </div>
 
         <h1 style={{

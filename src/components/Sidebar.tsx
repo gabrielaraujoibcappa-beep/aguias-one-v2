@@ -170,11 +170,17 @@ export function Sidebar() {
           <IconMenu size={22} />
         </button>
 
-        <div style={{ display: "flex", alignItems: "center", gap: "8px" }}>
-          <LogoEmblem size={20} style={{ color: "#b89047" }} />
-          <span style={{ fontWeight: 700, letterSpacing: "-0.5px", fontSize: "16px", fontFamily: "var(--font-family-title)" }}>
-            ÁGUIAS ONE
-          </span>
+        <div style={{ display: "flex", alignItems: "center", gap: "10px" }}>
+          <img
+            src="/logo-simbolo.png"
+            alt="ÁGUIAS ONE"
+            style={{ width: "24px", height: "24px", borderRadius: "4px", objectFit: "contain" }}
+          />
+          <img
+            src="/logo-aguias-one.png"
+            alt="ÁGUIAS ONE"
+            style={{ height: "20px", maxWidth: "130px", objectFit: "contain" }}
+          />
         </div>
 
         <button
@@ -220,6 +226,7 @@ export function Sidebar() {
         >
           <Link
             href={isStaff ? "/painel/turma" : "/dashboard"}
+            title="Ir para início"
             style={{
               display: "flex",
               alignItems: "center",
@@ -228,15 +235,22 @@ export function Sidebar() {
               textDecoration: "none",
             }}
           >
-            <LogoEmblem size={24} style={{ color: "#b89047", flexShrink: 0 }} />
-            {!recolhida && (
-              <div style={{ overflow: "hidden", whiteSpace: "nowrap" }}>
-                <div style={{ fontWeight: 700, letterSpacing: "-0.5px", fontSize: "16px", fontFamily: "var(--font-family-title)" }}>
-                  ÁGUIAS ONE
-                </div>
-                <div style={{ fontSize: "10px", color: "rgba(255,255,255,0.5)", textTransform: "uppercase", letterSpacing: "0.5px" }}>
+            {recolhida ? (
+              <img
+                src="/logo-simbolo.png"
+                alt="ÁGUIAS ONE"
+                style={{ width: "32px", height: "32px", borderRadius: "6px", objectFit: "contain" }}
+              />
+            ) : (
+              <div style={{ display: "flex", flexDirection: "column" }}>
+                <img
+                  src="/logo-aguias-one.png"
+                  alt="ÁGUIAS ONE"
+                  style={{ height: "30px", maxWidth: "170px", objectFit: "contain" }}
+                />
+                <span style={{ fontSize: "9px", color: "rgba(255,255,255,0.45)", textTransform: "uppercase", letterSpacing: "0.6px", marginTop: "2px", fontFamily: "var(--font-family-mono)" }}>
                   IBCAPPA · UniBCAPPA
-                </div>
+                </span>
               </div>
             )}
           </Link>

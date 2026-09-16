@@ -162,14 +162,68 @@ export function IconWhatsApp({ size = 16, ...props }: IconProps) {
   );
 }
 
-export function LogoEmblem({ size = 20, ...props }: IconProps) {
+export function LogoSimbolo({ size = 20, className, style }: { size?: number; className?: string; style?: React.CSSProperties }) {
   return (
-    <svg width={size} height={size} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" {...props}>
-      <path d="M12 3L2 9l10 6 10-6-10-6z" />
-      <path d="M2 15l10 6 10-6" />
-      <path d="M6 11.5l6 3.5 6-3.5" />
-    </svg>
+    <img
+      src="/logo-simbolo.png"
+      alt="ÁGUIAS ONE"
+      width={size}
+      height={size}
+      className={className}
+      style={{
+        width: `${size}px`,
+        height: `${size}px`,
+        objectFit: "contain",
+        borderRadius: "4px",
+        display: "inline-block",
+        verticalAlign: "middle",
+        ...style,
+      }}
+    />
   );
+}
+
+export function LogoAguiasOne({ height = 28, className, style }: { height?: number; className?: string; style?: React.CSSProperties }) {
+  return (
+    <img
+      src="/logo-aguias-one.png"
+      alt="ÁGUIAS ONE Mentoria"
+      height={height}
+      className={className}
+      style={{
+        height: `${height}px`,
+        width: "auto",
+        objectFit: "contain",
+        display: "inline-block",
+        verticalAlign: "middle",
+        ...style,
+      }}
+    />
+  );
+}
+
+export function AguiaIcone({ size = 24, className, style }: { size?: number; className?: string; style?: React.CSSProperties }) {
+  return (
+    <img
+      src="/aguia-icone.png"
+      alt="Águia"
+      width={size}
+      height={size}
+      className={className}
+      style={{
+        width: `${size}px`,
+        height: `${size}px`,
+        objectFit: "contain",
+        display: "inline-block",
+        verticalAlign: "middle",
+        ...style,
+      }}
+    />
+  );
+}
+
+export function LogoEmblem({ size = 20, style, className }: IconProps) {
+  return <LogoSimbolo size={size} style={style} className={className} />;
 }
 
 export function IconCalendar({ size = 16, ...props }: IconProps) {

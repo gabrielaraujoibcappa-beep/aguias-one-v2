@@ -6,6 +6,11 @@ import "./globals.css";
 export const metadata: Metadata = {
   title: "ÁGUIAS ONE — Sistema de Mentoria",
   description: "Sistema de Gestão Estratégica e Acompanhamento de Negócios Periciais — IBCAPPA",
+  icons: {
+    icon: "/logo-simbolo.png",
+    shortcut: "/logo-simbolo.png",
+    apple: "/logo-simbolo.png",
+  },
 };
 
 export default function RootLayout({
@@ -16,6 +21,7 @@ export default function RootLayout({
   return (
     <html lang="pt-BR">
       <head>
+        <link rel="icon" href="/logo-simbolo.png" />
         <link rel="preconnect" href="https://fonts.googleapis.com" />
         <link rel="preconnect" href="https://fonts.gstatic.com" crossOrigin="anonymous" />
         <link
@@ -39,10 +45,18 @@ export default function RootLayout({
               fontSize: "13px",
               color: "var(--cor-muted)",
             }}>
-              <div style={{ maxWidth: "1200px", margin: "0 auto" }}>
-                <strong>ÁGUIAS ONE</strong> · Pós-Graduação em Gestão Estratégica de Negócios Periciais (IBCAPPA / UniBCAPPA)
-                <div style={{ marginTop: "4px", fontSize: "12px" }}>
-                  Sistema de Acompanhamento, Check-in Modular, Faturamento & Comprovantes ZIP.
+              <div style={{ maxWidth: "1200px", margin: "0 auto", display: "flex", flexDirection: "column", alignItems: "center", gap: "10px" }}>
+                <div style={{ display: "inline-flex", alignItems: "center", gap: "8px" }}>
+                  <img
+                    src="/logo-simbolo.png"
+                    alt="ÁGUIAS ONE"
+                    style={{ width: "20px", height: "20px", borderRadius: "4px" }}
+                  />
+                  <strong style={{ color: "var(--cor-primary)" }}>ÁGUIAS ONE</strong>
+                  <span>· Pós-Graduação em Gestão Estratégica de Negócios Periciais</span>
+                </div>
+                <div style={{ fontSize: "12px", color: "var(--cor-text-muted)" }}>
+                  IBCAPPA · UniBCAPPA · Acompanhamento Prático, Check-in Modular & Faturamento Mensal.
                 </div>
               </div>
             </footer>
