@@ -1,8 +1,8 @@
 "use client";
 
-import React, { useState, useRef } from "react";
+import React, { useState } from "react";
 import { ComprovanteItem, DeclaracaoFaturamento, validarComprovanteFaturamento } from "@/lib/api/faturamento";
-import { IconFolder } from "../ui/Icons";
+import { UploadArquivos, ArquivoUploadItem } from "../ui/UploadArquivos";
 
 interface FormularioFaturamentoProps {
   onSalvar: (declaracao: DeclaracaoFaturamento) => void;
@@ -13,36 +13,42 @@ export function FormularioFaturamento({ onSalvar }: FormularioFaturamentoProps) 
   const [valorTexto, setValorTexto] = useState("");
   const [comprovantes, setComprovantes] = useState<ComprovanteItem[]>([]);
   const [erro, setErro] = useState("");
-  const fileInputRef = useRef<HTMLInputElement>(null);
 
-  const handleFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
-    const files = e.target.files;
-    if (!files || files.length === 0) return;
+  const comprovantesUpload: ArquivoUploadItem[] = comprovantes.map((c, i) => ({
+    id: `comprovante-${i}-${c.nome}`,
+    nome: c.nome,
+    tamanhoBytes: 1024 * 350,
+    status: "concluido",
+  }));
 
-    const novos: ComprovanteItem[] = [];
-    for (let i = 0; i < files.length; i++) {
-      const file = files[i];
-      const validacao = validarComprovanteFaturamento(file.name);
-      if (!validacao.valido) {
-        setErro(validacao.motivo || "Arquivo com formato inválido");
-        return;
+  const handleUploadChange = (novos: ArquivoUploadItem[]) => {
+    if (novos.length < comprovantes.length) {
+      const idxRemovido = comprovantes.findIndex((c) => !novos.some((n) => n.nome === c.nome));
+      if (idxRemovido !== -1) {
+        setComprovantes(comprovantes.filter((_, i) => i !== idxRemovido));
+      }
+    } else {
+      const novosAdicionados = novos.slice(comprovantes.length);
+      const novosComprovantes: ComprovanteItem[] = [];
+
+      for (const item of novosAdicionados) {
+        const validacao = validarComprovanteFaturamento(item.nome);
+        if (!validacao.valido) {
+          setErro(validacao.motivo || "Arquivo com formato inválido");
+          return;
+        }
+
+        const isZip = item.nome.toLowerCase().endsWith(".zip");
+        novosComprovantes.push({
+          nome: item.nome,
+          path: `faturamentos/${Date.now()}_${item.nome}`,
+          tipo: isZip ? "zip" : "arquivo",
+        });
       }
 
-      const isZip = file.name.toLowerCase().endsWith(".zip");
-      novos.push({
-        nome: file.name,
-        path: `faturamentos/${Date.now()}_${file.name}`,
-        tipo: isZip ? "zip" : "arquivo",
-      });
+      setErro("");
+      setComprovantes([...comprovantes, ...novosComprovantes]);
     }
-
-    setErro("");
-    setComprovantes([...comprovantes, ...novos]);
-    if (fileInputRef.current) fileInputRef.current.value = "";
-  };
-
-  const handleRemoverComprovante = (idx: number) => {
-    setComprovantes(comprovantes.filter((_, i) => i !== idx));
   };
 
   const handleSubmit = (e: React.FormEvent) => {
@@ -148,76 +154,16 @@ export function FormularioFaturamento({ onSalvar }: FormularioFaturamentoProps) 
           </div>
         </div>
 
-        {/* Upload de Comprovantes ou ZIP */}
-        <div>
-          <label style={{ display: "block", fontSize: "13px", fontWeight: 500, marginBottom: "4px" }}>
-            Comprovantes (PDFs, Imagens ou Pacote .ZIP compactado)
-          </label>
-          <div
-            onClick={() => fileInputRef.current?.click()}
-            style={{
-              border: "2px dashed var(--cor-hairline)",
-              borderRadius: "var(--radius-sm)",
-              padding: "var(--espaco-md)",
-              textAlign: "center",
-              backgroundColor: "#fafafb",
-              cursor: "pointer",
-            }}
-          >
-            <input
-              ref={fileInputRef}
-              type="file"
-              multiple
-              accept=".zip,application/pdf,image/png,image/jpeg"
-              onChange={handleFileChange}
-              style={{ display: "none" }}
-            />
-            <div style={{ display: "flex", justifyContent: "center", marginBottom: "4px", color: "var(--cor-slate)" }}>
-              <IconFolder size={20} />
-            </div>
-            <div style={{ fontSize: "13px", fontWeight: 500, marginTop: "2px" }}>
-              Clique para anexar comprovantes ou arquivo .zip
-            </div>
-          </div>
-
-          {comprovantes.length > 0 && (
-            <div style={{ marginTop: "8px", display: "flex", flexDirection: "column", gap: "6px" }}>
-              {comprovantes.map((c, i) => (
-                <div key={i} style={{
-                  display: "flex",
-                  justifyContent: "space-between",
-                  alignItems: "center",
-                  backgroundColor: "#f9fafb",
-                  border: "1px solid var(--cor-border-light)",
-                  padding: "6px 12px",
-                  borderRadius: "var(--radius-xs)",
-                  fontSize: "13px",
-                }}>
-                  <span style={{ display: "inline-flex", alignItems: "center", gap: "8px" }}>
-                    <span style={{
-                      fontSize: "10px",
-                      fontWeight: 600,
-                      backgroundColor: "var(--cor-soft-stone)",
-                      padding: "1px 5px",
-                      borderRadius: "2px",
-                      fontFamily: "var(--font-family-mono)",
-                    }}>
-                      {c.tipo.toUpperCase()}
-                    </span>
-                    <span>{c.nome}</span>
-                  </span>
-                  <button
-                    type="button"
-                    onClick={() => handleRemoverComprovante(i)}
-                    style={{ color: "var(--cor-error)", fontSize: "12px" }}
-                  >
-                    Remover
-                  </button>
-                </div>
-              ))}
-            </div>
-          )}
-        </div>
+        {/* Upload de Comprovantes ou ZIP (Norma de UX ÁGUIAS ONE) */}
+        <UploadArquivos
+          rotulo="Comprovantes de Faturamento"
+          descricao="Anexe extratos, comprovantes fiscais (PDF/Imagens) ou um pacote único compactado (.ZIP)"
+          arquivos={comprovantesUpload}
+          onChange={handleUploadChange}
+          formatosPermitidos={[".zip", ".pdf", ".png", ".jpg", ".jpeg"]}
+          tamanhoMaximoBytes={25 * 1024 * 1024}
+          maximoArquivos={5}
+        />
 
         <div style={{ display: "flex", justifyContent: "flex-end", marginTop: "var(--espaco-sm)" }}>
           <button type="submit" className="btn-primary" style={{ padding: "10px 24px" }}>

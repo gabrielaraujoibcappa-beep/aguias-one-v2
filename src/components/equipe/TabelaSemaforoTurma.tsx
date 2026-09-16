@@ -4,6 +4,7 @@ import React, { useState } from "react";
 import { AlunoSemaforoStatus } from "@/lib/api/turma-semaforo";
 import { BotaoResgateWhatsApp } from "./BotaoResgateWhatsApp";
 import { StatusDot } from "../ui/StatusDot";
+import { ResumoFiltrosAtivos, FiltroAtivoItem } from "../ui/ResumoFiltrosAtivos";
 
 interface TabelaSemaforoTurmaProps {
   alunos: AlunoSemaforoStatus[];
@@ -22,6 +23,23 @@ export function TabelaSemaforoTurma({ alunos }: TabelaSemaforoTurmaProps) {
   const totalAmarelos = alunos.filter((a) => a.semaforoAtual === "amarelo").length;
   const totalVermelhos = alunos.filter((a) => a.semaforoAtual === "vermelho").length;
   const totalResgate = alunos.filter((a) => a.precisaResgate).length;
+
+  const filtrosAtivos: FiltroAtivoItem[] = [];
+  if (filtroSemaforo !== "todos") {
+    const rotulos: Record<string, string> = {
+      verde: "Regulares (Verde)",
+      amarelo: "Atenção (Amarelo)",
+      vermelho: "Em Risco (Vermelho)",
+      resgate: "Resgate Necessário",
+    };
+    filtrosAtivos.push({
+      id: "semaforo",
+      categoria: "Semáforo",
+      valorRotulo: rotulos[filtroSemaforo] || filtroSemaforo,
+      onRemover: () => setFiltroSemaforo("todos"),
+      removivel: true,
+    });
+  }
 
   return (
     <div style={{
@@ -81,6 +99,15 @@ export function TabelaSemaforoTurma({ alunos }: TabelaSemaforoTurmaProps) {
           </button>
         )}
       </div>
+
+      {/* Resumo de Filtros Ativos (Câmara UX / Baymard / Carbon) */}
+      <ResumoFiltrosAtivos
+        filtros={filtrosAtivos}
+        totalResultados={alunosFiltrados.length}
+        totalGeral={alunos.length}
+        entidadeNome="peritos"
+        onLimparTudo={() => setFiltroSemaforo("todos")}
+      />
 
       {/* Tabela de Alunos com Semáforos e Travas */}
       <div style={{ overflowX: "auto" }}>

@@ -3,11 +3,25 @@
 import React, { useState } from "react";
 import { PainelKpisTurma } from "@/components/equipe/PainelKpisTurma";
 import { TabelaSemaforoTurma } from "@/components/equipe/TabelaSemaforoTurma";
+import { FiltroPeriodo } from "@/components/ui/FiltroPeriodo";
+import { criarPeriodoPadrao, PeriodoFiltroState } from "@/lib/periodo/calculo-periodo";
 import { useSistemaStore } from "@/lib/store/sistema-store";
 
 export default function PainelTurmaPage() {
   const { estado, carregado } = useSistemaStore();
   const [turma] = useState("Águias ONE — Turma 2026.1");
+  const [periodo, setPeriodo] = useState<PeriodoFiltroState>(() =>
+    criarPeriodoPadrao("Global (Turma 2026.1)")
+  );
+  const [carregandoPeriodo, setCarregandoPeriodo] = useState(false);
+
+  const handleAtualizarDados = () => {
+    setCarregandoPeriodo(true);
+    setTimeout(() => {
+      setPeriodo((prev) => ({ ...prev, ultimaAtualizacao: new Date() }));
+      setCarregandoPeriodo(false);
+    }, 400);
+  };
 
   if (!carregado) return null;
 
@@ -31,6 +45,15 @@ export default function PainelTurmaPage() {
           {turma}
         </div>
       </div>
+
+      {/* Barra Contextual de Filtro de Período (Norma de UX ÁGUIAS ONE) */}
+      <FiltroPeriodo
+        valor={periodo}
+        onChange={setPeriodo}
+        onAtualizarDados={handleAtualizarDados}
+        carregando={carregandoPeriodo}
+        escopoNome={turma}
+      />
 
       {/* Indicadores Estratégicos da Turma (KPIs 360) */}
       <PainelKpisTurma

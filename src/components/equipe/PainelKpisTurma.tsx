@@ -70,7 +70,12 @@ export function PainelKpisTurma({ alunos, entregas, turmaNome = "Turma 2026.1" }
             <span style={{ fontSize: "11px", fontWeight: 500, textTransform: "uppercase", letterSpacing: "0.4px" }}>
               Alunos em Risco
             </span>
-            <IconAlertCircle size={14} />
+            <div style={{ display: "flex", alignItems: "center", gap: "6px" }}>
+              <span style={{ fontSize: "9px", padding: "1px 5px", borderRadius: "var(--radius-pill)", backgroundColor: "var(--cor-soft-stone)", color: "var(--cor-slate)", fontWeight: 600 }}>
+                Tempo Real
+              </span>
+              <IconAlertCircle size={14} />
+            </div>
           </div>
           <div style={{
             fontSize: "24px",
@@ -84,8 +89,8 @@ export function PainelKpisTurma({ alunos, entregas, turmaNome = "Turma 2026.1" }
               perito(s)
             </span>
           </div>
-          <div style={{ marginTop: "12px", fontSize: "12px", color: "var(--cor-muted)" }}>
-            Critério: 2+ semanas sem check-in
+          <div style={{ marginTop: "12px", fontSize: "11px", color: "var(--cor-muted)" }}>
+            Critério: 2+ semanas sem check-in · <em>Janela operacional contínua</em>
           </div>
         </div>
 
