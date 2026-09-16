@@ -14,6 +14,8 @@ interface PainelKpisAlunoProps {
   modulos: ModuloItem[];
   entregas: EntregaPendente[];
   semaforo?: "verde" | "amarelo" | "vermelho";
+  /** Meta mensal derivada da meta anual (meta anual / 12). */
+  metaMensal?: number;
 }
 
 export function PainelKpisAluno({
@@ -22,9 +24,10 @@ export function PainelKpisAluno({
   modulos,
   entregas,
   semaforo = "verde",
+  metaMensal = 20000,
 }: PainelKpisAlunoProps) {
   const faturamentoAtual = faturamentos[0]?.valorBruto || 14500;
-  const metaCiclo = 20000;
+  const metaCiclo = metaMensal > 0 ? metaMensal : 20000;
   const percMeta = Math.min(Math.round((faturamentoAtual / metaCiclo) * 100), 100);
 
   const canaisAtivos = canais.filter((c) => c.status === "ativo").length;
@@ -96,7 +99,7 @@ export function PainelKpisAluno({
               marginBottom: "4px",
               fontFamily: "var(--font-family-mono)",
             }}>
-              <span>Teto R$ 20.000</span>
+              <span>Meta mensal {formatarMoedaBRL(metaCiclo)}</span>
               <span>{percMeta}%</span>
             </div>
             <div style={{ width: "100%", height: "4px", backgroundColor: "var(--cor-soft-stone)", borderRadius: "2px", overflow: "hidden" }}>

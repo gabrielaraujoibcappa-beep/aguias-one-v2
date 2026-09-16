@@ -4,7 +4,7 @@ import { useState, useEffect } from "react";
 import { AlunoCadastro } from "../api/alunos";
 import { TurmaCadastro } from "../api/turmas";
 import { ModuloItem, MODULOS_PADRAO_AGUIAS_ONE } from "../api/modulos-liberacao";
-import { DeclaracaoFaturamento, FATURAMENTOS_HISTORICO_MOCK } from "../api/faturamento";
+import { DeclaracaoFaturamento, FATURAMENTOS_HISTORICO_MOCK, META_FATURAMENTO_ANUAL_PADRAO } from "../api/faturamento";
 import { CanalItem, CANAIS_INICIAIS_MOCK } from "../api/canais";
 import { EntregaPendente, ENTREGAS_MOCK } from "../api/auditoria";
 import { AlunoSemaforoStatus, ALUNOS_SEMAFORO_MOCK } from "../api/turma-semaforo";
@@ -22,6 +22,7 @@ export interface SistemaState {
   modulos: ModuloItem[];
   entregas: EntregaPendente[];
   faturamentos: DeclaracaoFaturamento[];
+  metaFaturamentoAnual: number;
   canais: CanalItem[];
   alunos: AlunoCadastro[];
   turmas: TurmaCadastro[];
@@ -38,6 +39,7 @@ const estadoInicial: SistemaState = {
   modulos: MODULOS_PADRAO_AGUIAS_ONE,
   entregas: ENTREGAS_MOCK,
   faturamentos: FATURAMENTOS_HISTORICO_MOCK,
+  metaFaturamentoAnual: META_FATURAMENTO_ANUAL_PADRAO,
   canais: CANAIS_INICIAIS_MOCK,
   alunos: [
     {
@@ -107,7 +109,7 @@ export function useSistemaStore() {
     try {
       const salvo = localStorage.getItem(STORAGE_KEY);
       if (salvo) {
-        const dados = JSON.parse(salvo);
+        const dados = { ...estadoInicial, ...JSON.parse(salvo) } as SistemaState;
         setEstado(dados);
         if (typeof document !== "undefined" && dados.papelAtual) {
           document.cookie = `user-role=${dados.papelAtual}; path=/; max-age=31536000; SameSite=Lax`;
@@ -175,6 +177,11 @@ export function useSistemaStore() {
     });
   };
 
+  const definirMetaFaturamentoAnual = (valor: number) => {
+    const metaValida = Number.isFinite(valor) && valor > 0 ? valor : META_FATURAMENTO_ANUAL_PADRAO;
+    salvarEstado({ ...estado, metaFaturamentoAnual: metaValida });
+  };
+
   const atualizarCanal = (nomeCanal: string, status: "ativo" | "nao_iniciado", url?: string) => {
     const canaisAtualizados = estado.canais.map((c) =>
       c.nome === nomeCanal ? { ...c, status, url: url ?? c.url, atualizadoEm: new Date().toISOString() } : c
@@ -209,6 +216,7 @@ export function useSistemaStore() {
     submeterCheckin,
     auditarEntrega,
     adicionarFaturamento,
+    definirMetaFaturamentoAnual,
     atualizarCanal,
     salvarAluno,
     excluirAluno,

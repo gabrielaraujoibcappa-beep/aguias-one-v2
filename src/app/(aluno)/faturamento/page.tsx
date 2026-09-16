@@ -4,11 +4,12 @@ import React from "react";
 import { useRouter } from "next/navigation";
 import { FormularioFaturamento } from "@/components/faturamento/FormularioFaturamento";
 import { TabelaHistoricoFaturamento } from "@/components/faturamento/TabelaHistoricoFaturamento";
+import { MetaFaturamentoAnual } from "@/components/faturamento/MetaFaturamentoAnual";
 import { useSistemaStore } from "@/lib/store/sistema-store";
 
 export default function FaturamentoAlunoPage() {
   const router = useRouter();
-  const { estado, adicionarFaturamento, carregado } = useSistemaStore();
+  const { estado, adicionarFaturamento, definirMetaFaturamentoAnual, carregado } = useSistemaStore();
 
   if (!carregado) return null;
 
@@ -35,6 +36,12 @@ export default function FaturamentoAlunoPage() {
           Registro direto de faturamento bruto do escritório com upload de comprovantes ou pacotes compactados .zip.
         </p>
       </div>
+
+      <MetaFaturamentoAnual
+        faturamentos={estado.faturamentos}
+        metaAnual={estado.metaFaturamentoAnual}
+        onDefinirMeta={definirMetaFaturamentoAnual}
+      />
 
       <FormularioFaturamento onSalvar={adicionarFaturamento} />
       <TabelaHistoricoFaturamento historico={estado.faturamentos} />

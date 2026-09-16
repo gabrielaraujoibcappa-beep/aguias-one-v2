@@ -7,6 +7,7 @@ import { AtalhosPrincipais } from "@/components/aluno/AtalhosPrincipais";
 import { SecaoMateriais } from "@/components/aluno/SecaoMateriais";
 import { useSistemaStore } from "@/lib/store/sistema-store";
 import { filtrarModulosVisiveis } from "@/lib/api/modulos-liberacao";
+import { calcularMetaMensal } from "@/lib/api/faturamento";
 
 export default function DashboardAlunoPage() {
   const { estado, carregado } = useSistemaStore();
@@ -33,6 +34,7 @@ export default function DashboardAlunoPage() {
         modulos={estado.modulos}
         entregas={estado.entregas}
         semaforo="verde"
+        metaMensal={calcularMetaMensal(estado.metaFaturamentoAnual)}
       />
 
       {/* 2. Atalhos Centrais (Check-in, Canais, Faturamento) */}
