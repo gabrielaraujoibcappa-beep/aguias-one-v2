@@ -5,16 +5,18 @@ import { FilaAuditoria } from "@/components/equipe/FilaAuditoria";
 import { TabelaHistoricoAuditoria } from "@/components/equipe/TabelaHistoricoAuditoria";
 import { VisualizadorEntrega } from "@/components/equipe/VisualizadorEntrega";
 import { Tabs, TabItem } from "@/components/ui/Tabs";
+import { BotaoExportDossie } from "@/components/equipe/BotaoExportDossie";
 import { EntregaPendente } from "@/lib/api/auditoria";
 import { lerEstadoSistema, useSistemaStore } from "@/lib/store/sistema-store";
 import { notificar } from "@/lib/notificacoes";
 import { canAudit } from "@/lib/auth/roles";
+import { EstadoCarregando } from "@/components/ui/EstadoCarregando";
 
 export default function PainelAuditoriaPage() {
   const { estado, auditarEntrega, reverterEntrega, carregado } = useSistemaStore();
   const [entregaSelecionada, setEntregaSelecionada] = useState<EntregaPendente | null>(null);
 
-  if (!carregado) return null;
+  if (!carregado) return <EstadoCarregando texto="a fila de auditoria" variante="tabela" />;
 
   /**
    * A decisão aparece na hora e a entrega sai da fila, mas o envio ao backend só
@@ -92,13 +94,25 @@ export default function PainelAuditoriaPage() {
       </div>
 
       {entregaSelecionada ? (
-        <VisualizadorEntrega
+        <>
+          {(() => {
+            const matricula =
+              entregaSelecionada.matriculaId ??
+              estado.alunosSemaforo.find((a) => a.nome === entregaSelecionada.alunoNome)?.matriculaId;
+            return matricula ? (
+              <div style={{ display: "flex", justifyContent: "flex-end", marginBottom: "var(--espaco-sm)" }}>
+                <BotaoExportDossie matriculaId={matricula} />
+              </div>
+            ) : null;
+          })()}
+          <VisualizadorEntrega
           entrega={entregaSelecionada}
           onAprovar={handleAprovar}
           onSolicitarAjuste={handleSolicitarAjuste}
           onVoltar={() => setEntregaSelecionada(null)}
           podeAuditar={canAudit(estado.papelAtual)}
         />
+        </>
       ) : (
         <Tabs
           tabs={abasAuditoria}

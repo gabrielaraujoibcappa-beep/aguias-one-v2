@@ -4,6 +4,7 @@ import React, { useState } from "react";
 import Link from "next/link";
 import { useSistemaStore } from "@/lib/store/sistema-store";
 import { IconFolder, IconUsers, IconPrinter, IconCheckCircle, IconCurrency } from "@/components/ui/Icons";
+import { EstadoCarregando } from "@/components/ui/EstadoCarregando";
 
 const RELATORIOS = [
   {
@@ -44,7 +45,7 @@ export default function AdminRelatoriosPage() {
   const { estado, carregado } = useSistemaStore();
   const [turmaSelecionada, setTurmaSelecionada] = useState<string>("");
 
-  if (!carregado) return null;
+  if (!carregado) return <EstadoCarregando texto="os relatórios" variante="cartoes" />;
 
   const turmas = estado.turmas || [];
   const turmaValida = turmas.some((t) => t.id === turmaSelecionada);

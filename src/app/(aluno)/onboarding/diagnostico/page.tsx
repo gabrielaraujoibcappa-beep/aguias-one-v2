@@ -6,6 +6,7 @@ import { useRouter } from "next/navigation";
 import { BLOCOS, PayloadDiagnostico, TEXTO_ABERTURA, TEXTO_ENVIADO, ValorCampo } from "@/lib/diagnostico/campos";
 import { FalhaApi, chamarApi, formatarCentavos } from "@/lib/diagnostico/cliente";
 import { CamposBloco, NUMEROS, blocoDoCampo } from "@/components/diagnostico/aluno/CamposBloco";
+import { RevisaoPlacar } from "@/components/diagnostico/aluno/RevisaoPlacar";
 
 interface RespostaDiagnostico {
   diagnostico: {
@@ -21,7 +22,7 @@ export default function WizardDiagnosticoPage() {
   const [carregando, setCarregando] = useState(true);
   const [payload, setPayload] = useState<PayloadDiagnostico>({});
   const [meses, setMeses] = useState<string[]>([]);
-  // 0 = abertura; 1..8 = blocos
+  // 0 = abertura; 1..8 = blocos; último = revisão antes do envio
   const [passo, setPasso] = useState(0);
   const [salvando, setSalvando] = useState(false);
   const [erro, setErro] = useState<{ mensagem: string; campo?: string } | null>(null);
@@ -60,7 +61,9 @@ export default function WizardDiagnosticoPage() {
   };
 
   const total = BLOCOS.length;
-  const bloco = passo > 0 ? BLOCOS[passo - 1] : null;
+  const passoRevisao = total + 1;
+  const revisando = passo === passoRevisao;
+  const bloco = passo > 0 && !revisando ? BLOCOS[passo - 1] : null;
 
   const salvarRascunho = async () => {
     const r = await chamarApi<RespostaDiagnostico>("/api/diagnostico", {
@@ -74,7 +77,7 @@ export default function WizardDiagnosticoPage() {
     setErro(null);
     setSalvando(true);
     try {
-      if (passo < total) {
+      if (passo <= total) {
         await salvarRascunho();
         setPasso(passo + 1);
         window.scrollTo({ top: 0 });
@@ -160,7 +163,7 @@ export default function WizardDiagnosticoPage() {
           </button>
         </div>
       ) : (
-        bloco && (
+        (bloco || revisando) && (
           <form
             onSubmit={(e) => {
               e.preventDefault();
@@ -170,20 +173,21 @@ export default function WizardDiagnosticoPage() {
           >
             <div style={{ marginBottom: "var(--espaco-md)" }}>
               <p style={{ ...NUMEROS, fontSize: "13px", color: "var(--cor-muted)", margin: "0 0 6px" }}>
-                <span className="sr-only">Bloco </span>
-                {passo} de {total}
+                <span className="sr-only">Etapa </span>
+                {passo} de {passoRevisao}
+                {revisando ? " · Revisão" : bloco ? ` · ${bloco.titulo}` : ""}
               </p>
               <div
                 role="progressbar"
                 aria-valuemin={1}
-                aria-valuemax={total}
+                aria-valuemax={passoRevisao}
                 aria-valuenow={passo}
-                aria-label={`Bloco ${passo} de ${total}`}
+                aria-label={`Etapa ${passo} de ${passoRevisao}`}
                 style={{ height: "4px", background: "var(--cor-border-light)", borderRadius: "var(--radius-pill)" }}
               >
                 <div
                   style={{
-                    width: `${(passo / total) * 100}%`,
+                    width: `${(passo / passoRevisao) * 100}%`,
                     height: "100%",
                     background: "var(--cor-action-blue)",
                     borderRadius: "var(--radius-pill)",
@@ -193,8 +197,14 @@ export default function WizardDiagnosticoPage() {
             </div>
 
             <h1 ref={tituloRef} tabIndex={-1} style={{ fontSize: "22px", marginBottom: "var(--espaco-md)" }}>
-              {bloco.titulo}
+              {revisando ? "Confira antes de enviar" : bloco?.titulo}
             </h1>
+
+            {revisando && (
+              <p style={{ fontSize: "14px", color: "var(--cor-muted)", marginBottom: "var(--espaco-md)" }}>
+                Depois do envio, o placar fica congelado para auditoria. Corrija agora o que precisar.
+              </p>
+            )}
 
             <div aria-live="assertive">
               {erro && (
@@ -204,13 +214,19 @@ export default function WizardDiagnosticoPage() {
               )}
             </div>
 
-            <CamposBloco
-              bloco={bloco}
-              payload={payload}
-              onChange={alterar}
-              mesesReferencia={meses}
-              campoComErro={erro?.campo ?? null}
-            />
+            {revisando ? (
+              <RevisaoPlacar payload={payload} onEditarBloco={(destino) => { setErro(null); setPasso(destino); window.scrollTo({ top: 0 }); }} />
+            ) : (
+              bloco && (
+                <CamposBloco
+                  bloco={bloco}
+                  payload={payload}
+                  onChange={alterar}
+                  mesesReferencia={meses}
+                  campoComErro={erro?.campo ?? null}
+                />
+              )
+            )}
 
             <div
               style={{
@@ -227,7 +243,7 @@ export default function WizardDiagnosticoPage() {
                 Voltar
               </button>
               <button type="submit" className="btn-primary" disabled={salvando} style={{ flex: 1, minHeight: "44px" }}>
-                {salvando ? "Salvando…" : passo === total ? "Enviar placar" : "Salvar e continuar"}
+                {salvando ? (revisando ? "Enviando…" : "Salvando…") : revisando ? "Enviar placar" : passo === total ? "Revisar e enviar" : "Salvar e continuar"}
               </button>
             </div>
           </form>

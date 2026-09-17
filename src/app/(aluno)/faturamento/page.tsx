@@ -5,9 +5,10 @@ import { useRouter } from "next/navigation";
 import { FormularioFaturamento } from "@/components/faturamento/FormularioFaturamento";
 import { TabelaHistoricoFaturamento } from "@/components/faturamento/TabelaHistoricoFaturamento";
 import { MetaFaturamentoAnual } from "@/components/faturamento/MetaFaturamentoAnual";
-import { ALUNO_ATUAL_ID, lerEstadoSistema, useSistemaStore } from "@/lib/store/sistema-store";
+import { lerEstadoSistema, useSistemaStore } from "@/lib/store/sistema-store";
 import { formatarMoedaReal, obterMetaAnualAluno } from "@/lib/api/faturamento";
 import { notificar } from "@/lib/notificacoes";
+import { EstadoCarregando } from "@/components/ui/EstadoCarregando";
 
 export default function FaturamentoAlunoPage() {
   const router = useRouter();
@@ -17,23 +18,26 @@ export default function FaturamentoAlunoPage() {
     reverterMetaFaturamento,
     faturamentosAlunoAtual,
     metaAnualAlunoAtual,
+    alunoAtualId,
     carregado,
   } = useSistemaStore();
 
-  if (!carregado) return null;
+  if (!carregado) return <EstadoCarregando texto="seu faturamento" variante="pagina" />;
 
   const handleDefinirMeta = (valor: number) => {
-    const anterior = lerEstadoSistema().metasFaturamentoAlunos[ALUNO_ATUAL_ID];
-    const valorAnteriorExibido = obterMetaAnualAluno(lerEstadoSistema().metasFaturamentoAlunos, ALUNO_ATUAL_ID);
-    definirMetaFaturamentoAnual(valor);
-    const posterior = lerEstadoSistema().metasFaturamentoAlunos[ALUNO_ATUAL_ID];
+    const anterior = lerEstadoSistema().metasFaturamentoAlunos[alunoAtualId];
+    const valorAnteriorExibido = obterMetaAnualAluno(lerEstadoSistema().metasFaturamentoAlunos, alunoAtualId);
+    // Gravação adiada: só vai ao servidor quando a janela de "Desfazer" termina
+    const efetivar = definirMetaFaturamentoAnual(valor, alunoAtualId, { adiarPersistencia: true });
+    const posterior = lerEstadoSistema().metasFaturamentoAlunos[alunoAtualId];
     if (anterior === posterior) return;
 
     notificar(`Sua meta anual foi alterada para ${formatarMoedaReal(posterior)}.`, {
+      efetivar,
       desfazer: {
         rotulo: "Desfazer alteração",
         rotuloAcessivel: "Desfazer alteração da sua meta anual de faturamento",
-        executar: () => reverterMetaFaturamento(ALUNO_ATUAL_ID, anterior, posterior),
+        executar: () => reverterMetaFaturamento(alunoAtualId, anterior, posterior),
         mensagemAposDesfazer: `Alteração desfeita. Sua meta anual voltou para ${formatarMoedaReal(valorAnteriorExibido)}.`,
       },
     });

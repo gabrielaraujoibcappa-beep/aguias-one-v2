@@ -6,6 +6,7 @@ import { FormularioCheckinModular } from "@/components/checkin/FormularioCheckin
 import { SubmissaoCheckin } from "@/lib/api/checkin";
 import { ModuloItem, filtrarModulosVisiveis } from "@/lib/api/modulos-liberacao";
 import { useSistemaStore } from "@/lib/store/sistema-store";
+import { EstadoCarregando } from "@/components/ui/EstadoCarregando";
 
 /**
  * Aceita o id real do módulo (UUID) ou "mod-N" (número do módulo), formato dos
@@ -30,7 +31,7 @@ export default function CheckinModuloPage() {
   const router = useRouter();
   const { estado, carregado, submeterCheckin } = useSistemaStore();
 
-  if (!carregado) return null;
+  if (!carregado) return <EstadoCarregando texto="o check-in do módulo" variante="formulario" />;
 
   const parametro = Array.isArray(params?.moduloId) ? params.moduloId[0] : (params?.moduloId as string | undefined);
   const modulo = localizarModulo(estado.modulos, parametro);

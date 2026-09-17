@@ -8,13 +8,14 @@ import { FiltroPeriodo } from "@/components/ui/FiltroPeriodo";
 import { IconUserPlus } from "@/components/ui/Icons";
 import { criarPeriodoPadrao, PeriodoFiltroState } from "@/lib/periodo/calculo-periodo";
 import { useSistemaStore } from "@/lib/store/sistema-store";
+import { EstadoCarregando } from "@/components/ui/EstadoCarregando";
 
 export default function PainelTurmaPage() {
   const { estado, salvarAluno, carregado } = useSistemaStore();
-  const [turma] = useState("Águias ONE — Turma 2026.1");
+
   const [modalMatriculaAberto, setModalMatriculaAberto] = useState(false);
   const [periodo, setPeriodo] = useState<PeriodoFiltroState>(() =>
-    criarPeriodoPadrao("Global (Turma 2026.1)")
+    criarPeriodoPadrao("Global da turma")
   );
   const [carregandoPeriodo, setCarregandoPeriodo] = useState(false);
 
@@ -28,7 +29,10 @@ export default function PainelTurmaPage() {
     }, 400);
   };
 
-  if (!carregado) return null;
+  if (!carregado) return <EstadoCarregando texto="a turma" variante="pagina" />;
+
+  // Turma em andamento vinda do banco (o painel ainda não seleciona entre turmas)
+  const turma = (estado.turmas.find((t) => t.status === "em_andamento") ?? estado.turmas[0])?.nome ?? "Nenhuma turma cadastrada";
 
   return (
     <div style={{ maxWidth: "1200px", margin: "0 auto", padding: "var(--espaco-xl)" }}>
@@ -79,7 +83,7 @@ export default function PainelTurmaPage() {
         turmaNome={turma}
       />
 
-      <TabelaSemaforoTurma alunos={estado.alunosSemaforo} />
+      <TabelaSemaforoTurma alunos={estado.alunosSemaforo} entregas={estado.entregas} />
 
       {/* Modal de Matrícula / Criação de Usuário pela Operação */}
       {modalMatriculaAberto && (

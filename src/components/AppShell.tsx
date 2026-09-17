@@ -6,10 +6,11 @@ import { Sidebar } from "./Sidebar";
 import { Breadcrumbs } from "./Breadcrumbs";
 import { TelaAcessoBloqueado } from "./TelaAcessoBloqueado";
 import { RegiaoNotificacoes } from "./ui/RegiaoNotificacoes";
+import { AvisoSincronizacao } from "./ui/AvisoSincronizacao";
 import { SessaoSync } from "./SessaoSync";
 import { useSistemaStore } from "@/lib/store/sistema-store";
 
-const ROTAS_SEM_SHELL = ["/login", "/acesso-bloqueado"];
+export const ROTAS_SEM_SHELL = ["/", "/login", "/acesso-bloqueado"];
 
 export function AppShell({ children }: { children: React.ReactNode }) {
   const pathname = usePathname();
@@ -29,6 +30,7 @@ export function AppShell({ children }: { children: React.ReactNode }) {
       <SessaoSync />
       <Sidebar />
       <div className="app-main">
+        <AvisoSincronizacao />
         <Breadcrumbs />
         <main style={{ flex: 1, minHeight: "calc(100vh - 120px)", paddingBottom: "var(--espaco-section)" }}>
           {children}

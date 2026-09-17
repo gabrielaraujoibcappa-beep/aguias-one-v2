@@ -19,6 +19,7 @@ import {
   formatarCentavos,
   formatarData,
   formatarMesCurto,
+  formatarValorCampo,
   rotuloOpcao,
 } from "@/lib/diagnostico/cliente";
 import { CamposBloco, NUMEROS, blocoDoCampo } from "@/components/diagnostico/aluno/CamposBloco";
@@ -33,15 +34,6 @@ interface Diagnostico {
   congeladoEm: string | null;
   corrigirAte: string | null;
   mesesReferencia: string[];
-}
-
-function formatarValor(campoId: string, tipo: string, v: ValorCampo): string {
-  if (v === undefined || v === null || v === "") return "—";
-  if (tipo === "bool") return v ? "Sim" : "Não";
-  if (tipo === "centavos" && typeof v === "number") return formatarCentavos(v);
-  if (tipo === "enum" && typeof v === "string") return rotuloOpcao(campoId, v);
-  if (tipo === "multi" && Array.isArray(v)) return v.length ? v.map((x) => rotuloOpcao(campoId, x)).join(", ") : "—";
-  return String(v);
 }
 
 export default function MeuDiagnosticoPage() {
@@ -241,7 +233,7 @@ export default function MeuDiagnosticoPage() {
                     <div key={c.id}>
                       <dt style={{ fontSize: "13px", color: "var(--cor-muted)" }}>{c.rotulo}</dt>
                       <dd style={{ margin: 0, fontSize: "15px", whiteSpace: "pre-wrap", ...(c.tipo === "centavos" ? NUMEROS : {}) }}>
-                        {formatarValor(c.id, c.tipo, diag.payload[c.id])}
+                        {formatarValorCampo(c.id, c.tipo, diag.payload[c.id])}
                       </dd>
                     </div>
                   ))}

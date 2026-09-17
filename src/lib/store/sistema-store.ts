@@ -81,6 +81,8 @@ export interface SistemaState {
   alunos: AlunoCadastro[];
   turmas: TurmaCadastro[];
   alunosSemaforo: AlunoSemaforoStatus[];
+  /** Última sincronização com o servidor falhou: a tela mostra dados possivelmente defasados. */
+  sincronizacaoFalhou: boolean;
 }
 
 /** Estado vazio: nada é exibido até o servidor responder. */
@@ -98,6 +100,7 @@ const estadoInicial: SistemaState = {
   alunos: [],
   turmas: [],
   alunosSemaforo: [],
+  sincronizacaoFalhou: false,
 };
 
 /**
@@ -322,9 +325,11 @@ async function executarSincronizacao() {
       novo.canais = rCanais ? mapearCanais(rCanais.canais ?? []) : [];
     }
 
+    novo.sincronizacaoFalhou = false;
     salvarEstado(novo);
   } catch {
-    // Offline: mantém o que já está na tela
+    // Offline ou servidor fora: mantém o que está na tela e avisa que pode estar defasado
+    salvarEstado({ ...estadoGlobal, sincronizacaoFalhou: true });
   }
 }
 
@@ -344,6 +349,8 @@ function matriculaDoAluno(alunoId: string | undefined): string | null {
 export function useSistemaStore() {
   const estado = useSyncExternalStore(inscrever, lerEstado, lerEstadoNoServidor);
   const carregado = useSyncExternalStore(inscrever, lerCarregado, lerCarregadoNoServidor);
+  /** Nova tentativa manual após falha de rede ou de servidor. */
+  const tentarSincronizarNovamente = () => sincronizarAgora();
 
   useEffect(() => {
     carregarDoArmazenamento();
@@ -697,6 +704,7 @@ export function useSistemaStore() {
   };
 
   return {
+    tentarSincronizarNovamente,
     estado,
     mentorados,
     carregado,

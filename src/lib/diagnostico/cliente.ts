@@ -1,5 +1,5 @@
 /** Helpers de navegador para as telas do placar de entrada. */
-import { TODOS_CAMPOS } from "./campos";
+import { TODOS_CAMPOS, type ValorCampo } from "./campos";
 import type { AnjoTipoT0, IcpSegmento, RiscoParcela, StatusDiagnostico } from "./regras";
 
 export interface ErroApiDiagnostico {
@@ -116,4 +116,16 @@ export function baixarArquivo(nome: string, conteudo: string, tipo = "text/csv;c
   a.download = nome;
   a.click();
   URL.revokeObjectURL(url);
+}
+
+/** Valor de um campo do placar em texto legível, para revisão e leitura. */
+export function formatarValorCampo(campoId: string, tipo: string, valor: ValorCampo): string {
+  if (valor === undefined || valor === null || valor === "") return "—";
+  if (tipo === "bool") return valor ? "Sim" : "Não";
+  if (tipo === "centavos" && typeof valor === "number") return formatarCentavos(valor);
+  if (tipo === "enum" && typeof valor === "string") return rotuloOpcao(campoId, valor);
+  if (tipo === "multi" && Array.isArray(valor)) {
+    return valor.length ? valor.map((v) => rotuloOpcao(campoId, v)).join(", ") : "—";
+  }
+  return String(valor);
 }

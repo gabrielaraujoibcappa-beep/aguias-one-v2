@@ -16,6 +16,7 @@ import {
 } from "@/lib/api/faturamento";
 import { lerEstadoSistema, useSistemaStore } from "@/lib/store/sistema-store";
 import { notificar } from "@/lib/notificacoes";
+import { EstadoCarregando } from "@/components/ui/EstadoCarregando";
 
 const ANO_ATUAL = new Date().getFullYear();
 
@@ -53,7 +54,7 @@ export default function PainelFaturamentoPage() {
     [alunosBase, estado.faturamentos, estado.metasFaturamentoAlunos]
   );
 
-  if (!carregado) return null;
+  if (!carregado) return <EstadoCarregando texto="as declarações da turma" variante="pagina" />;
 
   const nomeDe = (id: string) => nomesAlunos[id] ?? "Mentorado";
 
@@ -99,7 +100,8 @@ export default function PainelFaturamentoPage() {
 
   const handleSalvarDeclaracao = (declaracao: DeclaracaoFaturamento) => {
     const edicao = declaracao.id ? localizar(declaracao.id) : { registro: undefined, indice: -1 };
-    salvarFaturamento(declaracao);
+    // Edição adiada até a janela de "Desfazer" terminar; criação vai direto ao servidor
+    const efetivar = salvarFaturamento(declaracao, { adiarPersistencia: Boolean(edicao.registro) });
 
     // Nova declaração: apenas confirma. Ela pode ser excluída pela própria tabela.
     if (!edicao.registro) {
@@ -111,6 +113,7 @@ export default function PainelFaturamentoPage() {
     const posterior = localizar(anterior.id as string).registro;
     const objeto = descreverDeclaracao(anterior);
     notificar(`Alterações salvas na ${objeto}.`, {
+      efetivar,
       desfazer: {
         rotulo: "Desfazer edição",
         rotuloAcessivel: `Desfazer edição da ${objeto}`,
@@ -123,9 +126,10 @@ export default function PainelFaturamentoPage() {
   const handleExcluir = (id: string) => {
     const { registro: anterior, indice } = localizar(id);
     if (!anterior) return;
-    excluirFaturamento(id);
+    const efetivar = excluirFaturamento(id, { adiarPersistencia: true });
     const objeto = descreverDeclaracao(anterior);
     notificar(`${capitalizar(objeto)} excluída.`, {
+      efetivar,
       desfazer: {
         rotulo: "Desfazer exclusão",
         rotuloAcessivel: `Desfazer exclusão da ${objeto}`,
@@ -137,10 +141,11 @@ export default function PainelFaturamentoPage() {
 
   const handleDefinirMeta = (alunoId: string, nome: string, valor: number) => {
     const anterior = lerEstadoSistema().metasFaturamentoAlunos[alunoId];
-    definirMetaFaturamentoAnual(valor, alunoId);
+    const efetivar = definirMetaFaturamentoAnual(valor, alunoId, { adiarPersistencia: true });
     const posterior = lerEstadoSistema().metasFaturamentoAlunos[alunoId];
     if (anterior === posterior) return;
     notificar(`Meta anual de ${nome} alterada para ${formatarMoedaReal(posterior)}.`, {
+      efetivar,
       desfazer: {
         rotulo: "Desfazer alteração",
         rotuloAcessivel: `Desfazer alteração da meta anual de ${nome}`,

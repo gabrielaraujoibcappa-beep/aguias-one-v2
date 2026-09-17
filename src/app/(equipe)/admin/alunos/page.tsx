@@ -8,6 +8,7 @@ import { ModalConfirmacaoDestrutiva } from "@/components/ui/ModalConfirmacaoDest
 import { AlunoCadastro } from "@/lib/api/alunos";
 import { lerEstadoSistema, useSistemaStore } from "@/lib/store/sistema-store";
 import { DURACAO_COM_DESFAZER_MS, notificar } from "@/lib/notificacoes";
+import { EstadoCarregando } from "@/components/ui/EstadoCarregando";
 
 const SEGUNDOS_PARA_DESFAZER = Math.round(DURACAO_COM_DESFAZER_MS / 1000);
 
@@ -18,7 +19,7 @@ export default function AdminAlunosPage() {
   const [alunoAcesso, setAlunoAcesso] = useState<AlunoCadastro | null>(null);
   const [alunoParaExcluir, setAlunoParaExcluir] = useState<AlunoCadastro | null>(null);
 
-  if (!carregado) return null;
+  if (!carregado) return <EstadoCarregando texto="a lista de alunos" variante="tabela" />;
 
   const turmasDisponiveis = estado.turmas.map((t) => ({ id: t.id, nome: t.nome }));
 

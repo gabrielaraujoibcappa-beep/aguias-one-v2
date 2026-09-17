@@ -4,6 +4,7 @@ import React, { useCallback, useEffect, useState } from "react";
 import { Button } from "@/components/ui/Button";
 import { Tabs } from "@/components/ui/Tabs";
 import { useSistemaStore } from "@/lib/store/sistema-store";
+import { EstadoCarregando } from "@/components/ui/EstadoCarregando";
 import {
   obterRelatorioPresencas,
   criarEncontro,
@@ -151,7 +152,7 @@ export default function AdminChamadasPage() {
     }
   };
 
-  if (!carregado) return null;
+  if (!carregado) return <EstadoCarregando texto="as chamadas" variante="tabela" />;
 
   const encontrosOrdenados = [...(dadosTurma?.encontros ?? [])].sort((a, b) =>
     b.data_encontro.localeCompare(a.data_encontro)

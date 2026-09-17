@@ -3,6 +3,7 @@
 import React, { useState } from "react";
 import { TurmaCadastro } from "@/lib/api/turmas";
 import { useSistemaStore } from "@/lib/store/sistema-store";
+import { EstadoCarregando } from "@/components/ui/EstadoCarregando";
 
 export default function AdminTurmasPage() {
   const { estado, salvarTurma, carregado } = useSistemaStore();
@@ -12,7 +13,7 @@ export default function AdminTurmasPage() {
   const [limiteVagas, setLimiteVagas] = useState(40);
   const [modalAberto, setModalAberto] = useState(false);
 
-  if (!carregado) return null;
+  if (!carregado) return <EstadoCarregando texto="as turmas" variante="tabela" />;
 
   const handleCriarTurma = (e: React.FormEvent) => {
     e.preventDefault();

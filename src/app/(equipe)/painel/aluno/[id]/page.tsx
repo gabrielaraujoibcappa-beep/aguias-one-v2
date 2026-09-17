@@ -5,14 +5,15 @@ import Link from "next/link";
 import { useParams, useSearchParams } from "next/navigation";
 import { FichaAluno } from "@/components/equipe/FichaAluno";
 import { CONTEXTOS_OPERACIONAIS, montarFichaAluno } from "@/lib/api/ficha-aluno";
-import { ALUNO_ATUAL_ID, useSistemaStore } from "@/lib/store/sistema-store";
+import { useSistemaStore } from "@/lib/store/sistema-store";
+import { EstadoCarregando } from "@/components/ui/EstadoCarregando";
 
 const ANO_ATUAL = new Date().getFullYear();
 
 function ConteudoFicha() {
   const params = useParams<{ id: string }>();
   const searchParams = useSearchParams();
-  const { estado, mentorados, carregado } = useSistemaStore();
+  const { estado, mentorados, carregado, alunoAtualId } = useSistemaStore();
 
   const alunoId = decodeURIComponent(Array.isArray(params?.id) ? params.id[0] : params?.id ?? "");
   const contextoChave = searchParams.get("contexto") ?? "";
@@ -32,7 +33,7 @@ function ConteudoFicha() {
               faturamentos: estado.faturamentos,
               metasFaturamentoAlunos: estado.metasFaturamentoAlunos,
               canais: estado.canais,
-              alunoAtualId: ALUNO_ATUAL_ID,
+              alunoAtualId,
               bloqueiosAcesso: estado.bloqueiosAcesso,
               historicoBloqueios: estado.historicoBloqueios,
             },
@@ -43,7 +44,7 @@ function ConteudoFicha() {
     [carregado, estado, alunoId]
   );
 
-  if (!carregado) return null;
+  if (!carregado) return <EstadoCarregando texto="a ficha do aluno" variante="pagina" />;
 
   if (!ficha) {
     return (

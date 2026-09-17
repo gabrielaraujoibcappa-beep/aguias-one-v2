@@ -4,12 +4,13 @@ import React from "react";
 import { useRouter } from "next/navigation";
 import { GridCanais } from "@/components/canais/GridCanais";
 import { useSistemaStore } from "@/lib/store/sistema-store";
+import { EstadoCarregando } from "@/components/ui/EstadoCarregando";
 
 export default function CanaisAlunoPage() {
   const router = useRouter();
   const { estado, carregado } = useSistemaStore();
 
-  if (!carregado) return null;
+  if (!carregado) return <EstadoCarregando texto="seus canais de captação" variante="tabela" />;
 
   return (
     <div style={{ maxWidth: "1100px", margin: "0 auto", padding: "var(--espaco-xl)" }}>

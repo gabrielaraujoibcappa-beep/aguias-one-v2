@@ -3,12 +3,13 @@
 import React, { useState } from "react";
 import { ListaLiberacaoModulos } from "@/components/equipe/ListaLiberacaoModulos";
 import { useSistemaStore } from "@/lib/store/sistema-store";
+import { EstadoCarregando } from "@/components/ui/EstadoCarregando";
 
 export default function PainelModulosPage() {
   const { estado, alternarModulo, carregado } = useSistemaStore();
-  const [turmaSelecionada, setTurmaSelecionada] = useState("Águias ONE — Turma 2026.1");
+  const [turmaSelecionada, setTurmaSelecionada] = useState("");
 
-  if (!carregado) return null;
+  if (!carregado) return <EstadoCarregando texto="a liberação de módulos" variante="tabela" />;
 
   return (
     <div style={{ maxWidth: "1000px", margin: "0 auto", padding: "var(--espaco-xl)" }}>
@@ -21,7 +22,8 @@ export default function PainelModulosPage() {
         </div>
 
         <select
-          value={turmaSelecionada}
+          aria-label="Turma"
+          value={turmaSelecionada || estado.turmas[0]?.id || ""}
           onChange={(e) => setTurmaSelecionada(e.target.value)}
           style={{
             padding: "8px 14px",
@@ -31,8 +33,12 @@ export default function PainelModulosPage() {
             fontWeight: 500,
           }}
         >
-          <option value="Águias ONE — Turma 2026.1">Águias ONE — Turma 2026.1</option>
-          <option value="Águias ONE — Turma 2026.2">Águias ONE — Turma 2026.2</option>
+          {estado.turmas.length === 0 && <option value="">Nenhuma turma cadastrada</option>}
+          {estado.turmas.map((t) => (
+            <option key={t.id} value={t.id}>
+              {t.nome}
+            </option>
+          ))}
         </select>
       </div>
 
