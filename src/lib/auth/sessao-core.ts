@@ -7,13 +7,7 @@
 import type { PapelUsuario } from "./roles";
 
 export const COOKIE_SESSAO = "sb-access-token";
-export const PREFIXO_TOKEN_DEMO = "demo:";
 export const PAPEIS_EQUIPE: PapelUsuario[] = ["admin", "concierge", "anjo", "mentor"];
-
-/** Login demo sem senha: exclusivo do ambiente de desenvolvimento. */
-export function modoDemoAtivo(): boolean {
-  return process.env.NODE_ENV === "development";
-}
 
 export interface PerfilSessao {
   usuarioId: string;
@@ -22,7 +16,6 @@ export interface PerfilSessao {
   email: string;
   papel: PapelUsuario;
   status: string;
-  demo: boolean;
 }
 
 const CACHE_TTL_MS = 30_000;
@@ -38,7 +31,7 @@ function configSupabase() {
   return { url, anon, service };
 }
 
-async function buscarUsuario(filtro: string): Promise<Omit<PerfilSessao, "demo"> | null> {
+async function buscarUsuario(filtro: string): Promise<PerfilSessao | null> {
   const { url, service } = configSupabase();
   const res = await fetch(
     `${url}/rest/v1/usuarios?${filtro}&select=id,auth_id,nome,email,papel,status&limit=1`,
@@ -58,14 +51,6 @@ async function buscarUsuario(filtro: string): Promise<Omit<PerfilSessao, "demo">
 }
 
 async function resolverSemCache(token: string): Promise<PerfilSessao | null> {
-  if (token.startsWith(PREFIXO_TOKEN_DEMO)) {
-    if (!modoDemoAtivo()) return null;
-    const email = token.slice(PREFIXO_TOKEN_DEMO.length).trim().toLowerCase();
-    if (!email) return null;
-    const u = await buscarUsuario(`email=eq.${encodeURIComponent(email)}`);
-    return u ? { ...u, demo: true } : null;
-  }
-
   const { url, anon } = configSupabase();
   const res = await fetch(`${url}/auth/v1/user`, {
     headers: { apikey: anon, Authorization: `Bearer ${token}` },
@@ -75,11 +60,10 @@ async function resolverSemCache(token: string): Promise<PerfilSessao | null> {
   const authUser = await res.json();
   if (!authUser?.id) return null;
 
-  const u = await buscarUsuario(`auth_id=eq.${encodeURIComponent(authUser.id)}`);
-  return u ? { ...u, demo: false } : null;
+  return buscarUsuario(`auth_id=eq.${encodeURIComponent(authUser.id)}`);
 }
 
-/** Valida o token (JWT do Supabase ou demo:<email> em dev) e devolve o perfil. */
+/** Valida o JWT do Supabase e devolve o perfil gravado em public.usuarios. */
 export async function resolverPerfil(tokenBruto: string | null | undefined): Promise<PerfilSessao | null> {
   if (!tokenBruto) return null;
   let token = tokenBruto;

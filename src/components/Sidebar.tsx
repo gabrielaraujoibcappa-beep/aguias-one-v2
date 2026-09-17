@@ -27,7 +27,7 @@ import {
   IconFolder,
   IconCalendar
 } from "./ui/Icons";
-import { CONTAS_DEMO, MODO_DEMO, encerrarSessao, iniciarSessaoDemo } from "@/lib/auth/sessao-cliente";
+import { encerrarSessao } from "@/lib/auth/sessao-cliente";
 
 interface ItemSidebar {
   rotulo: string;
@@ -133,29 +133,19 @@ export function Sidebar() {
   // Resgate não é equipe: não vê painéis nem cadastros
   const isStaff = estado.papelAtual !== "mentorado" && !isResgate;
 
+  // nomeExemplo é só o texto de reserva até a sessão trazer o nome real
   const personasConfig: { id: PapelUsuario; rotulo: string; cargo: string; nomeExemplo: string; rotaPadrao: string }[] = [
-    { id: "mentorado", rotulo: "Mentorado", cargo: "Perito Solo", nomeExemplo: "Dr. Roberto Silva", rotaPadrao: "/dashboard" },
-    { id: "concierge", rotulo: "Concierge", cargo: "Operação & Turma", nomeExemplo: "Flávio Lopes", rotaPadrao: "/painel/turma" },
-    { id: "anjo", rotulo: "Anjo", cargo: "Suporte & Auditoria", nomeExemplo: "Ana Carolina", rotaPadrao: "/painel/modulos" },
-    { id: "mentor", rotulo: "Mentor", cargo: "Coordenação", nomeExemplo: "Prof. Edilson Aguiais", rotaPadrao: "/painel/turma" },
-    { id: "resgate", rotulo: "Resgate", cargo: "Resgate de alunos", nomeExemplo: "Adelayne", rotaPadrao: "/resgate" },
-    { id: "admin", rotulo: "Admin", cargo: "Gestão", nomeExemplo: "Coordenação UniBCAPPA", rotaPadrao: "/admin/alunos" },
+    { id: "mentorado", rotulo: "Mentorado", cargo: "Perito Solo", nomeExemplo: "Mentorado", rotaPadrao: "/dashboard" },
+    { id: "concierge", rotulo: "Concierge", cargo: "Operação & Turma", nomeExemplo: "Concierge", rotaPadrao: "/painel/turma" },
+    { id: "anjo", rotulo: "Anjo", cargo: "Suporte & Auditoria", nomeExemplo: "Anjo", rotaPadrao: "/painel/modulos" },
+    { id: "mentor", rotulo: "Mentor", cargo: "Coordenação", nomeExemplo: "Mentor", rotaPadrao: "/painel/turma" },
+    { id: "resgate", rotulo: "Resgate", cargo: "Resgate de alunos", nomeExemplo: "Resgate", rotaPadrao: "/resgate" },
+    { id: "admin", rotulo: "Admin", cargo: "Gestão", nomeExemplo: "Coordenação", rotaPadrao: "/admin/alunos" },
   ];
 
   const configPapel = personasConfig.find((p) => p.id === estado.papelAtual) || personasConfig[0];
   // Identidade exibida vem da sessão validada no servidor (SessaoSync)
   const personaAtiva = { ...configPapel, nomeExemplo: estado.usuarioAtual?.nome || configPapel.nomeExemplo };
-
-  // Troca de persona = nova sessão demo; indisponível fora de desenvolvimento
-  const handleTrocaPapel = (papelId: PapelUsuario) => {
-    const conta = CONTAS_DEMO.find((c) => c.papel === papelId);
-    const config = personasConfig.find((p) => p.id === papelId);
-    if (!MODO_DEMO || !conta || !config) return;
-    iniciarSessaoDemo(conta.email);
-    mudarPapel(papelId);
-    setPersonaAberta(false);
-    window.location.assign(config.rotaPadrao);
-  };
 
   const handleSair = async () => {
     setPersonaAberta(false);
@@ -227,7 +217,6 @@ export function Sidebar() {
       ? [
           { rotulo: "Mentor · Turma", href: "/mentor/turma", icone: IconUsers },
           { rotulo: "ICP & Frases", href: "/mentor/icp", icone: IconFolder },
-          { rotulo: "Auditoria de acessos", href: "/mentor/auditoria", icone: IconAudit },
         ]
       : []),
   ];
@@ -453,54 +442,16 @@ export function Sidebar() {
                 minWidth: "220px",
               }}
             >
-              {MODO_DEMO && (
-              <>
-              <div style={{ fontSize: "11px", fontWeight: 600, color: "rgba(255,255,255,0.65)", padding: "4px 8px" }}>
-                Alternar perfil (demo · dev)
-              </div>
-              {personasConfig.map((p) => {
-                const ativo = p.id === estado.papelAtual;
-                return (
-                  <button
-                    key={p.id}
-                    type="button"
-                    onClick={() => handleTrocaPapel(p.id)}
-                    aria-current={ativo ? "true" : undefined}
-                    style={{
-                      width: "100%",
-                      display: "flex",
-                      alignItems: "center",
-                      padding: "8px 10px",
-                      borderRadius: "var(--radius-xs)",
-                      border: "none",
-                      backgroundColor: ativo ? "rgba(255, 255, 255, 0.1)" : "transparent",
-                      color: "#ffffff",
-                      fontSize: "12px",
-                      cursor: "pointer",
-                      textAlign: "left",
-                    }}
-                  >
-                    <div>
-                      <div style={{ fontWeight: ativo ? 600 : 400 }}>{p.nomeExemplo}</div>
-                      <div style={{ fontSize: "11px", color: "rgba(255,255,255,0.6)" }}>
-                        {p.rotulo} · {p.cargo}
-                      </div>
-                    </div>
-                  </button>
-                );
-              })}
-              </>
-              )}
               <button
                 type="button"
                 onClick={handleSair}
                 style={{
                   width: "100%",
-                  marginTop: MODO_DEMO ? "4px" : 0,
+                  marginTop: 0,
                   padding: "8px 10px",
                   borderRadius: "var(--radius-xs)",
                   border: "none",
-                  borderTop: MODO_DEMO ? "1px solid rgba(255, 255, 255, 0.1)" : "none",
+                  borderTop: "none",
                   backgroundColor: "transparent",
                   color: "#fca5a5",
                   fontSize: "12px",

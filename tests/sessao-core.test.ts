@@ -31,18 +31,14 @@ describe("resolverPerfil", () => {
     vi.unstubAllGlobals();
   });
 
-  it("recusa token demo em produção sem consultar o banco", async () => {
-    const { resolverPerfil } = await carregarModulo("production");
-    expect(await resolverPerfil("demo:flavio.lopes@unibcappa.com.br")).toBeNull();
-    expect(fetchMock).not.toHaveBeenCalled();
-  });
-
-  it("aceita token demo em desenvolvimento, com papel vindo do banco", async () => {
-    fetchMock.mockResolvedValue({ ok: true, json: async () => [USUARIO_DB] });
+  // O login de demonstração (token "demo:<email>") foi removido do sistema.
+  it("recusa token de demonstração, inclusive em desenvolvimento", async () => {
+    fetchMock.mockResolvedValue({ ok: false, json: async () => ({}) });
     const { resolverPerfil } = await carregarModulo("development");
-    const perfil = await resolverPerfil("demo%3Aflavio.lopes%40unibcappa.com.br");
-    expect(perfil).toMatchObject({ papel: "concierge", demo: true, usuarioId: "u-1" });
-    expect(String(fetchMock.mock.calls[0][0])).toContain("email=eq.flavio.lopes%40unibcappa.com.br");
+    expect(await resolverPerfil("demo:flavio.lopes@unibcappa.com.br")).toBeNull();
+    // Só tenta validar como JWT no Supabase Auth; nunca busca o usuário por e-mail
+    expect(String(fetchMock.mock.calls[0][0])).toContain("/auth/v1/user");
+    expect(fetchMock.mock.calls.every((c) => !String(c[0]).includes("email=eq."))).toBe(true);
   });
 
   it("recusa JWT que o Supabase Auth não reconhece", async () => {
@@ -57,7 +53,7 @@ describe("resolverPerfil", () => {
       .mockResolvedValueOnce({ ok: true, json: async () => [USUARIO_DB] });
     const { resolverPerfil } = await carregarModulo("production");
     const perfil = await resolverPerfil("jwt-valido");
-    expect(perfil).toMatchObject({ papel: "concierge", demo: false });
+    expect(perfil).toMatchObject({ papel: "concierge", usuarioId: "u-1" });
     expect(String(fetchMock.mock.calls[1][0])).toContain("auth_id=eq.auth-1");
   });
 

@@ -15,7 +15,7 @@ export async function GET(req: NextRequest) {
       supabaseAdmin.from("usuarios").select("whatsapp, cpf, area_pericial").eq("id", sessao.usuarioId).maybeSingle(),
       supabaseAdmin
         .from("matriculas")
-        .select("id, status, turmas (id, codigo, nome, status)")
+        .select("id, status, meta_faturamento_anual, turmas (id, codigo, nome, status)")
         .eq("usuario_id", sessao.usuarioId)
         .order("matriculado_em", { ascending: false })
         .limit(1),
@@ -35,8 +35,9 @@ export async function GET(req: NextRequest) {
         areaPericial: usuario?.area_pericial ?? null,
         papel: sessao.papel,
         status: sessao.status,
-        demo: sessao.demo,
         matriculaId: matricula?.id ?? null,
+        metaFaturamentoAnual:
+          (matricula as any)?.meta_faturamento_anual != null ? Number((matricula as any).meta_faturamento_anual) : null,
         turma: matricula?.turmas ?? null,
       },
     });

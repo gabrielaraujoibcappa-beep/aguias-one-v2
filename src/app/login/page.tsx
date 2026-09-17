@@ -5,14 +5,7 @@ import { useRouter } from "next/navigation";
 import Link from "next/link";
 import { useSistemaStore } from "@/lib/store/sistema-store";
 import { supabase } from "@/lib/supabase/client";
-import {
-  CONTAS_DEMO,
-  MODO_DEMO,
-  encerrarSessao,
-  gravarTokenSessao,
-  iniciarSessaoDemo,
-  obterUsuarioLogado,
-} from "@/lib/auth/sessao-cliente";
+import { encerrarSessao, gravarTokenSessao, obterUsuarioLogado } from "@/lib/auth/sessao-cliente";
 import { IconCheckCircle, IconAlertCircle } from "@/components/ui/Icons";
 
 export default function LoginPage() {
@@ -60,20 +53,6 @@ export default function LoginPage() {
       await concluirLogin();
     } catch (err: any) {
       setErro(err.message || "Ocorreu um erro ao realizar o login.");
-    } finally {
-      setCarregando(false);
-    }
-  };
-
-  const entrarComContaDemo = async (conta: (typeof CONTAS_DEMO)[number]) => {
-    setCarregando(true);
-    setErro(null);
-    try {
-      await supabase.auth.signOut().catch(() => {});
-      iniciarSessaoDemo(conta.email);
-      await concluirLogin();
-    } catch (err: any) {
-      setErro(err.message || "Não foi possível entrar com a conta de demonstração.");
     } finally {
       setCarregando(false);
     }
@@ -442,55 +421,6 @@ export default function LoginPage() {
             )}
           </form>
 
-          {/* Login demo sem senha: somente em desenvolvimento (NODE_ENV=development) */}
-          {MODO_DEMO && (
-          <>
-          {/* Divisor Visual */}
-          <div
-            style={{
-              display: "flex",
-              alignItems: "center",
-              margin: "24px 0 16px 0",
-              color: "var(--cor-muted, #6b7280)",
-              fontSize: "11px",
-              textTransform: "uppercase",
-              letterSpacing: "0.5px",
-            }}
-          >
-            <div style={{ flex: 1, height: "1px", backgroundColor: "var(--cor-border-light, #e5e7eb)" }} />
-            <span style={{ padding: "0 10px" }}>Demonstração · apenas em desenvolvimento</span>
-            <div style={{ flex: 1, height: "1px", backgroundColor: "var(--cor-border-light, #e5e7eb)" }} />
-          </div>
-
-          {/* Atalhos com 1 clique para as Personas Cadastradas */}
-          <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: "8px" }}>
-            {CONTAS_DEMO.map((c) => (
-              <button
-                key={c.email}
-                type="button"
-                onClick={() => entrarComContaDemo(c)}
-                disabled={carregando}
-                style={{
-                  padding: "8px 10px",
-                  borderRadius: "var(--radius-xs, 4px)",
-                  border: email === c.email ? "1px solid var(--cor-action-vibrant, #0052ff)" : "1px solid var(--cor-border-light, #e5e7eb)",
-                  backgroundColor: email === c.email ? "rgba(0, 82, 255, 0.06)" : "var(--cor-soft-stone, #f5f6f8)",
-                  cursor: "pointer",
-                  textAlign: "left",
-                  transition: "all 0.15s ease",
-                }}
-              >
-                <div style={{ fontSize: "12px", fontWeight: 600, color: "var(--cor-primary, #111827)", whiteSpace: "nowrap", overflow: "hidden", textOverflow: "ellipsis" }}>
-                  {c.nome}
-                </div>
-                <div style={{ fontSize: "10px", color: "var(--cor-text-muted, #4b5563)" }}>
-                  {c.cargo}
-                </div>
-              </button>
-            ))}
-          </div>
-          </>
-          )}
         </div>
 
         {/* Rodapé Seguro e Suporte */}

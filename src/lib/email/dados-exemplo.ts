@@ -34,9 +34,9 @@ export const TEMPLATES_CATALOGO: TemplateInfo[] = [
     descricao: "Enviado no momento da matrícula com login, senha inicial gerada e primeiros passos.",
     renderizar: () =>
       gerarEmailBoasVindas({
-        nome: "Dr. Roberto Silva",
-        email: "roberto.silva@pericia.com.br",
-        senhaInicial: "Aguia@2026",
+        nome: "Mentorado de Exemplo",
+        email: "mentorado@exemplo.test",
+        senhaInicial: "••••••••",
         turmaNome: "Águias ONE — Turma 2026.1",
         linkLogin: "http://localhost:3000/login",
         whatsappConcierge: "(11) 97777-1111",
@@ -49,7 +49,7 @@ export const TEMPLATES_CATALOGO: TemplateInfo[] = [
     descricao: "Enviado quando o Anjo ou Concierge libera um novo módulo para a turma.",
     renderizar: () =>
       gerarEmailModuloLiberado({
-        nome: "Dr. Roberto Silva",
+        nome: "Mentorado de Exemplo",
         moduloNumero: 2,
         moduloTitulo: "Agenda, Rotina e Alta Performance do Perito",
         disciplinaRef: "Rotina & Produtividade",
@@ -70,7 +70,7 @@ export const TEMPLATES_CATALOGO: TemplateInfo[] = [
     descricao: "Enviado após a auditoria do Anjo/Mentor homologar a entrega do módulo.",
     renderizar: () =>
       gerarEmailCheckinAprovado({
-        nome: "Dr. Roberto Silva",
+        nome: "Mentorado de Exemplo",
         moduloNumero: 1,
         moduloTitulo: "Árvore de Pastas no Google Drive & Nomenclatura",
         avaliadorNome: "Ana Carolina (Anjo)",
@@ -86,7 +86,7 @@ export const TEMPLATES_CATALOGO: TemplateInfo[] = [
     descricao: "Enviado quando a auditoria identifica inconsistências ou faltam evidências na entrega.",
     renderizar: () =>
       gerarEmailCheckinAjuste({
-        nome: "Dr. Roberto Silva",
+        nome: "Mentorado de Exemplo",
         moduloNumero: 3,
         moduloTitulo: "Catálogo de Serviços Periciais & Precificação",
         avaliadorNome: "Prof. Edilson Aguiais (Mentor)",
@@ -101,7 +101,7 @@ export const TEMPLATES_CATALOGO: TemplateInfo[] = [
     descricao: "Disparado para peritos sem entrega há mais de 8 ou 14 dias pelo Concierge.",
     renderizar: () =>
       gerarEmailResgateSemafaro({
-        nome: "Dr. Roberto Silva",
+        nome: "Mentorado de Exemplo",
         diasSemEntrega: 16,
         statusSemaforo: "vermelho",
         ultimoModuloConcluido: "Módulo 2",
@@ -116,7 +116,7 @@ export const TEMPLATES_CATALOGO: TemplateInfo[] = [
     descricao: "Notifica o perito sobre a homologação de honorários declarados e comprovantes.",
     renderizar: () =>
       gerarEmailFaturamentoAuditoria({
-        nome: "Dr. Roberto Silva",
+        nome: "Mentorado de Exemplo",
         mesReferencia: "Março de 2026",
         valorBruto: 45000,
         statusAuditoria: "aprovado",
@@ -131,7 +131,7 @@ export const TEMPLATES_CATALOGO: TemplateInfo[] = [
     descricao: "Lembrete automático enviado no dia do encontro ao vivo às 18:15.",
     renderizar: () =>
       gerarEmailLembreteCall({
-        nome: "Dr. Roberto Silva",
+        nome: "Mentorado de Exemplo",
         dataCallExtenso: "Hoje, Quarta-feira (16/09)",
         horario: "18:15 às 19:45 (Horário de Brasília)",
         linkEncontro: "https://meet.google.com/agu-ias-one",
@@ -146,7 +146,7 @@ export const TEMPLATES_CATALOGO: TemplateInfo[] = [
     descricao: "Comunicação oficial em caso de suspensão administrativa ou reativação de acesso.",
     renderizar: () =>
       gerarEmailStatusAcesso({
-        nome: "Dr. Roberto Silva",
+        nome: "Mentorado de Exemplo",
         acao: "bloqueado",
         motivo: "Pendência documental na ficha cadastral de matrícula",
         observacoes: "Por favor encaminhe o comprovante de registro profissional pericial atualizado.",

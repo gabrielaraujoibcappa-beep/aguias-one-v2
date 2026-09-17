@@ -20,7 +20,7 @@ export function AppShell({ children }: { children: React.ReactNode }) {
   }
 
   // Mentorado com bloqueio vigente: nenhuma área do sistema é renderizada
-  if (carregado && estado.papelAtual === "mentorado" && bloqueioAlunoAtual && pathname !== "/") {
+  if (carregado && estado.papelAtual === "mentorado" && bloqueioAlunoAtual) {
     return <TelaAcessoBloqueado bloqueio={bloqueioAlunoAtual} />;
   }
 

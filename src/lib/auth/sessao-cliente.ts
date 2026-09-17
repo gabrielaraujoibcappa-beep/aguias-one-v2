@@ -5,19 +5,7 @@
  */
 import { supabase } from "@/lib/supabase/client";
 import type { PapelUsuario } from "./roles";
-import { COOKIE_SESSAO, PREFIXO_TOKEN_DEMO } from "./sessao-core";
-
-export const MODO_DEMO = process.env.NODE_ENV === "development";
-
-/** Contas de demonstração (existem em public.usuarios). Login sem senha só em dev. */
-export const CONTAS_DEMO: { nome: string; email: string; papel: PapelUsuario; cargo: string }[] = [
-  { nome: "Dr. Roberto Silva", email: "roberto.silva@pericia.com.br", papel: "mentorado", cargo: "Perito Solo (Mentorado)" },
-  { nome: "Flávio Lopes", email: "flavio.lopes@unibcappa.com.br", papel: "concierge", cargo: "Concierge da Turma" },
-  { nome: "Ana Carolina", email: "ana.carolina@unibcappa.com.br", papel: "anjo", cargo: "Anjo & Auditoria" },
-  { nome: "Prof. Edilson Aguiais", email: "edilson.aguiais@unibcappa.com.br", papel: "mentor", cargo: "Coordenação & Mentoria" },
-  { nome: "Adelayne", email: "adelayne@unibcappa.com.br", papel: "resgate", cargo: "Resgate de alunos" },
-  { nome: "Coordenação UniBCAPPA", email: "admin@aguiasone.test", papel: "admin", cargo: "Gestão" },
-];
+import { COOKIE_SESSAO } from "./sessao-core";
 
 function gravarCookie(valor: string, maxAge: number) {
   const seguro = typeof location !== "undefined" && location.protocol === "https:" ? "; Secure" : "";
@@ -26,11 +14,6 @@ function gravarCookie(valor: string, maxAge: number) {
 
 export function gravarTokenSessao(accessToken: string, expiraEmSegundos = 3600) {
   gravarCookie(accessToken, expiraEmSegundos);
-}
-
-export function iniciarSessaoDemo(email: string) {
-  if (!MODO_DEMO) throw new Error("Login de demonstração indisponível neste ambiente.");
-  gravarCookie(`${PREFIXO_TOKEN_DEMO}${email.toLowerCase()}`, 60 * 60 * 12);
 }
 
 export async function encerrarSessao() {
@@ -51,7 +34,6 @@ export interface UsuarioLogado {
   papel: PapelUsuario;
   status: string;
   matriculaId: string | null;
-  demo: boolean;
 }
 
 export async function obterUsuarioLogado(): Promise<UsuarioLogado | null> {
