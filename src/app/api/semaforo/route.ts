@@ -114,18 +114,7 @@ export async function GET(req: NextRequest) {
     const semanaAtual = inicioSemana(agora);
     const historicoPorMatricula = new Map<string, FotoSemana[]>();
     if (alunosSemaforo.length) {
-      const { error: erroFoto } = await supabaseAdmin.from("semaforo_semanal").upsert(
-        alunosSemaforo.map((a) => ({
-          matricula_id: a.matriculaId,
-          semana: semanaAtual,
-          cor: a.statusSemaforo,
-          motivo: a.motivoSemaforo,
-          atualizado_em: agora.toISOString(),
-        })),
-        { onConflict: "matricula_id,semana" }
-      );
-      if (erroFoto) console.error("[semaforo_semanal] upsert", erroFoto.message);
-
+      // Lê antes de gravar: a foto da semana quase sempre já existe e não mudou de cor
       const desde = new Date(agora.getTime() - 35 * 24 * 60 * 60 * 1000).toISOString().slice(0, 10);
       const { data: fotos, error: erroHist } = await supabaseAdmin
         .from("semaforo_semanal")
@@ -137,6 +126,31 @@ export async function GET(req: NextRequest) {
         const lista = historicoPorMatricula.get(f.matricula_id) ?? [];
         lista.push({ semana: f.semana, cor: f.cor });
         historicoPorMatricula.set(f.matricula_id, lista);
+      }
+
+      const corGravada = new Map(
+        (fotos || []).filter((f) => f.semana === semanaAtual).map((f) => [f.matricula_id, f.cor])
+      );
+      const mudaram = alunosSemaforo.filter((a) => corGravada.get(a.matriculaId) !== a.statusSemaforo);
+      if (mudaram.length) {
+        const { error: erroFoto } = await supabaseAdmin.from("semaforo_semanal").upsert(
+          mudaram.map((a) => ({
+            matricula_id: a.matriculaId,
+            semana: semanaAtual,
+            cor: a.statusSemaforo,
+            motivo: a.motivoSemaforo,
+            atualizado_em: agora.toISOString(),
+          })),
+          { onConflict: "matricula_id,semana" }
+        );
+        if (erroFoto) console.error("[semaforo_semanal] upsert", erroFoto.message);
+        else {
+          for (const a of mudaram) {
+            const lista = (historicoPorMatricula.get(a.matriculaId) ?? []).filter((f) => f.semana !== semanaAtual);
+            lista.push({ semana: semanaAtual, cor: a.statusSemaforo });
+            historicoPorMatricula.set(a.matriculaId, lista);
+          }
+        }
       }
     }
     const alunosComHistorico = alunosSemaforo.map((a) => {

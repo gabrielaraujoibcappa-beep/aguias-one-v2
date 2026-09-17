@@ -1,6 +1,6 @@
 /**
  * Acesso a dados do placar de entrada para as rotas /api (service_role).
- * Toda leitura de dinheiro de terceiros registra acesso_faturamento_log.
+ * Eventos de negócio (envio, correção, congelamento) ficam em evento_sistema.
  */
 import { NextResponse } from "next/server";
 import { supabaseAdmin } from "@/lib/supabase/admin";
@@ -14,7 +14,6 @@ import {
   calcularScores,
   deveCongelar,
   validarEnvio,
-  diagnosticoAtrasado,
   filtrarParaPapel,
   mesesReferencia,
   prazoCorrecao,
@@ -121,16 +120,6 @@ export async function registrarEvento(
   if (error && error.code !== "23505") console.error("[evento_sistema]", codigo, error.message);
 }
 
-export async function registrarAcessoFaturamento(sessao: Sessao, matriculaId: string | null, origem: string) {
-  const { error } = await supabaseAdmin.from("acesso_faturamento_log").insert({
-    leitor_id: sessao.usuarioId,
-    leitor_papel: sessao.papel,
-    matricula_id: matriculaId,
-    origem,
-  });
-  if (error) throw new Error(`Não foi possível registrar o acesso: ${error.message}`);
-}
-
 /**
  * Aplica o ciclo de vida sem cron: congela quem passou do prazo de correção.
  * Idempotente; roda em toda leitura.
@@ -227,10 +216,3 @@ export function respostaAluno(diag: LinhaDiagnostico, matricula: MatriculaContex
   };
 }
 
-/** Registra diagnostico.atrasado (uma vez por matrícula) quando T+48h sem envio. */
-export async function sinalizarAtraso(diag: Pick<LinhaDiagnostico, "status"> | null, matricula: MatriculaContexto) {
-  if (matricula.status !== "ativo") return false;
-  const atrasado = diagnosticoAtrasado(diag?.status ?? "rascunho", matricula.matriculado_em);
-  if (atrasado) await registrarEvento("diagnostico.atrasado", { matriculaId: matricula.id });
-  return atrasado;
-}

@@ -373,7 +373,7 @@ const SCORES_CONCIERGE: (keyof ScoresDiagnostico)[] = [
 export interface VisaoDiagnostico {
   payload: PayloadDiagnostico;
   scores: Partial<ScoresDiagnostico>;
-  /** A leitura inclui números de faturamento: a rota deve registrar em acesso_faturamento_log. */
+  /** A leitura inclui números de faturamento. */
   contemDinheiro: boolean;
 }
 

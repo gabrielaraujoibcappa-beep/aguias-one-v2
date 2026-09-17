@@ -2,12 +2,11 @@ import { NextRequest, NextResponse } from "next/server";
 import { exigirSessao } from "@/lib/auth/sessao-api";
 import { supabaseAdmin } from "@/lib/supabase/admin";
 import { CAMPOS_FRASE } from "@/lib/diagnostico/campos";
-import { PAPEIS_ICP, erroApi, registrarEvento } from "@/lib/diagnostico/servidor";
+import { PAPEIS_ICP, erroApi } from "@/lib/diagnostico/servidor";
 
 /**
  * GET /api/icp/frases?turma=&segmento=&comNome=1 — mural de frases (mentor/admin).
- * Frases são identificáveis: toda leitura gera evento leitura_icp_frases.
- * Sem comNome=1 a lista sai sem nome; com o parâmetro, o drill-down também é logado.
+ * Sem comNome=1 a lista sai sem nome.
  */
 export async function GET(req: NextRequest) {
   const auth = await exigirSessao(req, PAPEIS_ICP);
@@ -27,11 +26,6 @@ export async function GET(req: NextRequest) {
 
     const { data, error } = await query;
     if (error) return erroApi(500, { codigo: "erro_consulta", mensagem: error.message });
-
-    await registrarEvento("leitura_icp_frases", {
-      sessao: auth.sessao,
-      dados: { turma: turmaId, segmento, comNome, quantidade: data?.length ?? 0 },
-    });
 
     const frases = (data || []).flatMap((d: any, i: number) =>
       CAMPOS_FRASE.filter((campo) => typeof d.payload?.[campo] === "string" && d.payload[campo].trim()).map((campo) => ({

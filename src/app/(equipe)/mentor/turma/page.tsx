@@ -272,7 +272,7 @@ export default function MentorTurmaPage() {
 
       {!carregando && !erro && dados?.turma && (
         <p style={{ fontSize: "12px", color: "var(--cor-muted)", marginTop: "var(--espaco-md)" }}>
-          Leitura de faturamento registrada na auditoria. Média 3m = últimos 3 meses declarados.
+          Média 3m = últimos 3 meses declarados.
         </p>
       )}
     </div>

@@ -2,12 +2,12 @@ import { NextRequest, NextResponse } from "next/server";
 import { exigirSessao } from "@/lib/auth/sessao-api";
 import { supabaseAdmin } from "@/lib/supabase/admin";
 import { deveCongelar, diagnosticoAtrasado, scoresDeCard, type StatusDiagnostico } from "@/lib/diagnostico/regras";
-import { registrarAcessoFaturamento, registrarEvento, erroApi } from "@/lib/diagnostico/servidor";
+import { erroApi } from "@/lib/diagnostico/servidor";
 import { vermelhos28d, type FotoSemana } from "@/lib/acompanhamento/semaforo-semanal";
 
 /**
  * GET /api/diagnosticos?turma= — cards da turma para concierge, anjo, mentor e admin.
- * Nunca traz frases. Dinheiro (média dos últimos 3 meses declarados) só para mentor/admin, com log.
+ * Nunca traz frases. Dinheiro (média dos últimos 3 meses declarados) só para mentor/admin.
  */
 export async function GET(req: NextRequest) {
   const auth = await exigirSessao(req, ["concierge", "anjo", "mentor", "admin"]);
@@ -62,7 +62,6 @@ export async function GET(req: NextRequest) {
           return [m.id, v.length ? Math.round((v.reduce((a, b) => a + b, 0) / v.length) * 100) : null];
         })
       );
-      await registrarAcessoFaturamento(sessao, null, `${sessao.papel}_turma:${turmaId}`);
     }
 
     // Histórico do semáforo: uma consulta para a turma inteira
@@ -88,7 +87,7 @@ export async function GET(req: NextRequest) {
         // Congelamento aparece na lista; a gravação acontece na próxima leitura da ficha/aluno
         if (deveCongelar(status, d?.enviado_em ?? null, turma.data_inicio)) status = "congelado";
         const atrasado = diagnosticoAtrasado(status, m.matriculado_em);
-        if (atrasado) await registrarEvento("diagnostico.atrasado", { matriculaId: m.id });
+        // O evento diagnostico.atrasado é gravado pelo cron diário, não a cada leitura
 
         const checkins = (m.checkins_modulo || []).sort(
           (a: any, b: any) => new Date(b.enviado_em).getTime() - new Date(a.enviado_em).getTime()

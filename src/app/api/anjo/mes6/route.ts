@@ -2,7 +2,7 @@ import { NextRequest, NextResponse } from "next/server";
 import { exigirSessao } from "@/lib/auth/sessao-api";
 import { supabaseAdmin } from "@/lib/supabase/admin";
 import { ANJO_LE_FATURAMENTO, BASE_MES6, REGUA_MES6 } from "@/lib/diagnostico/parametros";
-import { erroApi, registrarAcessoFaturamento } from "@/lib/diagnostico/servidor";
+import { erroApi } from "@/lib/diagnostico/servidor";
 import { listarJanelaMes6 } from "@/lib/acompanhamento/mes6-servidor";
 
 /**
@@ -24,8 +24,6 @@ export async function GET(req: NextRequest) {
 
     const itens = await listarJanelaMes6(turmaId);
     const soComparativo = sessao.papel === "anjo" && !ANJO_LE_FATURAMENTO;
-
-    if (itens.length && !soComparativo) await registrarAcessoFaturamento(sessao, null, `anjo_mes6:${turmaId}`);
 
     const alunos = itens.map((i) =>
       soComparativo

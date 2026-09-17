@@ -48,7 +48,6 @@ export interface FichaDiagnostico {
   notas?: NotaAnjo[];
   plano: Record<string, any> | null;
   auditoria?: {
-    acessos: { origem: string; papel: string; nome: string; em: string }[];
     eventos: { codigo: string; papel: string | null; nome: string; dados: Record<string, any>; em: string }[];
   };
 }

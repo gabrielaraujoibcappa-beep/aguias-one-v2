@@ -8,8 +8,6 @@ import {
   buscarMatricula,
   buscarOuCriarDiagnostico,
   erroApi,
-  registrarAcessoFaturamento,
-  registrarEvento,
 } from "@/lib/diagnostico/servidor";
 import { ANJO_LE_FATURAMENTO } from "@/lib/diagnostico/parametros";
 import { comparar, mediaCentavos } from "@/lib/acompanhamento/mes6";
@@ -20,16 +18,9 @@ interface RouteParams {
   params: Promise<{ matricula: string }>;
 }
 
-const ORIGEM_POR_PAPEL: Record<string, string> = {
-  anjo: "leitura_anjo_ficha",
-  concierge: "concierge_aluno",
-  mentor: "mentor_ficha",
-  admin: "admin_ficha",
-};
-
 /**
  * GET /api/diagnostico/:matricula — ficha para concierge, anjo, mentor e admin.
- * Campos filtrados por papel; toda leitura com número registra acesso_faturamento_log.
+ * Campos filtrados por papel.
  */
 export async function GET(req: NextRequest, { params }: RouteParams) {
   const auth = await exigirSessao(req, PAPEIS_LEITURA_DIAGNOSTICO);
@@ -42,22 +33,14 @@ export async function GET(req: NextRequest, { params }: RouteParams) {
 
     const diag = await aplicarCiclo(await buscarOuCriarDiagnostico(matricula.id), matricula);
     const visao = filtrarParaPapel(sessao.papel, diag.payload, diag.status === "rascunho" ? {} : diag.scores);
-    const origem = ORIGEM_POR_PAPEL[sessao.papel] ?? "ficha";
     // SPEC §16.1: com ANJO_LE_FATURAMENTO=false o Anjo vê só acima/igual/abaixo da entrada
     const soComparativo = sessao.papel === "anjo" && !ANJO_LE_FATURAMENTO;
-
-    // Log antes de devolver: se não registrar, não entrega número
-    if (visao.contemDinheiro && !soComparativo) await registrarAcessoFaturamento(sessao, matricula.id, origem);
-    if (sessao.papel === "anjo") {
-      await registrarEvento("leitura_anjo_ficha", { matriculaId: matricula.id, sessao });
-    }
 
     const lerFaturamentoMensal = sessao.papel !== "concierge";
     const lerNotas = sessao.papel === "anjo" || sessao.papel === "mentor" || sessao.papel === "admin";
     const lerAuditoria = sessao.papel === "mentor" || sessao.papel === "admin";
-    const noventaDias = new Date(Date.now() - 90 * 24 * 60 * 60 * 1000).toISOString();
 
-    const [faturamentos, notas, plano, acessos, eventos, trava] = await Promise.all([
+    const [faturamentos, notas, plano, eventos, trava] = await Promise.all([
       lerFaturamentoMensal
         ? supabaseAdmin
             .from("faturamentos")
@@ -77,15 +60,6 @@ export async function GET(req: NextRequest, { params }: RouteParams) {
         .select("tipo, peca_1, evidencia_1, data_1, peca_2, cadencia_dias, horario_real, status, atualizado_em")
         .eq("matricula_id", matricula.id)
         .maybeSingle(),
-      lerAuditoria
-        ? supabaseAdmin
-            .from("acesso_faturamento_log")
-            .select("origem, leitor_papel, criado_em, usuarios:leitor_id (nome)")
-            .eq("matricula_id", matricula.id)
-            .gte("criado_em", noventaDias)
-            .order("criado_em", { ascending: false })
-            .limit(200)
-        : Promise.resolve({ data: null }),
       lerAuditoria
         ? supabaseAdmin
             .from("evento_sistema")
@@ -162,12 +136,6 @@ export async function GET(req: NextRequest, { params }: RouteParams) {
       plano: plano.data ?? null,
       auditoria: lerAuditoria
         ? {
-            acessos: (acessos.data || []).map((a: any) => ({
-              origem: a.origem,
-              papel: a.leitor_papel,
-              nome: a.usuarios?.nome ?? "—",
-              em: a.criado_em,
-            })),
             eventos: (eventos.data || []).map((e: any) => ({
               codigo: e.codigo,
               papel: e.ator_papel,

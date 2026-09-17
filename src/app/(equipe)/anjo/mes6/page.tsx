@@ -95,7 +95,7 @@ export default function ListaMes6Page() {
       {!carregando && !erro && dados && (
         <>
           <p style={{ color: "var(--cor-muted)", fontSize: "13px", margin: "0 0 var(--espaco-md)" }}>
-            {dados.somenteComparativo ? "Você vê só a comparação com a entrada, sem valores." : "Leitura de faturamento registrada na auditoria."}
+            {dados.somenteComparativo ? "Você vê só a comparação com a entrada, sem valores." : ""}
             {" "}Abaixo da régua ou “não sei” = sessão obrigatória com o Anjo. O aluno continua na quarta.
           </p>
 

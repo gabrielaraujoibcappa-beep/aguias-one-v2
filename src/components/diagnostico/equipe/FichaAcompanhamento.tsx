@@ -118,10 +118,6 @@ export function FichaAcompanhamento({ matriculaId, modo }: { matriculaId: string
         </div>
       </header>
 
-      <p style={{ ...textoMuted, marginTop: "calc(-1 * var(--espaco-md))", marginBottom: "var(--espaco-lg)" }}>
-        Leitura registrada na auditoria.
-      </p>
-
       <Secao numero={1} titulo="Placar de entrada">
         {enviado ? (
           <PlacarEntrada payload={d.payload} scores={s} mesesReferencia={d.mesesReferencia} />
@@ -221,23 +217,7 @@ export function FichaAcompanhamento({ matriculaId, modo }: { matriculaId: string
           </Secao>
 
           <Secao titulo="Auditoria">
-            <h3 style={{ fontSize: "14px", margin: "0 0 var(--espaco-sm)" }}>Quem abriu esta ficha (90 dias)</h3>
-            {ficha.auditoria?.acessos.length ? (
-              <div style={rolagemTabela}>
-                <table className="adm-tabela" style={numeroTabular}>
-                  <thead><tr><th>Quando</th><th>Quem</th><th>Papel</th><th>Origem</th></tr></thead>
-                  <tbody>
-                    {ficha.auditoria.acessos.map((a, i) => (
-                      <tr key={i}><td>{formatarDataHora(a.em)}</td><td>{a.nome}</td><td>{a.papel}</td><td>{a.origem}</td></tr>
-                    ))}
-                  </tbody>
-                </table>
-              </div>
-            ) : (
-              <p style={textoMuted}>Nenhum acesso registrado.</p>
-            )}
-
-            <h3 style={{ fontSize: "14px", margin: "var(--espaco-lg) 0 var(--espaco-sm)" }}>Eventos</h3>
+            <h3 style={{ fontSize: "14px", margin: "0 0 var(--espaco-sm)" }}>Eventos</h3>
             {ficha.auditoria?.eventos.length ? (
               <div style={rolagemTabela}>
                 <table className="adm-tabela" style={numeroTabular}>

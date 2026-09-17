@@ -44,19 +44,42 @@ export async function exigirSessao(
     return negar(403, "Você não tem permissão para esta operação.");
   }
 
-  const { data: matriculas } = await supabaseAdmin
-    .from("matriculas")
-    .select("id, turma_id")
-    .eq("usuario_id", perfil.usuarioId);
+  const { matriculaIds, turmaIds } = await matriculasDoUsuario(perfil.usuarioId);
 
   return {
-    sessao: {
-      ...perfil,
-      equipe: ehEquipe(perfil.papel),
-      matriculaIds: (matriculas || []).map((m) => m.id),
-      turmaIds: (matriculas || []).map((m) => m.turma_id),
-    },
+    sessao: { ...perfil, equipe: ehEquipe(perfil.papel), matriculaIds, turmaIds },
   };
+}
+
+/**
+ * Matrículas do usuário, em cache curto: a sincronização do painel chama várias
+ * rotas seguidas e cada uma repetia esta mesma consulta.
+ */
+const CACHE_MATRICULAS_MS = 30_000;
+const cacheMatriculas = new Map<string, { valor: { matriculaIds: string[]; turmaIds: string[] }; expira: number }>();
+
+async function matriculasDoUsuario(usuarioId: string) {
+  const agora = Date.now();
+  const emCache = cacheMatriculas.get(usuarioId);
+  if (emCache && emCache.expira > agora) return emCache.valor;
+
+  const { data } = await supabaseAdmin
+    .from("matriculas")
+    .select("id, turma_id")
+    .eq("usuario_id", usuarioId);
+
+  const valor = {
+    matriculaIds: (data || []).map((m) => m.id),
+    turmaIds: (data || []).map((m) => m.turma_id),
+  };
+  cacheMatriculas.set(usuarioId, { valor, expira: agora + CACHE_MATRICULAS_MS });
+  return valor;
+}
+
+/** Usado após criar, mudar ou encerrar matrícula, para a sessão não ficar defasada. */
+export function limparCacheMatriculas(usuarioId?: string) {
+  if (usuarioId) cacheMatriculas.delete(usuarioId);
+  else cacheMatriculas.clear();
 }
 
 /** Equipe acessa qualquer matrícula; mentorado apenas as próprias. */
