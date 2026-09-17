@@ -1,29 +1,63 @@
 "use client";
 
-import React, { useState } from "react";
+import React, { useMemo, useState } from "react";
 import Link from "next/link";
-import { AlunoSemaforoStatus } from "@/lib/api/turma-semaforo";
+import { AlunoSemaforoStatus, calcularAtraso7d, verificarAtencaoPrecoce } from "@/lib/api/turma-semaforo";
+import { EntregaPendente } from "@/lib/api/auditoria";
 import { BotaoResgateWhatsApp } from "./BotaoResgateWhatsApp";
 import { StatusDot } from "../ui/StatusDot";
 import { ResumoFiltrosAtivos, FiltroAtivoItem } from "../ui/ResumoFiltrosAtivos";
 
 interface TabelaSemaforoTurmaProps {
   alunos: AlunoSemaforoStatus[];
+  entregas?: EntregaPendente[];
 }
 
-export function TabelaSemaforoTurma({ alunos }: TabelaSemaforoTurmaProps) {
+const ROTULO_MOTIVO: Record<string, string> = { atraso: "atraso +7d", falta_call: "faltou call" };
+
+export function TabelaSemaforoTurma({ alunos, entregas = [] }: TabelaSemaforoTurmaProps) {
   const [filtroSemaforo, setFiltroSemaforo] = useState<string>("todos");
 
-  const alunosFiltrados = alunos.filter((a) => {
-    if (filtroSemaforo === "todos") return true;
-    if (filtroSemaforo === "resgate") return a.precisaResgate;
-    return a.semaforoAtual === filtroSemaforo;
-  });
+  const atencaoPorAluno = useMemo(() => {
+    const mapa = new Map<string, { atencaoPrecoce: boolean; motivos: string[] }>();
+    for (const a of alunos) {
+      const chave = a.matriculaId ?? a.nome;
+      const proprias = entregas.filter((e) =>
+        e.matriculaId ? e.matriculaId === a.matriculaId : e.alunoNome === a.nome
+      );
+      const r = verificarAtencaoPrecoce(a.semaforoAtual, {
+        atraso7d: calcularAtraso7d(proprias),
+        faltouCall: !a.checkinEntregue,
+      });
+      mapa.set(chave, r);
+    }
+    return mapa;
+  }, [alunos, entregas]);
+
+  const chaveDe = (a: AlunoSemaforoStatus) => a.matriculaId ?? a.nome;
+
+  const alunosFiltrados = useMemo(() => {
+    const lista = alunos.filter((a) => {
+      if (filtroSemaforo === "todos") return true;
+      if (filtroSemaforo === "resgate") return a.precisaResgate;
+      if (filtroSemaforo === "precoce") return atencaoPorAluno.get(chaveDe(a))?.atencaoPrecoce;
+      return a.semaforoAtual === filtroSemaforo;
+    });
+    if (filtroSemaforo === "precoce") {
+      lista.sort((x, y) => {
+        const mx = atencaoPorAluno.get(chaveDe(x))?.motivos.length ?? 0;
+        const my = atencaoPorAluno.get(chaveDe(y))?.motivos.length ?? 0;
+        return my - mx;
+      });
+    }
+    return lista;
+  }, [alunos, filtroSemaforo, atencaoPorAluno]);
 
   const totalVerdes = alunos.filter((a) => a.semaforoAtual === "verde").length;
   const totalAmarelos = alunos.filter((a) => a.semaforoAtual === "amarelo").length;
   const totalVermelhos = alunos.filter((a) => a.semaforoAtual === "vermelho").length;
   const totalResgate = alunos.filter((a) => a.precisaResgate).length;
+  const totalPrecoce = alunos.filter((a) => atencaoPorAluno.get(chaveDe(a))?.atencaoPrecoce).length;
 
   const filtrosAtivos: FiltroAtivoItem[] = [];
   if (filtroSemaforo !== "todos") {
@@ -32,6 +66,7 @@ export function TabelaSemaforoTurma({ alunos }: TabelaSemaforoTurmaProps) {
       amarelo: "Atenção (Amarelo)",
       vermelho: "Em Risco (Vermelho)",
       resgate: "Resgate Necessário",
+      precoce: "Atenção precoce",
     };
     filtrosAtivos.push({
       id: "semaforo",
@@ -74,6 +109,17 @@ export function TabelaSemaforoTurma({ alunos }: TabelaSemaforoTurmaProps) {
           <StatusDot status="amarelo" size={6} />
           <span>Atenção ({totalAmarelos})</span>
         </button>
+        {totalPrecoce > 0 && (
+          <button
+            className={filtroSemaforo === "precoce" ? "btn-primary" : "btn-secondary"}
+            onClick={() => setFiltroSemaforo("precoce")}
+            title="Amarelas com atraso +7d ou falta de call — sem WhatsApp automático"
+            style={{ fontSize: "12px", padding: "5px 12px", borderRadius: "var(--radius-xs)", display: "inline-flex", alignItems: "center", gap: "6px" }}
+          >
+            <StatusDot status="amarelo" size={6} />
+            <span>Atenção precoce ({totalPrecoce})</span>
+          </button>
+        )}
         <button
           className={filtroSemaforo === "vermelho" ? "btn-primary" : "btn-secondary"}
           onClick={() => setFiltroSemaforo("vermelho")}
@@ -157,6 +203,11 @@ export function TabelaSemaforoTurma({ alunos }: TabelaSemaforoTurmaProps) {
                       label={aluno.semaforoAtual === "verde" ? "Regular" : aluno.semaforoAtual === "amarelo" ? "Atenção" : "Em Risco"}
                       size={7}
                     />
+                    {(atencaoPorAluno.get(chaveDe(aluno))?.motivos.length ?? 0) > 0 && (
+                      <div style={{ fontSize: "11px", color: "#92400e", marginTop: "4px" }}>
+                        Precoce: {atencaoPorAluno.get(chaveDe(aluno))!.motivos.map((m) => ROTULO_MOTIVO[m] ?? m).join(" + ")}
+                      </div>
+                    )}
                   </td>
                   <td style={{ padding: "12px 8px", color: "var(--cor-ink)" }}>{aluno.moduloAtual}</td>
                   <td style={{ padding: "12px 8px", fontSize: "12px", color: aluno.travouEmLinha ? "var(--cor-ink)" : "var(--cor-muted)" }}>

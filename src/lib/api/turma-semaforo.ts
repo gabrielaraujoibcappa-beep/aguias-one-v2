@@ -10,6 +10,10 @@ export interface AlunoSemaforoStatus {
   checkinEntregue: boolean;
   precisaResgate: boolean;
   faturamentoAtual?: number;
+  /** Campos vindos de /api/semaforo */
+  matriculaId?: string;
+  motivoSemaforo?: string;
+  vermelhos28d?: number;
 }
 
 export function verificarNecessidadeResgate(
@@ -31,6 +35,39 @@ export function verificarNecessidadeResgate(
   };
 }
 
+export const LIMIAR_ATRASO_ATENCAO_PRECOCE = 0.4;
+const MS_7D = 7 * 24 * 60 * 60 * 1000;
+
+/** Proporção de entregas aguardando há +7d (0..1). Entrada mínima p/ teste sem DOM. */
+export function calcularAtraso7d(
+  entregas: Array<{ status?: string; enviadoEm?: string }>,
+  agora = Date.now()
+): number {
+  const total = entregas.length;
+  if (total === 0) return 0;
+  const atrasadas = entregas.filter(
+    (e) => e.status === "aguardando_avaliacao" && e.enviadoEm && agora - new Date(e.enviadoEm).getTime() > MS_7D
+  ).length;
+  return atrasadas / total;
+}
+
+export interface SinalAtencaoPrecoce {
+  atraso7d: number;
+  faltouCall: boolean;
+}
+
+export function verificarAtencaoPrecoce(
+  semaforoAtual: "verde" | "amarelo" | "vermelho",
+  sinal: SinalAtencaoPrecoce,
+  limiarAtraso = LIMIAR_ATRASO_ATENCAO_PRECOCE
+): { atencaoPrecoce: boolean; motivos: Array<"atraso" | "falta_call"> } {
+  if (semaforoAtual !== "amarelo") return { atencaoPrecoce: false, motivos: [] };
+  const motivos: Array<"atraso" | "falta_call"> = [];
+  if (sinal.atraso7d > limiarAtraso) motivos.push("atraso");
+  if (sinal.faltouCall) motivos.push("falta_call");
+  return { atencaoPrecoce: motivos.length > 0, motivos };
+}
+
 export function gerarLinkWhatsAppResgate(aluno: AlunoSemaforoStatus, nomeConcierge = "Flávio Lopes"): string {
   const cleanPhone = aluno.whatsapp.replace(/\D/g, "");
   const ddiPhone = cleanPhone.startsWith("55") ? cleanPhone : `55${cleanPhone}`;
@@ -40,38 +77,3 @@ export function gerarLinkWhatsAppResgate(aluno: AlunoSemaforoStatus, nomeConcier
   return `https://wa.me/${ddiPhone}?text=${encodeURIComponent(mensagem)}`;
 }
 
-export const ALUNOS_SEMAFORO_MOCK: AlunoSemaforoStatus[] = [
-  {
-    id: "aluno-1",
-    nome: "Dr. Roberto Silva",
-    whatsapp: "(11) 98765-4321",
-    semaforoAtual: "amarelo",
-    historicoSemaforos: ["amarelo", "verde"],
-    travouEmLinha: "Dúvida no cálculo de juros compostos para ação revisional",
-    duvidaCall: "Como apresentar o laudo prévio ao advogado parceiro?",
-    moduloAtual: "Módulo 1 — Árvore de Pastas",
-    checkinEntregue: true,
-    precisaResgate: false,
-  },
-  {
-    id: "aluno-2",
-    nome: "Dra. Mariana Costa",
-    whatsapp: "(21) 99887-7665",
-    semaforoAtual: "verde",
-    historicoSemaforos: ["verde", "verde"],
-    moduloAtual: "Módulo 1 — Árvore de Pastas",
-    checkinEntregue: true,
-    precisaResgate: false,
-  },
-  {
-    id: "aluno-3",
-    nome: "Dr. André Martins",
-    whatsapp: "(31) 97766-5544",
-    semaforoAtual: "vermelho",
-    historicoSemaforos: ["vermelho", "vermelho"],
-    travouEmLinha: "Sem tempo para mexer na infraestrutura do escritório",
-    moduloAtual: "Módulo 1 — Árvore de Pastas",
-    checkinEntregue: false,
-    precisaResgate: true,
-  },
-];

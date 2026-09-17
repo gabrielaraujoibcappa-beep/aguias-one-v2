@@ -4,7 +4,8 @@ import { StatusDot } from "../ui/StatusDot";
 interface CardPerfilAlunoProps {
   nome: string;
   turmaNome: string;
-  semaforo: "verde" | "amarelo" | "vermelho";
+  /** Sem avaliação da equipe, o card mostra "Sem avaliação" em vez de inventar uma cor. */
+  semaforo?: "verde" | "amarelo" | "vermelho";
   moduloAtualTitulo: string;
 }
 
@@ -83,7 +84,7 @@ export function CardPerfilAluno({
         borderRadius: "var(--radius-xs)",
         boxShadow: "0 2px 8px rgba(0,0,0,0.1)",
       }}>
-        <StatusDot status={semaforo} label={semaforoLabels[semaforo]} size={8} />
+        <StatusDot status={semaforo ?? "neutro"} label={semaforo ? semaforoLabels[semaforo] : "Sem avaliação"} size={8} />
       </div>
     </div>
   );

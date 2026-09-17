@@ -1,10 +1,13 @@
 import { describe, it, expect } from "vitest";
 import { montarFichaAluno, localizarSemaforoDoAluno, localizarEntregasDoAluno, FonteDadosFicha, CONTEXTOS_OPERACIONAIS } from "../src/lib/api/ficha-aluno";
-import { FATURAMENTOS_HISTORICO_MOCK, METAS_FATURAMENTO_ALUNOS_MOCK } from "../src/lib/api/faturamento";
-import { ALUNOS_SEMAFORO_MOCK } from "../src/lib/api/turma-semaforo";
-import { ENTREGAS_MOCK } from "../src/lib/api/auditoria";
-import { MODULOS_PADRAO_AGUIAS_ONE } from "../src/lib/api/modulos-liberacao";
-import { CANAIS_INICIAIS_MOCK } from "../src/lib/api/canais";
+import {
+  ALUNOS_SEMAFORO_MOCK,
+  CANAIS_INICIAIS_MOCK,
+  ENTREGAS_MOCK,
+  FATURAMENTOS_HISTORICO_MOCK,
+  METAS_FATURAMENTO_ALUNOS_MOCK,
+  MODULOS_PADRAO_AGUIAS_ONE,
+} from "./fixtures/dados-demonstracao";
 import { AlunoCadastro } from "../src/lib/api/alunos";
 
 const ALUNOS: AlunoCadastro[] = [

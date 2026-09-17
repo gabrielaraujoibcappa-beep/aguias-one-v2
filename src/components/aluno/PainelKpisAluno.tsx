@@ -1,7 +1,7 @@
 "use client";
 
 import React from "react";
-import { DeclaracaoFaturamento, formatarMoedaBRL } from "@/lib/api/faturamento";
+import { DeclaracaoFaturamento, formatarMesReferencia, formatarMoedaBRL, mesReferenciaAtual } from "@/lib/api/faturamento";
 import { CanalItem } from "@/lib/api/canais";
 import { ModuloItem } from "@/lib/api/modulos-liberacao";
 import { EntregaPendente } from "@/lib/api/auditoria";
@@ -16,6 +16,8 @@ interface PainelKpisAlunoProps {
   semaforo?: "verde" | "amarelo" | "vermelho";
   /** Meta mensal derivada da meta anual (meta anual / 12). */
   metaMensal?: number;
+  /** Horário do encontro semanal da turma do aluno, quando conhecido. */
+  horarioEncontro?: string;
 }
 
 export function PainelKpisAluno({
@@ -23,10 +25,13 @@ export function PainelKpisAluno({
   canais,
   modulos,
   entregas,
-  semaforo = "verde",
+  semaforo,
   metaMensal = 20000,
+  horarioEncontro,
 }: PainelKpisAlunoProps) {
-  const faturamentoAtual = faturamentos[0]?.valorBruto || 14500;
+  // Declaração mais recente; sem declaração, zero (nunca um valor de demonstração)
+  const faturamentoAtual = faturamentos[0]?.valorBruto ?? 0;
+  const cicloAtual = formatarMesReferencia(mesReferenciaAtual()).replace(" de ", " / ");
   const metaCiclo = metaMensal > 0 ? metaMensal : 20000;
   const percMeta = Math.min(Math.round((faturamentoAtual / metaCiclo) * 100), 100);
 
@@ -53,7 +58,7 @@ export function PainelKpisAluno({
           Indicadores do Perito
         </h3>
         <span style={{ fontSize: "11px", color: "var(--cor-muted)", fontFamily: "var(--font-family-mono)" }}>
-          Ciclo: Setembro / 2026
+          Ciclo: {cicloAtual}
         </span>
       </div>
 
@@ -176,7 +181,10 @@ export function PainelKpisAluno({
             </span>
           </div>
           <div style={{ marginTop: "12px", fontSize: "12px", color: "var(--cor-body-muted)" }}>
-            Ativos: <strong style={{ color: "var(--cor-ink)" }}>WhatsApp & GMN</strong>
+            Ativos:{" "}
+            <strong style={{ color: "var(--cor-ink)" }}>
+              {canaisAtivos > 0 ? canais.filter((c) => c.status === "ativo").map((c) => c.nome).join(", ") : "nenhum ainda"}
+            </strong>
           </div>
         </div>
 
@@ -197,14 +205,20 @@ export function PainelKpisAluno({
             <span style={{ fontSize: "11px", fontWeight: 500, textTransform: "uppercase", letterSpacing: "0.4px" }}>
               Status Operacional
             </span>
-            <StatusDot status={semaforo} />
+            <StatusDot status={semaforo ?? "neutro"} />
           </div>
           <div style={{ marginTop: "4px" }}>
-            <StatusDot status={semaforo} label={semaforo === "verde" ? "Regular (Em dia)" : semaforo === "amarelo" ? "Atenção" : "Em Risco"} size={8} />
+            <StatusDot
+              status={semaforo ?? "neutro"}
+              label={!semaforo ? "Sem avaliação" : semaforo === "verde" ? "Regular (Em dia)" : semaforo === "amarelo" ? "Atenção" : "Em Risco"}
+              size={8}
+            />
           </div>
-          <div style={{ marginTop: "16px", fontSize: "12px", color: "var(--cor-muted)" }}>
-            Encontro: <strong>Quarta, 18:15</strong>
-          </div>
+          {horarioEncontro && (
+            <div style={{ marginTop: "16px", fontSize: "12px", color: "var(--cor-muted)" }}>
+              Encontro: <strong>{horarioEncontro}</strong>
+            </div>
+          )}
         </div>
       </div>
     </div>

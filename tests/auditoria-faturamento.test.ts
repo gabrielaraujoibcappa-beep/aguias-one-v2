@@ -1,14 +1,13 @@
 import { describe, it, expect } from "vitest";
 import {
   DeclaracaoFaturamento,
-  FATURAMENTOS_HISTORICO_MOCK,
-  METAS_FATURAMENTO_ALUNOS_MOCK,
   consolidarFaturamentoTurma,
   filtrarFaturamentosPorAluno,
   obterMetaAnualAluno,
   processarAuditoriaFaturamento,
 } from "../src/lib/api/faturamento";
-import { migrarEstadoSalvo, ALUNO_ATUAL_ID } from "../src/lib/store/sistema-store";
+import { migrarEstadoSalvo } from "../src/lib/store/sistema-store";
+import { FATURAMENTOS_HISTORICO_MOCK, METAS_FATURAMENTO_ALUNOS_MOCK } from "./fixtures/dados-demonstracao";
 
 const ALUNOS = [
   { id: "1", nome: "Dr. Roberto Silva", email: "roberto@pericia.com.br" },
@@ -73,40 +72,36 @@ describe("Auditoria de metas e faturamento (área de Operação)", () => {
     expect(Math.round(andre.percentualAnual)).toBe(3);
   });
 
-  it("migra estados salvos antigos: declarações sem aluno e meta única viram dados do aluno da sessão", () => {
+  it("estado salvo no navegador descarta dados antigos: nada de declarações, metas ou alunos locais", () => {
     const antigo = {
+      papelAtual: "concierge",
+      usuarioAtual: { nome: "Flávio", email: "flavio@x.com", turmaNome: "Turma 2026.1" },
       faturamentos: [
-        { matriculaId: "mat-atual", mesReferencia: "2026-09-01", valorBruto: 5000, comprovantes: [] } as DeclaracaoFaturamento,
+        { id: "fat-2", matriculaId: "mat-1", mesReferencia: "2026-07-01", valorBruto: 11800, comprovantes: [] } as DeclaracaoFaturamento,
       ],
       metaFaturamentoAnual: 360000,
+      metasFaturamentoAlunos: { "1": 240000 },
+      alunos: [{ id: "1", nome: "Dr. Roberto Silva" }],
     };
 
     const migrado = migrarEstadoSalvo(antigo);
 
-    expect(migrado.faturamentos[0].alunoId).toBe(ALUNO_ATUAL_ID);
-    expect(migrado.faturamentos[0].statusAuditoria).toBe("pendente");
-    expect(migrado.metasFaturamentoAlunos[ALUNO_ATUAL_ID]).toBe(360000);
-    expect(migrado.metasFaturamentoAlunos["2"]).toBe(300000); // demais metas vêm do estado inicial
-    expect(migrado.alunos.length).toBeGreaterThan(0);
-
-    // Na migração única, as declarações de demonstração ausentes são acrescentadas
-    expect(migrado.faturamentos.some((f) => f.id === "fat-3" && f.alunoId === "2")).toBe(true);
-    expect(migrado.faturamentos).toHaveLength(1 + FATURAMENTOS_HISTORICO_MOCK.length);
+    expect(migrado.faturamentos).toEqual([]);
+    expect(migrado.metasFaturamentoAlunos).toEqual({});
+    expect(migrado.alunos).toEqual([]);
+    expect(migrado.entregas).toEqual([]);
+    expect(migrado.alunosSemaforo).toEqual([]);
+    expect(migrado.sessao).toEqual({ usuarioId: null, matriculaId: null });
   });
 
-  it("na migração única, uma cópia antiga de declaração de demonstração recebe o status do mock", () => {
-    const antigo = {
-      faturamentos: [{ id: "fat-2", matriculaId: "mat-1", mesReferencia: "2026-07-01", valorBruto: 11800, comprovantes: [] } as DeclaracaoFaturamento],
-      metaFaturamentoAnual: 240000,
-    };
-    const migrado = migrarEstadoSalvo(antigo);
-    const fat2 = migrado.faturamentos.find((f) => f.id === "fat-2");
-    expect(fat2?.statusAuditoria).toBe("aprovado");
-    expect(fat2?.auditadoPor).toBe("Flávio Lopes (Concierge)");
+  it("aproveita só papel e identidade exibidos, para a barra lateral não piscar", () => {
+    const migrado = migrarEstadoSalvo({ papelAtual: "concierge", usuarioAtual: { nome: "Flávio", email: "flavio@x.com", turmaNome: "" } });
+    expect(migrado.papelAtual).toBe("concierge");
+    expect(migrado.usuarioAtual.nome).toBe("Flávio");
   });
 
-  it("estados já migrados não recebem declarações de demonstração de volta", () => {
-    const atual = { faturamentos: [], metasFaturamentoAlunos: { "1": 240000 } };
-    expect(migrarEstadoSalvo(atual).faturamentos).toHaveLength(0);
+  it("papel desconhecido salvo no navegador volta ao padrão de menor privilégio", () => {
+    expect(migrarEstadoSalvo({ papelAtual: "superusuario" }).papelAtual).toBe("mentorado");
+    expect(migrarEstadoSalvo(null).papelAtual).toBe("mentorado");
   });
 });
