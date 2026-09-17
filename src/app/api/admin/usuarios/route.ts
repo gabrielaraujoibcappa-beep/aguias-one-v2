@@ -1,6 +1,8 @@
 import { NextRequest, NextResponse } from "next/server";
 import { exigirSessao, limparCacheMatriculas, PAPEIS_GESTAO } from "@/lib/auth/sessao-api";
 import { supabaseAdmin } from "@/lib/supabase/admin";
+import { dispararEmail, link } from "@/lib/email/disparos";
+import { gerarEmailBoasVindas } from "@/lib/email/templates";
 
 export async function POST(req: NextRequest) {
   const auth = await exigirSessao(req, PAPEIS_GESTAO);
@@ -119,6 +121,23 @@ export async function POST(req: NextRequest) {
         return falhaCriacao();
       }
     }
+
+    // Boas-vindas sem senha: a senha inicial vai pelo WhatsApp do Concierge
+    const { data: turma } = turmaId
+      ? await supabaseAdmin.from("turmas").select("nome").eq("id", turmaId).maybeSingle()
+      : { data: null };
+
+    await dispararEmail(
+      { nome: nome.trim(), email: email.trim().toLowerCase() },
+      "boas_vindas",
+      "usuario.criado",
+      gerarEmailBoasVindas({
+        nome: nome.trim(),
+        email: email.trim().toLowerCase(),
+        turmaNome: turma?.nome,
+        linkLogin: link("/login"),
+      })
+    );
 
     return NextResponse.json({
       sucesso: true,

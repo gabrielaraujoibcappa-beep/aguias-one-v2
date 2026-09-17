@@ -7,6 +7,13 @@ const mocks = vi.hoisted(() => ({
   inserirUsuario: vi.fn(),
   apagarUsuario: vi.fn(),
   inserirMatricula: vi.fn(),
+  dispararEmail: vi.fn(),
+}));
+
+// O e-mail de boas-vindas nunca pode derrubar a criação da conta
+vi.mock("@/lib/email/disparos", () => ({
+  dispararEmail: mocks.dispararEmail,
+  link: (caminho: string) => `https://exemplo.test${caminho}`,
 }));
 
 vi.mock("@/lib/auth/sessao-api", () => ({
@@ -19,6 +26,9 @@ vi.mock("@/lib/supabase/admin", () => ({
   supabaseAdmin: {
     auth: { admin: { createUser: mocks.createUser, deleteUser: mocks.deleteUser } },
     from: (tabela: string) => {
+      if (tabela === "turmas") {
+        return { select: () => ({ eq: () => ({ maybeSingle: async () => ({ data: { nome: "Águias ONE 2026.1" } }) }) }) };
+      }
       if (tabela === "usuarios") {
         return {
           insert: () => ({ select: () => ({ single: mocks.inserirUsuario }) }),
@@ -55,6 +65,7 @@ describe("POST /api/admin/usuarios: falhas não viram sucesso", () => {
     mocks.inserirUsuario.mockResolvedValue({ data: { id: "usr-1" }, error: null });
     mocks.apagarUsuario.mockResolvedValue({ error: null });
     mocks.inserirMatricula.mockResolvedValue({ error: null });
+    mocks.dispararEmail.mockResolvedValue({ enviado: true });
   });
 
   it("cria login, usuário e matrícula e devolve o id real", async () => {
@@ -63,6 +74,23 @@ describe("POST /api/admin/usuarios: falhas não viram sucesso", () => {
     expect(res.status).toBe(200);
     expect(json.sucesso).toBe(true);
     expect(json.usuario.id).toBe("usr-1");
+  });
+
+  it("envia boas-vindas sem a senha inicial (ela vai pelo WhatsApp)", async () => {
+    await POST(requisicao(corpoValido));
+    expect(mocks.dispararEmail).toHaveBeenCalledTimes(1);
+    const [destinatario, templateId, evento, email] = mocks.dispararEmail.mock.calls[0];
+    expect(destinatario).toMatchObject({ email: "roberto@pericia.com.br" });
+    expect(templateId).toBe("boas_vindas");
+    expect(evento).toBe("usuario.criado");
+    expect(email.html).not.toContain(corpoValido.senha);
+    expect(email.textoPuro).not.toContain(corpoValido.senha);
+  });
+
+  it("conta criada continua valendo se o e-mail falhar", async () => {
+    mocks.dispararEmail.mockResolvedValue({ enviado: false, motivo: "falha_envio" });
+    const res = await POST(requisicao(corpoValido));
+    expect(res.status).toBe(200);
   });
 
   it("falha quando o Auth recusa, sem gravar no banco", async () => {

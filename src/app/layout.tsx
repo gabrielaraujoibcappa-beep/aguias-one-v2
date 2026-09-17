@@ -19,12 +19,35 @@ const spaceGrotesk = Space_Grotesk({
 });
 
 export const metadata: Metadata = {
+  metadataBase: new URL("https://mentoria.one.axelpro.com.br"),
   title: "ÁGUIAS ONE — Sistema de Mentoria",
-  description: "Sistema de Gestão Estratégica e Acompanhamento de Negócios Periciais — IBCAPPA",
+  description: "Sistema de Gestão Estratégica e Acompanhamento de Negócios Periciais — UniBCAPPA",
   icons: {
     icon: "/logo-simbolo.png",
     shortcut: "/logo-simbolo.png",
     apple: "/logo-simbolo.png",
+  },
+  openGraph: {
+    title: "ÁGUIAS ONE — Mentoria Pericial de Alta Performance",
+    description: "Sistema de Gestão Estratégica e Acompanhamento de Negócios Periciais — UniBCAPPA",
+    url: "https://mentoria.one.axelpro.com.br",
+    siteName: "ÁGUIAS ONE",
+    locale: "pt_BR",
+    type: "website",
+    images: [
+      {
+        url: "/og-image.jpg",
+        width: 1200,
+        height: 675,
+        alt: "ÁGUIAS ONE — Mentoria Pericial de Alta Performance",
+      },
+    ],
+  },
+  twitter: {
+    card: "summary_large_image",
+    title: "ÁGUIAS ONE — Mentoria Pericial de Alta Performance",
+    description: "Sistema de Gestão Estratégica e Acompanhamento de Negócios Periciais — UniBCAPPA",
+    images: ["/og-image.jpg"],
   },
 };
 

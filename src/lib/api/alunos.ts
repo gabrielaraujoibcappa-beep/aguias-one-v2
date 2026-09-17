@@ -1,4 +1,5 @@
 import { PapelUsuario } from "@/lib/auth/roles";
+import { URL_SISTEMA } from "@/lib/url-sistema";
 
 export interface AlunoCadastro {
   id?: string;
@@ -81,7 +82,7 @@ export function gerarMensagemAcessoWhatsApp({
   nome,
   email,
   senha,
-  linkAcesso = "http://localhost:3000/login",
+  linkAcesso = `${URL_SISTEMA}/login`,
 }: {
   nome: string;
   email: string;

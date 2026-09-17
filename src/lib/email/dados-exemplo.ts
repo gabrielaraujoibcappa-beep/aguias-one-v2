@@ -1,3 +1,4 @@
+import { URL_SISTEMA } from "@/lib/url-sistema";
 import {
   DadosBoasVindas,
   DadosModuloLiberado,
@@ -38,7 +39,7 @@ export const TEMPLATES_CATALOGO: TemplateInfo[] = [
         email: "mentorado@exemplo.test",
         senhaInicial: "••••••••",
         turmaNome: "Águias ONE — Turma 2026.1",
-        linkLogin: "http://localhost:3000/login",
+        linkLogin: `${URL_SISTEMA}/login`,
         whatsappConcierge: "(11) 97777-1111",
       }),
   },
@@ -59,7 +60,7 @@ export const TEMPLATES_CATALOGO: TemplateInfo[] = [
           "Configurar calendário sincronizado e alertas de prazos",
           "Submeter print do calendário preenchido e checklist de rotina",
         ],
-        linkCheckin: "http://localhost:3000/checkin/mod-2",
+        linkCheckin: `${URL_SISTEMA}/checkin/mod-2`,
         prazoSugerido: "Terça-feira, às 23:59",
       }),
   },
@@ -76,7 +77,7 @@ export const TEMPLATES_CATALOGO: TemplateInfo[] = [
         avaliadorNome: "Ana Carolina (Anjo)",
         parecerTexto: "Excelente organização, Dr. Roberto! A estrutura de pastas por número de processo e cliente parceiro ficou exatamente dentro do método. Parabéns pela disciplina!",
         proximoModuloNumero: 2,
-        linkPainel: "http://localhost:3000/dashboard",
+        linkPainel: `${URL_SISTEMA}/dashboard`,
       }),
   },
   {
@@ -91,7 +92,7 @@ export const TEMPLATES_CATALOGO: TemplateInfo[] = [
         moduloTitulo: "Catálogo de Serviços Periciais & Precificação",
         avaliadorNome: "Prof. Edilson Aguiais (Mentor)",
         parecerTexto: "Dr. Roberto, sua tabela de honorários precisa de um piso mínimo para assistências técnicas complexas. Revise o multiplicador de horas na aba de cálculos periciais e reenvie a planilha.",
-        linkRevisao: "http://localhost:3000/checkin/mod-3",
+        linkRevisao: `${URL_SISTEMA}/checkin/mod-3`,
       }),
   },
   {
@@ -106,7 +107,7 @@ export const TEMPLATES_CATALOGO: TemplateInfo[] = [
         statusSemaforo: "vermelho",
         ultimoModuloConcluido: "Módulo 2",
         whatsappConcierge: "5511977771111",
-        linkPainel: "http://localhost:3000/dashboard",
+        linkPainel: `${URL_SISTEMA}/dashboard`,
       }),
   },
   {
@@ -121,7 +122,7 @@ export const TEMPLATES_CATALOGO: TemplateInfo[] = [
         valorBruto: 45000,
         statusAuditoria: "aprovado",
         parecerAuditoria: "Honorários periciais comprovados via notas fiscais e alvarás judiciais anexados no arquivo .ZIP.",
-        linkFaturamento: "http://localhost:3000/faturamento",
+        linkFaturamento: `${URL_SISTEMA}/faturamento`,
       }),
   },
   {

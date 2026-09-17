@@ -13,6 +13,7 @@ import { PapelUsuario } from "@/lib/auth/roles";
 import { Button } from "@/components/ui/Button";
 import { ButtonGroup } from "@/components/ui/ButtonGroup";
 import { IconCheckCircle, IconWhatsApp, IconX, IconAlertCircle } from "@/components/ui/Icons";
+import { link } from "@/lib/url-sistema";
 
 interface ModalAlunoProps {
   aberto: boolean;
@@ -131,7 +132,7 @@ export function ModalAluno({ aberto, alunoInicial, turmas, onSalvar, onFechar }:
       nome: sucessoCriacao.nome,
       email: sucessoCriacao.email,
       senha: sucessoCriacao.senha,
-      linkAcesso: typeof window !== "undefined" ? `${window.location.origin}/login` : "http://localhost:3000/login",
+      linkAcesso: typeof window !== "undefined" ? `${window.location.origin}/login` : link("/login"),
     });
 
     if (navigator.clipboard) {

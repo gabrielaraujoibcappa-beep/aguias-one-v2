@@ -1,4 +1,5 @@
 import { renderizarLayoutEmail } from "./layout";
+import { URL_SISTEMA } from "@/lib/url-sistema";
 
 export interface ResultadoEmail {
   tipo: string;
@@ -14,7 +15,8 @@ export interface ResultadoEmail {
 export interface DadosBoasVindas {
   nome: string;
   email: string;
-  senhaInicial: string;
+  /** Quando ausente, o e-mail não traz senha: ela é entregue pelo Concierge no WhatsApp. */
+  senhaInicial?: string;
   turmaNome?: string;
   linkLogin?: string;
   whatsappConcierge?: string;
@@ -26,7 +28,7 @@ export function gerarEmailBoasVindas(dados: DadosBoasVindas): ResultadoEmail {
     email,
     senhaInicial,
     turmaNome = "Águias ONE — Turma 2026.1",
-    linkLogin = "http://localhost:3000/login",
+    linkLogin = `${URL_SISTEMA}/login`,
     whatsappConcierge = "(11) 97777-1111",
   } = dados;
 
@@ -46,12 +48,16 @@ export function gerarEmailBoasVindas(dados: DadosBoasVindas): ResultadoEmail {
         <strong>E-mail:</strong> <span style="font-family: monospace; background: #EEF2F6; padding: 2px 6px; border-radius: 4px;">${email}</span>
       </div>
       <div style="font-size: 14px; color: #1E293B;">
-        <strong>Senha Inicial:</strong> <span style="font-family: monospace; background: #EEF2F6; padding: 2px 6px; border-radius: 4px; font-weight: 700; color: #0052FF;">${senhaInicial}</span>
+        <strong>Senha:</strong> ${
+          senhaInicial
+            ? `<span style="font-family: monospace; background: #EEF2F6; padding: 2px 6px; border-radius: 4px; font-weight: 700; color: #0052FF;">${senhaInicial}</span>`
+            : "enviada pelo Concierge no seu WhatsApp, por segurança."
+        }
       </div>
     </div>
 
     <p style="font-size: 14px; color: #64748B;">
-      * Recomendamos que você altere sua senha após o primeiro login nas configurações de perfil.
+      * Troque a senha depois do primeiro acesso, nas configurações do perfil.
     </p>
   `;
 
@@ -88,7 +94,7 @@ Sua matrícula na ${turmaNome} foi concluída com sucesso.
 
 Seus dados de acesso:
 E-mail: ${email}
-Senha inicial: ${senhaInicial}
+Senha: ${senhaInicial || "enviada pelo Concierge no seu WhatsApp, por segurança."}
 Link de acesso: ${linkLogin}
 
 Encontro semanal ao vivo: Quartas-feiras das 18:15 às 19:45.
@@ -120,7 +126,7 @@ export function gerarEmailModuloLiberado(dados: DadosModuloLiberado): ResultadoE
     disciplinaRef = "Execução Pericial",
     descricao = "Confira o roteiro da semana, assista às aulas de alinhamento e submeta as evidências da entrega no prazo.",
     itensRoteiro = [],
-    linkCheckin = `http://localhost:3000/checkin/mod-${dados.moduloNumero}`,
+    linkCheckin = `${URL_SISTEMA}/checkin/mod-${dados.moduloNumero}`,
     prazoSugerido = "Próxima terça-feira, às 23:59",
   } = dados;
 
@@ -208,7 +214,7 @@ export function gerarEmailCheckinAprovado(dados: DadosCheckinAprovado): Resultad
     avaliadorNome = "Ana Carolina (Anjo)",
     parecerTexto = "Parabéns pela execução! Estrutura impecável dentro do padrão ÁGUIAS ONE.",
     proximoModuloNumero = dados.moduloNumero + 1,
-    linkPainel = "http://localhost:3000/dashboard",
+    linkPainel = `${URL_SISTEMA}/dashboard`,
   } = dados;
 
   const assunto = `✅ Check-in Aprovado: Módulo ${moduloNumero} — Parabéns, ${nome}!`;
@@ -276,7 +282,7 @@ export function gerarEmailCheckinAjuste(dados: DadosCheckinAjuste): ResultadoEma
     moduloTitulo,
     avaliadorNome = "Ana Carolina (Anjo)",
     parecerTexto,
-    linkRevisao = `http://localhost:3000/checkin/mod-${dados.moduloNumero}`,
+    linkRevisao = `${URL_SISTEMA}/checkin/mod-${dados.moduloNumero}`,
   } = dados;
 
   const assunto = `⚠️ Ajuste Solicitado no Check-in: Módulo ${moduloNumero} — ÁGUIAS ONE`;
@@ -353,7 +359,7 @@ export function gerarEmailResgateSemafaro(dados: DadosResgateSemafaro): Resultad
     statusSemaforo,
     ultimoModuloConcluido = "Módulo 1",
     whatsappConcierge = "5511977771111",
-    linkPainel = "http://localhost:3000/dashboard",
+    linkPainel = `${URL_SISTEMA}/dashboard`,
   } = dados;
 
   const isVermelho = statusSemaforo === "vermelho";
@@ -430,7 +436,7 @@ export function gerarEmailFaturamentoAuditoria(dados: DadosFaturamentoAuditoria)
     valorBruto,
     statusAuditoria,
     parecerAuditoria = "Comprovantes e valores verificados com sucesso.",
-    linkFaturamento = "http://localhost:3000/faturamento",
+    linkFaturamento = `${URL_SISTEMA}/faturamento`,
   } = dados;
 
   const isAprovado = statusAuditoria === "aprovado";
@@ -651,7 +657,7 @@ export function gerarEmailStatusAcesso(dados: DadosStatusAcesso): ResultadoEmail
         }
       : {
           rotulo: "Acessar Plataforma Agora",
-          url: "http://localhost:3000/login",
+          url: `${URL_SISTEMA}/login`,
         },
     tom: isBloqueio ? "urgente" : "sucesso",
   });

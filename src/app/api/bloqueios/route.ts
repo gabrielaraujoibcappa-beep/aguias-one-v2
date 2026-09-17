@@ -1,6 +1,36 @@
 import { NextRequest, NextResponse } from "next/server";
 import { exigirSessao, PAPEIS_GESTAO } from "@/lib/auth/sessao-api";
 import { supabaseAdmin } from "@/lib/supabase/admin";
+import { dispararEmail, link } from "@/lib/email/disparos";
+import { gerarEmailStatusAcesso } from "@/lib/email/templates";
+
+/** Avisa o mentorado por e-mail que o acesso foi bloqueado ou liberado. */
+async function avisarStatusAcesso(
+  usuarioId: string,
+  acao: "bloqueado" | "desbloqueado",
+  dados: { motivo?: string; observacoes?: string; responsavelNome: string }
+) {
+  const { data: usuario } = await supabaseAdmin
+    .from("usuarios")
+    .select("nome, email")
+    .eq("id", usuarioId)
+    .maybeSingle();
+  if (!usuario) return;
+
+  await dispararEmail(
+    { nome: usuario.nome, email: usuario.email },
+    "status_acesso",
+    `acesso.${acao}`,
+    gerarEmailStatusAcesso({
+      nome: usuario.nome,
+      acao,
+      motivo: dados.motivo,
+      observacoes: dados.observacoes,
+      responsavelNome: dados.responsavelNome,
+      linkContato: link("/login"),
+    })
+  );
+}
 
 export async function GET(req: NextRequest) {
   const auth = await exigirSessao(req, undefined, { permitirBloqueado: true });
@@ -99,6 +129,8 @@ export async function POST(req: NextRequest) {
         .update({ status: "bloqueado", atualizado_em: new Date().toISOString() })
         .eq("id", usuarioId);
 
+      await avisarStatusAcesso(usuarioId, "bloqueado", { motivo, observacoes, responsavelNome });
+
       return NextResponse.json({
         sucesso: true,
         bloqueio: novoBloqueio,
@@ -126,6 +158,11 @@ export async function POST(req: NextRequest) {
         .from("usuarios")
         .update({ status: "ativo", atualizado_em: new Date().toISOString() })
         .eq("id", usuarioId);
+
+      await avisarStatusAcesso(usuarioId, "desbloqueado", {
+        observacoes: justificativaDesbloqueio || undefined,
+        responsavelNome,
+      });
 
       return NextResponse.json({
         sucesso: true,

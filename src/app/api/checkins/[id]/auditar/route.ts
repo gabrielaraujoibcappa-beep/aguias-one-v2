@@ -5,6 +5,8 @@ import type { PapelUsuario } from "@/lib/auth/roles";
 // Parecer: admin, concierge e mentor. Anjo não edita check-in nem faturamento (SPEC diagnóstico §3)
 const PAPEIS_PARECER: PapelUsuario[] = ["admin", "concierge", "mentor"];
 import { supabaseAdmin } from "@/lib/supabase/admin";
+import { dispararEmail, link } from "@/lib/email/disparos";
+import { gerarEmailCheckinAjuste, gerarEmailCheckinAprovado } from "@/lib/email/templates";
 
 interface RouteParams {
   params: Promise<{ id: string }>;
@@ -39,7 +41,7 @@ export async function PATCH(req: NextRequest, { params }: RouteParams) {
       })
       .eq("id", id)
       .neq("status", "aprovado")
-      .select()
+      .select("*, modulos (numero, titulo), matriculas (id, usuarios (nome, email))")
       .maybeSingle();
 
     if (error) {
@@ -50,6 +52,31 @@ export async function PATCH(req: NextRequest, { params }: RouteParams) {
       return NextResponse.json(
         { sucesso: false, erro: "Entrega não encontrada ou já aprovada." },
         { status: 409 }
+      );
+    }
+
+    // Avisa o mentorado da decisão; falha de e-mail não desfaz a avaliação
+    const aluno = (checkin as any).matriculas?.usuarios;
+    const modulo = (checkin as any).modulos;
+    if (aluno && modulo) {
+      const comum = {
+        nome: aluno.nome,
+        moduloNumero: modulo.numero,
+        moduloTitulo: modulo.titulo,
+        avaliadorNome: auth.sessao.nome,
+      };
+      const parecer = typeof parecerTexto === "string" ? parecerTexto.trim() : "";
+      const email =
+        status === "aprovado"
+          ? gerarEmailCheckinAprovado({ ...comum, parecerTexto: parecer || undefined, linkPainel: link("/dashboard") })
+          : gerarEmailCheckinAjuste({ ...comum, parecerTexto: parecer, linkRevisao: link(`/checkin/mod-${modulo.numero}`) });
+
+      await dispararEmail(
+        { nome: aluno.nome, email: aluno.email },
+        status === "aprovado" ? "checkin_aprovado" : "checkin_ajuste",
+        `checkin.${status}`,
+        email,
+        { matriculaId: (checkin as any).matriculas?.id ?? null }
       );
     }
 
