@@ -46,3 +46,72 @@ export function validarSubmissaoCheckin(submissao: SubmissaoCheckin): { valido: 
     erros,
   };
 }
+
+export const MAXIMO_EVIDENCIAS = 15;
+
+export interface LinhaEvidencia {
+  tipo: "link" | "arquivo";
+  rotulo: string;
+  valor_url: string | null;
+  storage_path: string | null;
+  nome_arquivo: string | null;
+}
+
+function textoCurto(valor: unknown, limite: number): string | null {
+  if (typeof valor !== "string") return null;
+  const limpo = valor.trim();
+  return limpo ? limpo.slice(0, limite) : null;
+}
+
+function urlHttp(valor: unknown): string | null {
+  const texto = textoCurto(valor, 2000);
+  if (!texto) return null;
+  try {
+    const url = new URL(texto);
+    return url.protocol === "https:" || url.protocol === "http:" ? url.toString() : null;
+  } catch {
+    return null;
+  }
+}
+
+/**
+ * Valida as evidências recebidas pela API e devolve as linhas prontas para gravar.
+ * `validarCaminho` decide se o caminho do arquivo pode ser usado por quem envia.
+ */
+export function normalizarEvidencias(
+  evidencias: unknown,
+  validarCaminho: (caminho: unknown) => boolean
+): { linhas: LinhaEvidencia[]; erro?: undefined } | { linhas?: undefined; erro: string } {
+  if (!Array.isArray(evidencias) || evidencias.length === 0) {
+    return { erro: "Anexe ao menos um link ou arquivo de comprovação." };
+  }
+  if (evidencias.length > MAXIMO_EVIDENCIAS) {
+    return { erro: `Envie no máximo ${MAXIMO_EVIDENCIAS} evidências por check-in.` };
+  }
+
+  const linhas: LinhaEvidencia[] = [];
+  for (const ev of evidencias as any[]) {
+    if (ev?.tipo === "arquivo") {
+      if (!validarCaminho(ev.storagePath)) return { erro: "Arquivo anexado inválido. Envie o arquivo novamente." };
+      const nome = textoCurto(ev.nomeArquivo, 200);
+      linhas.push({
+        tipo: "arquivo",
+        rotulo: textoCurto(ev.rotulo, 200) ?? nome ?? "Arquivo",
+        valor_url: null,
+        storage_path: ev.storagePath,
+        nome_arquivo: nome,
+      });
+    } else {
+      const url = urlHttp(ev?.valorUrl);
+      if (!url) return { erro: "Todo link de evidência deve começar com http:// ou https://." };
+      linhas.push({
+        tipo: "link",
+        rotulo: textoCurto(ev?.rotulo, 200) ?? "Evidência",
+        valor_url: url,
+        storage_path: null,
+        nome_arquivo: null,
+      });
+    }
+  }
+  return { linhas };
+}

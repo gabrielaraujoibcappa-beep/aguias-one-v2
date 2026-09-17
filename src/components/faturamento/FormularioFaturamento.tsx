@@ -1,78 +1,70 @@
 "use client";
 
 import React, { useState } from "react";
-import { ComprovanteItem, DeclaracaoFaturamento, validarComprovanteFaturamento } from "@/lib/api/faturamento";
-import { UploadArquivos, ArquivoUploadItem } from "../ui/UploadArquivos";
+import {
+  ComprovanteItem,
+  DeclaracaoFaturamento,
+  formatarMesReferencia,
+  mesReferenciaAtual,
+  ultimosMesesReferencia,
+} from "@/lib/api/faturamento";
+import { REGRAS_BUCKET, extensoesDoBucket } from "@/lib/arquivos/regras";
+import { UploadArquivos } from "../ui/UploadArquivos";
+import { useEnvioArquivos } from "../ui/useEnvioArquivos";
 
 interface FormularioFaturamentoProps {
-  onSalvar: (declaracao: DeclaracaoFaturamento) => void;
+  /** Resolve depois que o servidor responde; o formulário só limpa se a declaração foi gravada. */
+  onSalvar: (declaracao: DeclaracaoFaturamento) => Promise<{ sucesso: boolean; erro?: string }>;
 }
 
 export function FormularioFaturamento({ onSalvar }: FormularioFaturamentoProps) {
-  const [mesReferencia, setMesReferencia] = useState("2026-09-01");
+  const [mesReferencia, setMesReferencia] = useState(() => mesReferenciaAtual());
   const [valorTexto, setValorTexto] = useState("");
-  const [comprovantes, setComprovantes] = useState<ComprovanteItem[]>([]);
   const [erro, setErro] = useState("");
+  const [salvando, setSalvando] = useState(false);
+  const envio = useEnvioArquivos("comprovantes");
 
-  const comprovantesUpload: ArquivoUploadItem[] = comprovantes.map((c, i) => ({
-    id: `comprovante-${i}-${c.nome}`,
-    nome: c.nome,
-    tamanhoBytes: 1024 * 350,
-    status: "concluido",
-  }));
-
-  const handleUploadChange = (novos: ArquivoUploadItem[]) => {
-    if (novos.length < comprovantes.length) {
-      const idxRemovido = comprovantes.findIndex((c) => !novos.some((n) => n.nome === c.nome));
-      if (idxRemovido !== -1) {
-        setComprovantes(comprovantes.filter((_, i) => i !== idxRemovido));
-      }
-    } else {
-      const novosAdicionados = novos.slice(comprovantes.length);
-      const novosComprovantes: ComprovanteItem[] = [];
-
-      for (const item of novosAdicionados) {
-        const validacao = validarComprovanteFaturamento(item.nome);
-        if (!validacao.valido) {
-          setErro(validacao.motivo || "Arquivo com formato inválido");
-          return;
-        }
-
-        const isZip = item.nome.toLowerCase().endsWith(".zip");
-        novosComprovantes.push({
-          nome: item.nome,
-          path: `faturamentos/${Date.now()}_${item.nome}`,
-          tipo: isZip ? "zip" : "arquivo",
-        });
-      }
-
-      setErro("");
-      setComprovantes([...comprovantes, ...novosComprovantes]);
-    }
-  };
-
-  const handleSubmit = (e: React.FormEvent) => {
+  const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
+    if (salvando) return;
     const cleanNumber = valorTexto.replace(/\D/g, "");
     if (!cleanNumber || Number(cleanNumber) <= 0) {
       setErro("Informe um valor bruto válido maior que zero.");
       return;
     }
+    if (envio.enviando) {
+      setErro("Aguarde o envio do comprovante terminar.");
+      return;
+    }
+    if (envio.comErro) {
+      setErro("Remova ou reenvie o comprovante com erro antes de salvar.");
+      return;
+    }
 
-    const valorBruto = Number(cleanNumber) / 100;
+    const comprovantes: ComprovanteItem[] = envio.concluidos.map((arq) => ({
+      nome: arq.nome,
+      path: arq.storagePath,
+      tipo: arq.nome.toLowerCase().endsWith(".zip") ? "zip" : "arquivo",
+    }));
 
     const declaracao: DeclaracaoFaturamento = {
       matriculaId: "mat-atual",
       mesReferencia,
-      valorBruto,
+      valorBruto: Number(cleanNumber) / 100,
       comprovantes,
       criadoEm: new Date().toISOString(),
     };
 
-    onSalvar(declaracao);
-    setValorTexto("");
-    setComprovantes([]);
     setErro("");
+    setSalvando(true);
+    const resultado = await onSalvar(declaracao);
+    setSalvando(false);
+    if (!resultado.sucesso) {
+      setErro(resultado.erro || "Não foi possível salvar a declaração. Tente novamente.");
+      return;
+    }
+    setValorTexto("");
+    envio.limpar();
   };
 
   const formatarInputValor = (digitado: string) => {
@@ -91,7 +83,7 @@ export function FormularioFaturamento({ onSalvar }: FormularioFaturamentoProps) 
     <div className="card" style={{ marginBottom: "var(--espaco-xl)" }}>
       <h3 style={{ fontSize: "18px", marginBottom: "var(--espaco-xs)" }}>Declarar Faturamento do Mês</h3>
       <p style={{ color: "var(--cor-muted)", fontSize: "13px", marginBottom: "var(--espaco-lg)" }}>
-        Declare o valor bruto recebido e anexe os comprovantes em arquivos avulsos (PDF/fotos) ou em um arquivo <strong>.zip</strong> único.
+        Declare o valor bruto recebido e anexe o comprovante: um PDF, uma foto ou, se forem vários documentos, um único arquivo <strong>.zip</strong>.
       </p>
 
       {erro && (
@@ -126,10 +118,11 @@ export function FormularioFaturamento({ onSalvar }: FormularioFaturamentoProps) 
                 fontSize: "14px",
               }}
             >
-              <option value="2026-09-01">Setembro / 2026</option>
-              <option value="2026-08-01">Agosto / 2026</option>
-              <option value="2026-07-01">Julho / 2026</option>
-              <option value="2026-06-01">Junho / 2026</option>
+              {ultimosMesesReferencia(12).map((mes) => (
+                <option key={mes} value={mes}>
+                  {formatarMesReferencia(mes).replace(" de ", " / ")}
+                </option>
+              ))}
             </select>
           </div>
 
@@ -157,17 +150,24 @@ export function FormularioFaturamento({ onSalvar }: FormularioFaturamentoProps) 
         {/* Upload de Comprovantes ou ZIP (Norma de UX ÁGUIAS ONE) */}
         <UploadArquivos
           rotulo="Comprovantes de Faturamento"
-          descricao="Anexe extratos, comprovantes fiscais (PDF/Imagens) ou um pacote único compactado (.ZIP)"
-          arquivos={comprovantesUpload}
-          onChange={handleUploadChange}
-          formatosPermitidos={[".zip", ".pdf", ".png", ".jpg", ".jpeg"]}
-          tamanhoMaximoBytes={25 * 1024 * 1024}
-          maximoArquivos={5}
+          descricao="Extrato ou comprovante fiscal (PDF/imagem). Vários documentos? Compacte em um único .ZIP"
+          arquivos={envio.itens}
+          onChange={envio.onChange}
+          onTentarNovamente={envio.tentarNovamente}
+          formatosPermitidos={extensoesDoBucket("comprovantes")}
+          tamanhoMaximoBytes={REGRAS_BUCKET.comprovantes.tamanhoMaximoBytes}
+          maximoArquivos={1}
         />
 
         <div style={{ display: "flex", justifyContent: "flex-end", marginTop: "var(--espaco-sm)" }}>
-          <button type="submit" className="btn-primary" style={{ padding: "10px 24px" }}>
-            Salvar Declaração Mensal
+          <button
+            type="submit"
+            className="btn-primary"
+            style={{ padding: "10px 24px" }}
+            disabled={salvando || envio.enviando}
+            aria-busy={salvando}
+          >
+            {salvando ? "Salvando…" : envio.enviando ? "Aguardando comprovante…" : "Salvar Declaração Mensal"}
           </button>
         </div>
       </form>

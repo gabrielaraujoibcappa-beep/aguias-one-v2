@@ -2,12 +2,15 @@
 
 import React, { useState } from "react";
 import { EntregaPendente } from "@/lib/api/auditoria";
+import { ArquivoVisualizavel, ModalArquivo } from "@/components/ui/ModalArquivo";
 
 interface VisualizadorEntregaProps {
   entrega: EntregaPendente;
   onAprovar: (id: string) => void;
   onSolicitarAjuste: (id: string, motivo: string) => void;
   onVoltar: () => void;
+  /** Admin, concierge e mentor avaliam; os demais papéis só consultam. */
+  podeAuditar?: boolean;
 }
 
 export function VisualizadorEntrega({
@@ -15,7 +18,9 @@ export function VisualizadorEntrega({
   onAprovar,
   onSolicitarAjuste,
   onVoltar,
+  podeAuditar = true,
 }: VisualizadorEntregaProps) {
+  const [arquivoAberto, setArquivoAberto] = useState<ArquivoVisualizavel | null>(null);
   const [motivoAjuste, setMotivoAjuste] = useState("");
   const [mostrandoCampoAjuste, setMostrandoCampoAjuste] = useState(false);
   const [erro, setErro] = useState("");
@@ -107,13 +112,14 @@ export function VisualizadorEntrega({
               }}>
                 <div style={{ fontSize: "13px", fontWeight: 500, marginBottom: "4px" }}>{arq.rotulo}</div>
                 <div style={{ fontSize: "12px", color: "var(--cor-muted)", marginBottom: "8px" }}>{arq.nome}</div>
-                <a
-                  href={`#download-${arq.path}`}
+                <button
+                  type="button"
+                  onClick={() => setArquivoAberto({ nome: arq.nome, path: arq.path, rotulo: arq.rotulo })}
                   className="btn-secondary"
                   style={{ width: "100%", textAlign: "center", fontSize: "11px", padding: "4px 8px" }}
                 >
                   Visualizar Arquivo
-                </a>
+                </button>
               </div>
             ))}
           </div>
@@ -146,7 +152,13 @@ export function VisualizadorEntrega({
 
       {/* Área de Ação da Auditoria */}
       <div style={{ borderTop: "1px solid var(--cor-border-light)", paddingTop: "var(--espaco-lg)" }}>
-        {!mostrandoCampoAjuste ? (
+        {!podeAuditar || entrega.status === "aprovado" ? (
+          <p style={{ fontSize: "13px", color: "var(--cor-muted)", textAlign: "right" }}>
+            {entrega.status === "aprovado"
+              ? `Entrega aprovada${entrega.avaliadoPor ? ` por ${entrega.avaliadoPor}` : ""}.`
+              : "Somente admin, concierge ou mentor avaliam entregas. Seu acesso a esta tela é de consulta."}
+          </p>
+        ) : !mostrandoCampoAjuste ? (
           <div style={{ display: "flex", justifyContent: "flex-end", gap: "var(--espaco-md)" }}>
             <button
               className="btn-secondary"
@@ -196,6 +208,8 @@ export function VisualizadorEntrega({
           </div>
         )}
       </div>
+
+      <ModalArquivo arquivo={arquivoAberto} bucket="evidencias" onFechar={() => setArquivoAberto(null)} />
     </div>
   );
 }

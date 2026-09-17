@@ -1,12 +1,14 @@
 "use client";
 
-import React from "react";
+import React, { useState } from "react";
 import Link from "next/link";
 import { FichaAluno as FichaAlunoDados, NivelAlerta, ROTULOS_STATUS_MATRICULA } from "@/lib/api/ficha-aluno";
 import { formatarMesReferencia, formatarMoedaReal } from "@/lib/api/faturamento";
 import { ROTULOS_MOTIVO_BLOQUEIO, formatarDataBloqueio } from "@/lib/api/bloqueio-acesso";
 import { StatusDot, StatusVariant } from "../ui/StatusDot";
 import { BadgeStatusAuditoria } from "../faturamento/BadgeStatusAuditoria";
+import { BucketArquivo } from "@/lib/arquivos/regras";
+import { ArquivoVisualizavel, ModalArquivo } from "../ui/ModalArquivo";
 
 interface FichaAlunoProps {
   ficha: FichaAlunoDados;
@@ -64,6 +66,7 @@ const TH: React.CSSProperties = { padding: "8px", color: "var(--cor-muted)", bor
 const TD: React.CSSProperties = { padding: "10px 8px", borderBottom: "1px solid var(--cor-border-light)", verticalAlign: "top" };
 
 export function FichaAluno({ ficha, contexto }: FichaAlunoProps) {
+  const [documentoAberto, setDocumentoAberto] = useState<{ arquivo: ArquivoVisualizavel; bucket: BucketArquivo } | null>(null);
   const { aluno, dadosPessoais, academico, administrativo, canais, alertas } = ficha;
   const s = academico.semaforo;
   const whatsappDigitos = dadosPessoais.whatsapp.replace(/\D/g, "");
@@ -302,7 +305,18 @@ export function FichaAluno({ ficha, contexto }: FichaAlunoProps) {
           <ul style={{ margin: 0, paddingLeft: "18px", fontSize: "13px", display: "flex", flexDirection: "column", gap: "4px" }}>
             {administrativo.documentos.map((d, i) => (
               <li key={i}>
-                <a href={`#download-${d.path}`}>{d.nome}</a>
+                <button
+                  type="button"
+                  onClick={() =>
+                    setDocumentoAberto({
+                      arquivo: { nome: d.nome, path: d.path },
+                      bucket: d.tipo === "comprovante" ? "comprovantes" : "evidencias",
+                    })
+                  }
+                  style={{ background: "none", border: "none", padding: 0, color: "var(--cor-action-vibrant)", textDecoration: "underline", cursor: "pointer", fontSize: "13px" }}
+                >
+                  {d.nome}
+                </button>
                 <span style={{ color: "var(--cor-muted)" }}> · {d.origem} · {d.tipo === "comprovante" ? "comprovante de faturamento" : "evidência de check-in"}</span>
               </li>
             ))}
@@ -324,6 +338,12 @@ export function FichaAluno({ ficha, contexto }: FichaAlunoProps) {
           </ul>
         </Secao>
       )}
+
+      <ModalArquivo
+        arquivo={documentoAberto?.arquivo ?? null}
+        bucket={documentoAberto?.bucket ?? "evidencias"}
+        onFechar={() => setDocumentoAberto(null)}
+      />
     </div>
   );
 }

@@ -8,6 +8,7 @@ import { Tabs, TabItem } from "@/components/ui/Tabs";
 import { EntregaPendente } from "@/lib/api/auditoria";
 import { lerEstadoSistema, useSistemaStore } from "@/lib/store/sistema-store";
 import { notificar } from "@/lib/notificacoes";
+import { canAudit } from "@/lib/auth/roles";
 
 export default function PainelAuditoriaPage() {
   const { estado, auditarEntrega, reverterEntrega, carregado } = useSistemaStore();
@@ -86,7 +87,7 @@ export default function PainelAuditoriaPage() {
       <div style={{ marginBottom: "var(--espaco-lg)" }}>
         <h1 style={{ fontSize: "28px", marginBottom: "var(--espaco-xs)" }}>Esteira de Auditoria de Entregas</h1>
         <p style={{ color: "var(--cor-muted)" }}>
-          Validação pelo Anjo (Ana Carolina) e Concierge (Flávio): confira prints, teste links e aprove ou solicite ajustes.
+          Confira prints, teste links e aprove ou solicite ajustes. Avaliação feita por admin, concierge ou mentor.
         </p>
       </div>
 
@@ -96,6 +97,7 @@ export default function PainelAuditoriaPage() {
           onAprovar={handleAprovar}
           onSolicitarAjuste={handleSolicitarAjuste}
           onVoltar={() => setEntregaSelecionada(null)}
+          podeAuditar={canAudit(estado.papelAtual)}
         />
       ) : (
         <Tabs

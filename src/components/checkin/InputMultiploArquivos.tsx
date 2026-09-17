@@ -1,64 +1,46 @@
 "use client";
 
-import React from "react";
+import React, { useEffect } from "react";
 import { EvidenciaArquivoItem } from "@/lib/api/checkin";
-import { UploadArquivos, ArquivoUploadItem } from "../ui/UploadArquivos";
+import { REGRAS_BUCKET, extensoesDoBucket } from "@/lib/arquivos/regras";
+import { UploadArquivos } from "../ui/UploadArquivos";
+import { useEnvioArquivos } from "../ui/useEnvioArquivos";
 
 interface InputMultiploArquivosProps {
   rotulo: string;
-  arquivos: EvidenciaArquivoItem[];
-  onAdicionar: (novoArquivo: EvidenciaArquivoItem) => void;
-  onRemover: (index: number) => void;
+  /** Recebe só os arquivos já gravados no Storage e se ainda há envio em andamento. */
+  onChange: (arquivos: EvidenciaArquivoItem[], enviando: boolean) => void;
   obrigatorio?: boolean;
 }
 
-export function InputMultiploArquivos({
-  rotulo,
-  arquivos,
-  onAdicionar,
-  onRemover,
-  obrigatorio = true,
-}: InputMultiploArquivosProps) {
-  // Converte EvidenciaArquivoItem em ArquivoUploadItem para o componente de design system
-  const arquivosUpload: ArquivoUploadItem[] = arquivos.map((arq, idx) => ({
-    id: `evidencia-${idx}-${arq.nome}`,
-    nome: arq.nome,
-    tamanhoBytes: arq.tamanhoBytes || 1024 * 120, // fallback estimativo se não houver bytes
-    status: "concluido",
-  }));
+export function InputMultiploArquivos({ rotulo, onChange, obrigatorio = true }: InputMultiploArquivosProps) {
+  const envio = useEnvioArquivos("evidencias");
 
-  const handleUploadChange = (novos: ArquivoUploadItem[]) => {
-    if (novos.length < arquivos.length) {
-      // Identifica o índice removido
-      const idxRemovido = arquivos.findIndex(
-        (arq) => !novos.some((n) => n.nome === arq.nome)
-      );
-      if (idxRemovido !== -1) {
-        onRemover(idxRemovido);
-      }
-    } else {
-      // Identifica itens novos adicionados
-      const novosAdicionados = novos.slice(arquivos.length);
-      for (const item of novosAdicionados) {
-        onAdicionar({
-          rotulo: item.nome,
-          nome: item.nome,
-          path: `/mock/uploads/${item.nome}`,
-          tipo: item.nome.toLowerCase().endsWith(".pdf") ? "pdf" : "print",
-          tamanhoBytes: item.tamanhoBytes,
-        });
-      }
-    }
-  };
+  const chaveConcluidos = envio.concluidos.map((a) => a.storagePath).join("|");
+  useEffect(() => {
+    onChange(
+      envio.concluidos.map((arq) => ({
+        rotulo: arq.nome,
+        nome: arq.nome,
+        path: arq.storagePath,
+        tipo: arq.nome.toLowerCase().endsWith(".pdf") ? "pdf" : "print",
+        tamanhoBytes: arq.tamanhoBytes,
+      })),
+      envio.enviando
+    );
+    // onChange do pai muda a cada render; só notifica quando a lista ou o envio mudam
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [chaveConcluidos, envio.enviando]);
 
   return (
     <UploadArquivos
       rotulo={rotulo}
       descricao="Evidências de execução da esteira (prints e documentos)"
-      arquivos={arquivosUpload}
-      onChange={handleUploadChange}
-      formatosPermitidos={[".png", ".jpg", ".jpeg", ".pdf"]}
-      tamanhoMaximoBytes={25 * 1024 * 1024}
+      arquivos={envio.itens}
+      onChange={envio.onChange}
+      onTentarNovamente={envio.tentarNovamente}
+      formatosPermitidos={extensoesDoBucket("evidencias")}
+      tamanhoMaximoBytes={REGRAS_BUCKET.evidencias.tamanhoMaximoBytes}
       maximoArquivos={5}
       obrigatorio={obrigatorio}
     />

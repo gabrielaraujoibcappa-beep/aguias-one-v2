@@ -1,7 +1,8 @@
 import { NextRequest, NextResponse } from "next/server";
 import { exigirSessao, podeAcessarMatricula, respostaProibida } from "@/lib/auth/sessao-api";
 import { supabaseAdmin } from "@/lib/supabase/admin";
-import { registrarAcessoFaturamento } from "@/lib/diagnostico/servidor";
+import { caminhoPertenceAoUsuario, caminhoSeguro } from "@/lib/arquivos/regras";
+import { normalizarMesReferencia, normalizarValorBruto } from "@/lib/api/faturamento";
 
 export async function GET(req: NextRequest) {
   const auth = await exigirSessao(req);
@@ -31,11 +32,6 @@ export async function GET(req: NextRequest) {
       query = query.in("matricula_id", auth.sessao.matriculaIds);
     }
 
-    // Equipe lendo dinheiro de mentorado: registra antes de entregar (SPEC diagnóstico §3)
-    if (auth.sessao.equipe && !(matriculaId && auth.sessao.matriculaIds.includes(matriculaId))) {
-      await registrarAcessoFaturamento(auth.sessao, matriculaId, matriculaId ? "faturamentos_aluno" : "faturamentos_lista");
-    }
-
     const { data: faturamentos, error } = await query;
 
     if (error) {
@@ -45,6 +41,8 @@ export async function GET(req: NextRequest) {
     let formatados = (faturamentos || []).map((f: any) => ({
       id: f.id,
       matriculaId: f.matricula_id,
+      // id do usuário dono da matrícula: as telas agrupam declarações por aluno
+      alunoId: f.matriculas?.usuarios?.id ?? null,
       alunoNome: f.matriculas?.usuarios?.nome || "Mentorado",
       alunoEmail: f.matriculas?.usuarios?.email || "",
       turmaId: f.matriculas?.turmas?.id || "",
@@ -82,25 +80,51 @@ export async function POST(req: NextRequest) {
   if (auth.erro) return auth.erro;
   try {
     const body = await req.json();
-    const { matriculaId, mesReferencia, valorBruto, storageZipPath } = body;
+    let { matriculaId, mesReferencia, valorBruto, storageZipPath } = body;
     // Declaração é do próprio aluno. Na equipe, só admin lança em nome dele (Anjo/Concierge não editam faturamento)
     if (auth.sessao.equipe && auth.sessao.papel !== "admin") {
       return respostaProibida("Somente o próprio mentorado ou a coordenação (admin) declaram faturamento.");
     }
+
+    // Se o mentorado não enviou matriculaId (ou enviou id local mock como "mat-atual"), usa a da sessão
+    if ((!matriculaId || typeof matriculaId !== "string" || matriculaId.startsWith("mat-") || matriculaId === "1") && !auth.sessao.equipe && auth.sessao.matriculaIds.length > 0) {
+      matriculaId = auth.sessao.matriculaIds[0];
+    }
+
     if (matriculaId && !podeAcessarMatricula(auth.sessao, matriculaId)) return respostaProibida();
 
-    if (!matriculaId || !mesReferencia || valorBruto === undefined) {
+    if (!matriculaId) {
+      return NextResponse.json({ sucesso: false, erro: "matriculaId é obrigatório." }, { status: 400 });
+    }
+
+    const dataFormatada = normalizarMesReferencia(mesReferencia);
+    if (!dataFormatada) {
       return NextResponse.json(
-        { sucesso: false, erro: "matriculaId, mesReferencia e valorBruto são obrigatórios." },
+        { sucesso: false, erro: "Informe o mês de referência no formato AAAA-MM." },
         { status: 400 }
       );
     }
 
-    // Formata a data de referência para YYYY-MM-01
-    const dataRef = new Date(mesReferencia);
-    const ano = dataRef.getUTCFullYear();
-    const mes = String(dataRef.getUTCMonth() + 1).padStart(2, "0");
-    const dataFormatada = `${ano}-${mes}-01`;
+    const valor = normalizarValorBruto(valorBruto);
+    if (valor === null) {
+      return NextResponse.json(
+        { sucesso: false, erro: "Informe um valor bruto maior que zero." },
+        { status: 400 }
+      );
+    }
+
+    // Comprovante precisa ter vindo da rota de upload (mentorado: só da própria pasta)
+    if (storageZipPath) {
+      const caminhoValido = auth.sessao.equipe
+        ? caminhoSeguro(storageZipPath)
+        : caminhoPertenceAoUsuario(storageZipPath, auth.sessao.usuarioId);
+      if (!caminhoValido) {
+        return NextResponse.json(
+          { sucesso: false, erro: "Comprovante anexado inválido. Envie o arquivo novamente." },
+          { status: 400 }
+        );
+      }
+    }
 
     const { data: faturamento, error } = await supabaseAdmin
       .from("faturamentos")
@@ -108,7 +132,7 @@ export async function POST(req: NextRequest) {
         {
           matricula_id: matriculaId,
           mes_referencia: dataFormatada,
-          valor_bruto: valorBruto,
+          valor_bruto: valor,
           storage_zip_path: storageZipPath || null,
           status_auditoria: "pendente",
           atualizado_em: new Date().toISOString(),
@@ -119,7 +143,8 @@ export async function POST(req: NextRequest) {
       .single();
 
     if (error) {
-      return NextResponse.json({ sucesso: false, erro: error.message }, { status: 400 });
+      console.error("[Faturamento POST]:", error.message);
+      return NextResponse.json({ sucesso: false, erro: "Não foi possível salvar a declaração." }, { status: 500 });
     }
 
     return NextResponse.json({

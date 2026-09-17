@@ -16,7 +16,8 @@ interface FormularioCheckinModularProps {
   moduloTitulo: string;
   itensRoteiro?: string[];
   submissaoExistente?: SubmissaoCheckin | null;
-  onEnviar: (submissao: SubmissaoCheckin) => void;
+  /** Resolve depois que o servidor responde; o sucesso só aparece se a entrega foi gravada. */
+  onEnviar: (submissao: SubmissaoCheckin) => Promise<{ sucesso: boolean; erro?: string }>;
 }
 
 export function FormularioCheckinModular({
@@ -36,6 +37,8 @@ export function FormularioCheckinModular({
   const [duvidaCall, setDuvidaCall] = useState(submissaoExistente?.duvidaCall || "");
   const [erros, setErros] = useState<string[]>([]);
   const [enviadoComSucesso, setEnviadoComSucesso] = useState(false);
+  const [arquivosEnviando, setArquivosEnviando] = useState(false);
+  const [submetendo, setSubmetendo] = useState(false);
 
   const handleUpdateLink = (index: number, novaUrl: string) => {
     const copia = [...links];
@@ -43,22 +46,25 @@ export function FormularioCheckinModular({
     setLinks(copia);
   };
 
-  const handleAdicionarArquivo = (novo: EvidenciaArquivoItem) => {
-    setArquivos([...arquivos, novo]);
+  const handleArquivos = (lista: EvidenciaArquivoItem[], enviando: boolean) => {
+    setArquivos(lista);
+    setArquivosEnviando(enviando);
   };
 
-  const handleRemoverArquivo = (index: number) => {
-    setArquivos(arquivos.filter((_, idx) => idx !== index));
-  };
-
-  const handleSubmit = (e: React.FormEvent) => {
+  const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
+    if (submetendo) return;
+    if (arquivosEnviando) {
+      setErros(["Aguarde o envio dos arquivos terminar antes de submeter."]);
+      return;
+    }
 
     const dados: SubmissaoCheckin = {
       id: submissaoExistente?.id,
       matriculaId: "matricula-atual",
       moduloId,
-      links,
+      // Link em branco é opcional: a entrega pode ser só com arquivos
+      links: links.filter((l) => l.url.trim() !== ""),
       arquivos,
       travou: travou.trim(),
       duvidaCall: duvidaCall.trim(),
@@ -73,8 +79,14 @@ export function FormularioCheckinModular({
     }
 
     setErros([]);
-    onEnviar(dados);
-    setEnviadoComSucesso(true);
+    setSubmetendo(true);
+    const resultado = await onEnviar(dados);
+    setSubmetendo(false);
+    if (resultado.sucesso) {
+      setEnviadoComSucesso(true);
+    } else {
+      setErros([resultado.erro || "Não foi possível enviar a entrega. Tente novamente."]);
+    }
   };
 
   if (enviadoComSucesso) {
@@ -83,7 +95,7 @@ export function FormularioCheckinModular({
         <IconCheckCircle size={40} style={{ color: "var(--cor-deep-green)", margin: "0 auto var(--espaco-sm) auto" }} />
         <h2 style={{ fontSize: "20px", fontWeight: 600, marginBottom: "var(--espaco-xs)" }}>Entrega Submetida</h2>
         <p style={{ color: "var(--cor-muted)", fontSize: "14px", marginBottom: "var(--espaco-lg)" }}>
-          O Anjo (Ana Carolina) e o Concierge (Flávio) já receberam seus links e arquivos para auditoria.
+          Seus links e arquivos foram recebidos e estão na fila de auditoria da equipe.
         </p>
         <a href="/dashboard" className="btn-primary">
           Voltar ao Dashboard
@@ -157,9 +169,7 @@ export function FormularioCheckinModular({
       </h3>
       <InputMultiploArquivos
         rotulo="Anexar Prints das Pastas / E-mail / Telas"
-        arquivos={arquivos}
-        onAdicionar={handleAdicionarArquivo}
-        onRemover={handleRemoverArquivo}
+        onChange={handleArquivos}
       />
 
       {/* 3. Travas e Dúvidas */}
@@ -208,8 +218,14 @@ export function FormularioCheckinModular({
         <button type="button" className="btn-secondary" onClick={() => history.back()}>
           Cancelar / Voltar
         </button>
-        <button type="submit" className="btn-primary" style={{ padding: "12px 28px" }}>
-          Submeter Entrega do Módulo →
+        <button
+          type="submit"
+          className="btn-primary"
+          style={{ padding: "12px 28px" }}
+          disabled={submetendo || arquivosEnviando}
+          aria-busy={submetendo}
+        >
+          {submetendo ? "Enviando…" : arquivosEnviando ? "Aguardando arquivos…" : "Submeter Entrega do Módulo →"}
         </button>
       </div>
     </form>

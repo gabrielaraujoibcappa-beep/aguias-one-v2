@@ -1,5 +1,5 @@
 import { NextRequest, NextResponse } from "next/server";
-import { exigirSessao, PAPEIS_GESTAO } from "@/lib/auth/sessao-api";
+import { exigirSessao, limparCacheMatriculas, PAPEIS_GESTAO } from "@/lib/auth/sessao-api";
 import { supabaseAdmin } from "@/lib/supabase/admin";
 
 export async function POST(req: NextRequest) {
@@ -58,69 +58,66 @@ export async function POST(req: NextRequest) {
       );
     }
 
-    let authUserId: string | null = null;
-    let usuarioCriadoId: string = `user-${Date.now()}`;
+    // 2. Provisiona o login no Supabase Auth
+    const { data: authData, error: authError } = await supabaseAdmin.auth.admin.createUser({
+      email: email.trim().toLowerCase(),
+      password: senha,
+      email_confirm: true,
+      user_metadata: {
+        nome: nome.trim(),
+        papel,
+        whatsapp,
+      },
+    });
 
-    // 2. Tenta provisionar no Supabase Auth com privilégios de Admin
-    try {
-      const { data: authData, error: authError } = await supabaseAdmin.auth.admin.createUser({
-        email: email.trim().toLowerCase(),
-        password: senha,
-        email_confirm: true,
-        user_metadata: {
-          nome: nome.trim(),
-          papel,
-          whatsapp,
-        },
-      });
-
-      if (authError) {
-        // Se o erro for de email já cadastrado, informa com clareza
-        if (authError.message.includes("already registered") || authError.message.includes("already been registered")) {
-          return NextResponse.json(
-            { sucesso: false, erro: "Já existe uma conta cadastrada com este endereço de email." },
-            { status: 409 }
-          );
-        }
-        console.warn("[Supabase Auth Admin]:", authError.message);
-      } else if (authData?.user) {
-        authUserId = authData.user.id;
-        usuarioCriadoId = authData.user.id;
+    if (authError || !authData?.user) {
+      const mensagem = authError?.message ?? "";
+      if (mensagem.includes("already registered") || mensagem.includes("already been registered")) {
+        return NextResponse.json(
+          { sucesso: false, erro: "Já existe uma conta cadastrada com este endereço de email." },
+          { status: 409 }
+        );
       }
-    } catch (authErr: any) {
-      console.warn("[Supabase Auth Exceção]:", authErr?.message || authErr);
+      console.error("[Supabase Auth Admin]:", mensagem || "createUser sem usuário");
+      return falhaCriacao();
     }
+    const authUserId = authData.user.id;
 
-    // 3. Gravação na tabela public.usuarios
-    try {
-      const { data: usuarioDb, error: dbError } = await supabaseAdmin
-        .from("usuarios")
-        .insert({
-          auth_id: authUserId,
-          nome: nome.trim(),
-          email: email.trim().toLowerCase(),
-          whatsapp: whatsapp.trim(),
-          cpf: cpf ? cpf.trim() : null,
-          area_pericial: areaPericial ? areaPericial.trim() : null,
-          papel,
-        })
-        .select()
-        .single();
+    // 3. Gravação na tabela public.usuarios; se falhar, remove o login recém-criado
+    const { data: usuarioDb, error: dbError } = await supabaseAdmin
+      .from("usuarios")
+      .insert({
+        auth_id: authUserId,
+        nome: nome.trim(),
+        email: email.trim().toLowerCase(),
+        whatsapp: whatsapp.trim(),
+        cpf: cpf ? cpf.trim() : null,
+        area_pericial: areaPericial ? areaPericial.trim() : null,
+        papel,
+      })
+      .select()
+      .single();
 
-      if (!dbError && usuarioDb) {
-        usuarioCriadoId = usuarioDb.id;
+    if (dbError || !usuarioDb) {
+      console.error("[Supabase DB usuarios]:", dbError?.message);
+      await desfazerCriacao(authUserId, null);
+      return falhaCriacao();
+    }
+    const usuarioCriadoId: string = usuarioDb.id;
 
-        // 4. Vincula a matrícula da turma caso informada (matrícula é exclusiva de mentorados)
-        if (turmaId && papel === "mentorado") {
-          await supabaseAdmin.from("matriculas").insert({
-            usuario_id: usuarioDb.id,
-            turma_id: turmaId,
-            status,
-          });
-        }
+    // 4. Vincula a matrícula da turma caso informada (matrícula é exclusiva de mentorados)
+    if (turmaId && papel === "mentorado") {
+      const { error: matriculaError } = await supabaseAdmin.from("matriculas").insert({
+        usuario_id: usuarioCriadoId,
+        turma_id: turmaId,
+        status,
+      });
+      limparCacheMatriculas(usuarioCriadoId);
+      if (matriculaError) {
+        console.error("[Supabase DB matriculas]:", matriculaError.message);
+        await desfazerCriacao(authUserId, usuarioCriadoId);
+        return falhaCriacao();
       }
-    } catch (dbErr: any) {
-      console.warn("[Supabase DB Exceção]:", dbErr?.message || dbErr);
     }
 
     return NextResponse.json({
@@ -139,9 +136,24 @@ export async function POST(req: NextRequest) {
       },
     });
   } catch (err: any) {
-    return NextResponse.json(
-      { sucesso: false, erro: err?.message || "Erro interno ao processar criação de conta." },
-      { status: 500 }
-    );
+    console.error("[Criação de usuário]:", err?.message || err);
+    return falhaCriacao();
   }
+}
+
+function falhaCriacao() {
+  return NextResponse.json(
+    { sucesso: false, erro: "Não foi possível criar a conta. Nenhum dado foi gravado; tente novamente." },
+    { status: 500 }
+  );
+}
+
+// Remove o que já foi gravado para não deixar login sem cadastro, nem cadastro sem matrícula
+async function desfazerCriacao(authUserId: string, usuarioId: string | null) {
+  if (usuarioId) {
+    const { error } = await supabaseAdmin.from("usuarios").delete().eq("id", usuarioId);
+    if (error) console.error("[Rollback usuarios]:", usuarioId, error.message);
+  }
+  const { error } = await supabaseAdmin.auth.admin.deleteUser(authUserId);
+  if (error) console.error("[Rollback Auth]:", authUserId, error.message);
 }

@@ -1,82 +1,48 @@
+import { randomUUID } from "crypto";
 import { NextRequest, NextResponse } from "next/server";
 import { exigirSessao } from "@/lib/auth/sessao-api";
 import { supabaseAdmin } from "@/lib/supabase/admin";
+import { MIME_POR_TIPO, REGRAS_BUCKET, detectarTipoArquivo, ehBucketArquivo } from "@/lib/arquivos/regras";
+
+function recusar(erro: string, status = 400) {
+  return NextResponse.json({ sucesso: false, erro }, { status });
+}
 
 export async function POST(req: NextRequest) {
   const auth = await exigirSessao(req);
   if (auth.erro) return auth.erro;
   try {
     const formData = await req.formData();
-    const file = formData.get("file") as File | null;
-    const bucket = (formData.get("bucket") as string) || "evidencias";
-    if (!["evidencias", "comprovantes"].includes(bucket)) {
-      return NextResponse.json({ sucesso: false, erro: "Bucket não permitido." }, { status: 400 });
-    }
-    // Pasta sanitizada; mentorado grava sempre sob o próprio usuário
-    const pastaInformada = ((formData.get("subfolder") as string) || "uploads")
-      .split("/")
-      .map((p) => p.replace(/[^a-zA-Z0-9_-]/g, ""))
-      .filter(Boolean)
-      .join("/") || "uploads";
-    const subfolder = auth.sessao.equipe ? pastaInformada : `${auth.sessao.usuarioId}/${pastaInformada}`;
+    const file = formData.get("file");
+    const bucket = formData.get("bucket") || "evidencias";
+    if (!ehBucketArquivo(bucket)) return recusar("Bucket não permitido.");
+    if (!(file instanceof File)) return recusar("Nenhum arquivo enviado no corpo da requisição.");
 
-    if (!file) {
-      return NextResponse.json(
-        { sucesso: false, erro: "Nenhum arquivo enviado no corpo da requisição." },
-        { status: 400 }
-      );
+    const regras = REGRAS_BUCKET[bucket];
+    if (file.size === 0) return recusar("O arquivo está vazio.");
+    if (file.size > regras.tamanhoMaximoBytes) {
+      return recusar(`O arquivo excede o limite de ${regras.tamanhoMaximoBytes / (1024 * 1024)} MB.`);
     }
 
-    const TAMANHO_MAXIMO = 26214400; // 25 MB
-    if (file.size > TAMANHO_MAXIMO) {
-      return NextResponse.json(
-        { sucesso: false, erro: "O arquivo excede o limite máximo permitido de 25 MB." },
-        { status: 400 }
-      );
+    // O tipo vem do conteúdo do arquivo; nome e content-type do navegador não são confiáveis
+    const buffer = Buffer.from(await file.arrayBuffer());
+    const tipo = detectarTipoArquivo(buffer);
+    if (!tipo || !regras.tipos.includes(tipo)) {
+      return recusar(`Formato não aceito. Envie ${regras.tipos.map((t) => t.toUpperCase()).join(", ")}.`);
     }
 
-    const extensao = file.name.split(".").pop() || "bin";
-    const nomeLimpo = file.name
-      .replace(/\.[^/.]+$/, "")
-      .replace(/[^a-zA-Z0-9_-]/g, "_")
-      .substring(0, 40);
-    const timestamp = Date.now();
-    const storagePath = `${subfolder}/${timestamp}_${nomeLimpo}.${extensao}`;
+    // Mentorado grava sempre sob o próprio id; a equipe grava sob o id de quem enviou
+    const pasta = auth.sessao.usuarioId;
+    const storagePath = `${pasta}/${new Date().toISOString().slice(0, 7)}/${randomUUID()}.${tipo}`;
 
-    const arrayBuffer = await file.arrayBuffer();
-    const buffer = Buffer.from(arrayBuffer);
-
-    // Upload no Supabase Storage
-    const { data: uploadData, error: uploadError } = await supabaseAdmin.storage
-      .from(bucket)
-      .upload(storagePath, buffer, {
-        contentType: file.type || "application/octet-stream",
-        upsert: true,
-      });
+    const { error: uploadError } = await supabaseAdmin.storage.from(bucket).upload(storagePath, buffer, {
+      contentType: MIME_POR_TIPO[tipo],
+      upsert: false,
+    });
 
     if (uploadError) {
-      return NextResponse.json(
-        { sucesso: false, erro: `Falha ao salvar no Storage: ${uploadError.message}` },
-        { status: 500 }
-      );
-    }
-
-    // Gera URL pública ou assinada
-    let fileUrl = "";
-    const { data: publicUrlData } = supabaseAdmin.storage
-      .from(bucket)
-      .getPublicUrl(storagePath);
-
-    fileUrl = publicUrlData?.publicUrl || "";
-
-    // Se o bucket for privado, gera URL assinada de 7 dias
-    if (!fileUrl || bucket === "comprovantes") {
-      const { data: signedData } = await supabaseAdmin.storage
-        .from(bucket)
-        .createSignedUrl(storagePath, 60 * 60 * 24 * 7); // 7 dias
-      if (signedData?.signedUrl) {
-        fileUrl = signedData.signedUrl;
-      }
+      console.error("[Upload Storage]:", bucket, uploadError.message);
+      return recusar("Não foi possível salvar o arquivo. Tente novamente.", 500);
     }
 
     return NextResponse.json({
@@ -85,10 +51,11 @@ export async function POST(req: NextRequest) {
       bucket,
       nomeArquivo: file.name,
       tamanhoBytes: file.size,
-      url: fileUrl,
+      tipo,
       mensagem: "Arquivo enviado com sucesso.",
     });
   } catch (err: any) {
-    return NextResponse.json({ sucesso: false, erro: err?.message }, { status: 500 });
+    console.error("[Upload]:", err?.message || err);
+    return recusar("Não foi possível processar o envio do arquivo.", 500);
   }
 }

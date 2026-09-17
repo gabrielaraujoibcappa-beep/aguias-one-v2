@@ -14,6 +14,7 @@ export interface ArquivoUploadItem {
   progresso?: number; // 0 a 100
   status: StatusArquivo;
   mensagemErro?: string;
+  reenviavel?: boolean; // false quando o erro é do próprio arquivo (formato/tamanho)
 }
 
 export interface UploadArquivosProps {
@@ -99,6 +100,7 @@ export function UploadArquivos({
         progresso: status === "pronto" ? 100 : 0,
         status,
         mensagemErro,
+        reenviavel: status === "erro" ? false : undefined,
       });
     }
 
@@ -288,11 +290,14 @@ export function UploadArquivos({
                     >
                       ({formatarBytes(arq.tamanhoBytes)})
                     </span>
+                    {arq.status === "enviando" && (
+                      <span style={{ fontSize: "11px", color: "var(--cor-muted)", flexShrink: 0 }}>Enviando…</span>
+                    )}
                   </div>
 
                   <div style={{ display: "flex", alignItems: "center", gap: "8px", flexShrink: 0 }}>
                     {/* Botão Tentar Novamente para Arquivos com Erro */}
-                    {isErro && onTentarNovamente && (
+                    {isErro && onTentarNovamente && arq.reenviavel !== false && (
                       <button
                         type="button"
                         onClick={() => onTentarNovamente(arq)}

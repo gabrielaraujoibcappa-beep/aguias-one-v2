@@ -1,6 +1,6 @@
 "use client";
 
-import React from "react";
+import React, { useState } from "react";
 import {
   DeclaracaoFaturamento,
   calcularMetaMensal,
@@ -10,6 +10,7 @@ import {
 } from "@/lib/api/faturamento";
 import { AcoesAuditoriaFaturamento } from "./AcoesAuditoriaFaturamento";
 import { BadgeStatusAuditoria } from "../faturamento/BadgeStatusAuditoria";
+import { ArquivoVisualizavel, ModalArquivo } from "../ui/ModalArquivo";
 
 interface FilaAuditoriaFaturamentoProps {
   declaracoes: DeclaracaoFaturamento[];
@@ -24,6 +25,7 @@ interface FilaAuditoriaFaturamentoProps {
 const CELULA: React.CSSProperties = { padding: "14px 8px", verticalAlign: "top" };
 
 export function FilaAuditoriaFaturamento({ declaracoes, nomesAlunos, metas, modo, onAprovar, onSolicitarAjuste, onAbrirAluno }: FilaAuditoriaFaturamentoProps) {
+  const [comprovanteAberto, setComprovanteAberto] = useState<ArquivoVisualizavel | null>(null);
   const ordenadas = [...declaracoes].sort((a, b) => (b.criadoEm ?? "").localeCompare(a.criadoEm ?? ""));
   const pendentes = modo === "pendentes";
 
@@ -85,9 +87,9 @@ export function FilaAuditoriaFaturamento({ declaracoes, nomesAlunos, metas, modo
                       ) : (
                         <div style={{ display: "flex", gap: "6px", flexWrap: "wrap" }}>
                           {d.comprovantes.map((c, i) => (
-                            <a key={i} href={`#download-${c.path}`} className="btn-secondary" style={{ fontSize: "11px", padding: "2px 8px", borderRadius: "var(--radius-xs)" }}>
-                              {c.tipo === "zip" ? "Baixar .ZIP" : "Ver arquivo"}
-                            </a>
+                            <button key={i} type="button" onClick={() => setComprovanteAberto({ nome: c.nome, path: c.path })} className="btn-secondary" style={{ fontSize: "11px", padding: "2px 8px", borderRadius: "var(--radius-xs)" }}>
+                              {c.tipo === "zip" ? "Abrir .ZIP" : "Ver arquivo"}
+                            </button>
                           ))}
                         </div>
                       )}
@@ -121,6 +123,8 @@ export function FilaAuditoriaFaturamento({ declaracoes, nomesAlunos, metas, modo
           </tbody>
         </table>
       </div>
+
+      <ModalArquivo arquivo={comprovanteAberto} bucket="comprovantes" onFechar={() => setComprovanteAberto(null)} />
     </div>
   );
 }

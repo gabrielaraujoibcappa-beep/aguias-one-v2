@@ -38,11 +38,19 @@ export async function PATCH(req: NextRequest, { params }: RouteParams) {
         atualizado_em: new Date().toISOString(),
       })
       .eq("id", id)
+      .neq("status", "aprovado")
       .select()
-      .single();
+      .maybeSingle();
 
     if (error) {
-      return NextResponse.json({ sucesso: false, erro: error.message }, { status: 400 });
+      console.error("[Auditar check-in]:", id, error.message);
+      return NextResponse.json({ sucesso: false, erro: "Não foi possível salvar a avaliação." }, { status: 500 });
+    }
+    if (!checkin) {
+      return NextResponse.json(
+        { sucesso: false, erro: "Entrega não encontrada ou já aprovada." },
+        { status: 409 }
+      );
     }
 
     return NextResponse.json({

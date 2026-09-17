@@ -3,21 +3,19 @@
 import { useEffect, useSyncExternalStore } from "react";
 import { AlunoCadastro } from "../api/alunos";
 import { TurmaCadastro } from "../api/turmas";
-import { ModuloItem, MODULOS_PADRAO_AGUIAS_ONE } from "../api/modulos-liberacao";
+import { ModuloItem } from "../api/modulos-liberacao";
 import {
   DeclaracaoFaturamento,
-  FATURAMENTOS_HISTORICO_MOCK,
   META_FATURAMENTO_ANUAL_PADRAO,
-  METAS_FATURAMENTO_ALUNOS_MOCK,
   StatusAuditoriaFaturamento,
   filtrarFaturamentosPorAluno,
   obterMetaAnualAluno,
   processarAuditoriaFaturamento,
 } from "../api/faturamento";
-import { CanalItem, CANAIS_INICIAIS_MOCK } from "../api/canais";
-import { EntregaPendente, ENTREGAS_MOCK } from "../api/auditoria";
-import { AlunoSemaforoStatus, ALUNOS_SEMAFORO_MOCK } from "../api/turma-semaforo";
-import { PapelUsuario, apenasMentorados } from "../auth/roles";
+import { CanalItem } from "../api/canais";
+import { EntregaPendente } from "../api/auditoria";
+import { AlunoSemaforoStatus } from "../api/turma-semaforo";
+import { PapelUsuario, ROTULOS_PAPEL, apenasMentorados } from "../auth/roles";
 import {
   BloqueioAcesso,
   DadosNovoBloqueio,
@@ -26,6 +24,17 @@ import {
   obterBloqueioVigente,
 } from "../api/bloqueio-acesso";
 import { AlvoReversao, reverterRegistro, reverterValorPorChave } from "../api/desfazer";
+import { notificar as avisarUsuario } from "../notificacoes";
+import {
+  mapearBloqueios,
+  mapearCanais,
+  mapearCheckinProprio,
+  mapearEntrega,
+  mapearFaturamento,
+  mapearModulo,
+  mapearSemaforo,
+  mapearTurma,
+} from "../api/adaptadores";
 
 /** Opções de ações que podem ser desfeitas logo após a execução. */
 export interface OpcoesAcaoReversivel {
@@ -36,19 +45,20 @@ export interface OpcoesAcaoReversivel {
   adiarPersistencia?: boolean;
 }
 
-const STORAGE_KEY = "aguias_one_v2_store";
+/**
+ * Só preferências de interface ficam no navegador. Dados do servidor são sempre
+ * buscados de novo: guardá-los aqui mantinha registros apagados e dados de demonstração.
+ */
+const STORAGE_KEY = "aguias_one_v2_ui";
+/** Chave antiga que guardava o estado inteiro (com dados de demonstração). */
+const STORAGE_KEY_LEGADA = "aguias_one_v2_store";
 
-/** Id do aluno da sessão de demonstração (Dr. Roberto Silva). */
-export const ALUNO_ATUAL_ID = "1";
-
-const NOMES_AVALIADORES: Record<PapelUsuario, string> = {
-  admin: "Coordenação UniBCAPPA (Admin)",
-  concierge: "Flávio Lopes (Concierge)",
-  anjo: "Ana Carolina (Anjo)",
-  mentor: "Prof. Edilson Aguiais (Mentor)",
-  resgate: "Adelayne (Resgate)",
-  mentorado: "Mentorado",
-};
+export interface SessaoAtual {
+  /** id em public.usuarios do usuário logado */
+  usuarioId: string | null;
+  /** matrícula ativa do mentorado logado (equipe não tem) */
+  matriculaId: string | null;
+}
 
 export interface SistemaState {
   papelAtual: PapelUsuario;
@@ -57,12 +67,13 @@ export interface SistemaState {
     email: string;
     turmaNome: string;
   };
+  sessao: SessaoAtual;
   modulos: ModuloItem[];
   entregas: EntregaPendente[];
   faturamentos: DeclaracaoFaturamento[];
-  /** Meta anual de faturamento por aluno (id do aluno → valor em reais). */
+  /** Meta anual de faturamento por aluno (id do usuário → valor em reais). */
   metasFaturamentoAlunos: Record<string, number>;
-  /** Bloqueio de acesso vigente (ou último) por aluno. */
+  /** Bloqueio de acesso vigente por aluno. */
   bloqueiosAcesso: Record<string, BloqueioAcesso>;
   /** Trilha completa de bloqueios e desbloqueios, mais recente primeiro. */
   historicoBloqueios: BloqueioAcesso[];
@@ -72,133 +83,45 @@ export interface SistemaState {
   alunosSemaforo: AlunoSemaforoStatus[];
 }
 
+/** Estado vazio: nada é exibido até o servidor responder. */
 const estadoInicial: SistemaState = {
   papelAtual: "mentorado",
-  usuarioAtual: {
-    nome: "Dr. Roberto Silva",
-    email: "roberto.silva@pericia.com.br",
-    turmaNome: "Águias ONE — Turma 2026.1",
-  },
-  modulos: MODULOS_PADRAO_AGUIAS_ONE,
-  entregas: ENTREGAS_MOCK,
-  faturamentos: FATURAMENTOS_HISTORICO_MOCK,
-  metasFaturamentoAlunos: METAS_FATURAMENTO_ALUNOS_MOCK,
+  usuarioAtual: { nome: "", email: "", turmaNome: "" },
+  sessao: { usuarioId: null, matriculaId: null },
+  modulos: [],
+  entregas: [],
+  faturamentos: [],
+  metasFaturamentoAlunos: {},
   bloqueiosAcesso: {},
   historicoBloqueios: [],
-  canais: CANAIS_INICIAIS_MOCK,
-  alunos: [
-    {
-      id: "1",
-      nome: "Dr. Roberto Silva",
-      email: "roberto.silva@pericia.com.br",
-      whatsapp: "(11) 98765-4321",
-      cpf: "123.456.789-00",
-      areaPericial: "Contábil e Financeira",
-      turmaId: "turma-2026.1",
-      turmaNome: "Águias ONE — Turma 2026.1",
-      status: "ativo",
-    },
-    {
-      id: "2",
-      nome: "Dra. Mariana Costa",
-      email: "mariana.costa@advpericia.com.br",
-      whatsapp: "(21) 99887-7665",
-      cpf: "234.567.890-11",
-      areaPericial: "Trabalhista",
-      turmaId: "turma-2026.1",
-      turmaNome: "Águias ONE — Turma 2026.1",
-      status: "ativo",
-    },
-    {
-      id: "3",
-      nome: "Dr. André Martins",
-      email: "andre.martins@pericia.com.br",
-      whatsapp: "(31) 97766-5544",
-      cpf: "345.678.901-22",
-      areaPericial: "Grafotécnica",
-      turmaId: "turma-2026.1",
-      turmaNome: "Águias ONE — Turma 2026.1",
-      status: "ativo",
-    },
-  ],
-  turmas: [
-    {
-      id: "turma-2026.1",
-      codigo: "POS.ONE.2026.1",
-      nome: "Águias ONE — Turma 2026.1",
-      dataInicio: "2026-03-01",
-      horarioEncontro: "Quartas, 18:15 às 19:45",
-      limiteVagas: 40,
-      totalMatriculados: 38,
-      status: "em_andamento",
-    },
-    {
-      id: "turma-2026.2",
-      codigo: "POS.ONE.2026.2",
-      nome: "Águias ONE — Turma 2026.2",
-      dataInicio: "2026-08-01",
-      horarioEncontro: "Quartas, 18:15 às 19:45",
-      limiteVagas: 40,
-      totalMatriculados: 12,
-      status: "aberta",
-    },
-  ],
-  alunosSemaforo: ALUNOS_SEMAFORO_MOCK,
+  canais: [],
+  alunos: [],
+  turmas: [],
+  alunosSemaforo: [],
 };
 
 /**
- * Reconcilia um estado salvo em versões anteriores com o formato atual:
- * campos novos recebem o valor inicial, declarações sem aluno passam a pertencer
- * ao aluno da sessão e a antiga meta única vira a meta desse aluno.
+ * Lê o que estava salvo no navegador e aproveita só a identidade exibida
+ * (papel e nome), para a barra lateral não piscar antes da sessão ser validada.
+ * Qualquer coleção salva em versões anteriores é descartada.
  */
-export function migrarEstadoSalvo(salvo: Partial<SistemaState> & { metaFaturamentoAnual?: number }): SistemaState {
-  const turmas = Array.isArray(salvo.turmas) ? salvo.turmas : estadoInicial.turmas;
-  const alunos = Array.isArray(salvo.alunos) ? salvo.alunos : estadoInicial.alunos;
-  const modulos = Array.isArray(salvo.modulos) ? salvo.modulos : estadoInicial.modulos;
-  const entregas = Array.isArray(salvo.entregas) ? salvo.entregas : estadoInicial.entregas;
-  const base: SistemaState = { ...estadoInicial, ...salvo, turmas, alunos, modulos, entregas } as SistemaState;
-  const versaoAntiga = !salvo.metasFaturamentoAlunos; // salvo antes da auditoria de faturamento existir
-  const mockPorId = new Map(estadoInicial.faturamentos.map((f) => [f.id, f]));
-
-  const faturamentos: DeclaracaoFaturamento[] = (salvo.faturamentos ?? estadoInicial.faturamentos).map((f) => {
-    const demo = versaoAntiga && f.id ? mockPorId.get(f.id) : undefined;
-    return {
-      ...f,
-      alunoId: f.alunoId ?? demo?.alunoId ?? ALUNO_ATUAL_ID,
-      statusAuditoria: f.statusAuditoria ?? demo?.statusAuditoria ?? "pendente",
-      parecerAuditoria: f.parecerAuditoria ?? demo?.parecerAuditoria,
-      auditadoPor: f.auditadoPor ?? demo?.auditadoPor,
-      auditadoEm: f.auditadoEm ?? demo?.auditadoEm,
-    };
-  });
-
-  // Uma única vez, na migração da versão antiga: completa com as declarações de demonstração ausentes
-  if (versaoAntiga) {
-    const idsSalvos = new Set(faturamentos.map((f) => f.id));
-    for (const demo of estadoInicial.faturamentos) {
-      if (!idsSalvos.has(demo.id)) faturamentos.push(demo);
-    }
-  }
-
-  const metas: Record<string, number> = { ...estadoInicial.metasFaturamentoAlunos, ...(salvo.metasFaturamentoAlunos ?? {}) };
-  if (versaoAntiga && Number.isFinite(salvo.metaFaturamentoAnual) && (salvo.metaFaturamentoAnual as number) > 0) {
-    metas[ALUNO_ATUAL_ID] = salvo.metaFaturamentoAnual as number;
-  }
-
-  return { ...base, faturamentos, metasFaturamentoAlunos: metas };
-}
-
-/** Cookie lido pelo middleware para barrar o mentorado bloqueado já no servidor. */
-function sincronizarCookieBloqueio(estado: SistemaState) {
-  if (typeof document === "undefined") return;
-  const bloqueado = estado.papelAtual === "mentorado" && Boolean(obterBloqueioVigente(estado.bloqueiosAcesso ?? {}, ALUNO_ATUAL_ID));
-  document.cookie = `acesso-bloqueado=${bloqueado ? "1" : "0"}; path=/; max-age=31536000; SameSite=Lax`;
+export function migrarEstadoSalvo(salvo: any): SistemaState {
+  const papel = typeof salvo?.papelAtual === "string" && salvo.papelAtual in ROTULOS_PAPEL ? (salvo.papelAtual as PapelUsuario) : estadoInicial.papelAtual;
+  const usuario = salvo?.usuarioAtual ?? {};
+  return {
+    ...estadoInicial,
+    papelAtual: papel,
+    usuarioAtual: {
+      nome: typeof usuario.nome === "string" ? usuario.nome : "",
+      email: typeof usuario.email === "string" ? usuario.email : "",
+      turmaNome: typeof usuario.turmaNome === "string" ? usuario.turmaNome : "",
+    },
+  };
 }
 
 // ---------------------------------------------------------------------------
-// Store compartilhado: um único estado em memória, persistido no localStorage,
-// ao qual todos os componentes se inscrevem. Uma ação em qualquer componente
-// (sidebar, página, modal) é vista imediatamente pelos demais.
+// Store compartilhado: um único estado em memória ao qual todos os componentes
+// se inscrevem. Uma ação em qualquer componente é vista imediatamente pelos demais.
 // ---------------------------------------------------------------------------
 let estadoGlobal: SistemaState = estadoInicial;
 let carregadoGlobal = false;
@@ -223,19 +146,11 @@ const lerCarregadoNoServidor = () => false;
 function carregarDoArmazenamento() {
   if (carregadoGlobal || typeof window === "undefined") return;
   try {
+    localStorage.removeItem(STORAGE_KEY_LEGADA);
     const salvo = localStorage.getItem(STORAGE_KEY);
-    if (salvo) {
-      const dados = migrarEstadoSalvo(JSON.parse(salvo));
-      estadoGlobal = dados;
-      if (typeof document !== "undefined" && dados.papelAtual) {
-        document.cookie = `user-role=${dados.papelAtual}; path=/; max-age=31536000; SameSite=Lax`;
-      }
-      sincronizarCookieBloqueio(dados);
-    } else if (typeof document !== "undefined") {
-      document.cookie = `user-role=mentorado; path=/; max-age=31536000; SameSite=Lax`;
-    }
+    if (salvo) estadoGlobal = migrarEstadoSalvo(JSON.parse(salvo));
   } catch {
-    // fallback para estado inicial
+    // armazenamento indisponível: segue com o estado vazio
   }
   carregadoGlobal = true;
   notificar();
@@ -244,11 +159,7 @@ function carregarDoArmazenamento() {
 function salvarEstado(novo: SistemaState) {
   estadoGlobal = novo;
   try {
-    localStorage.setItem(STORAGE_KEY, JSON.stringify(novo));
-    if (typeof document !== "undefined" && novo.papelAtual) {
-      document.cookie = `user-role=${novo.papelAtual}; path=/; max-age=31536000; SameSite=Lax`;
-    }
-    sincronizarCookieBloqueio(novo);
+    localStorage.setItem(STORAGE_KEY, JSON.stringify({ papelAtual: novo.papelAtual, usuarioAtual: novo.usuarioAtual }));
   } catch {
     // ignore
   }
@@ -271,6 +182,34 @@ function agendarPersistencia(enviar: () => void, opcoes?: OpcoesAcaoReversivel):
   };
   if (!opcoes?.adiarPersistencia) efetivar();
   return efetivar;
+}
+
+/** Envia ao backend e, ao terminar (com sucesso ou não), busca de novo o estado real. */
+function enviarEDepoisSincronizar(url: string, init: RequestInit) {
+  fetch(url, { keepalive: true, ...init, headers: { "Content-Type": "application/json", ...(init.headers ?? {}) } })
+    .catch(() => {})
+    .finally(() => sincronizarAgora());
+}
+
+export interface ResultadoEnvio {
+  sucesso: boolean;
+  erro?: string;
+}
+
+/** Como enviarEDepoisSincronizar, mas devolve se o servidor aceitou (para a tela mostrar o erro). */
+async function enviarComResultado(url: string, init: RequestInit): Promise<ResultadoEnvio> {
+  try {
+    const res = await fetch(url, { ...init, headers: { "Content-Type": "application/json", ...(init.headers ?? {}) } });
+    const json = await res.json().catch(() => ({}));
+    if (!res.ok || json.sucesso === false) {
+      return { sucesso: false, erro: typeof json.erro === "string" ? json.erro : "O servidor recusou o envio." };
+    }
+    return { sucesso: true };
+  } catch {
+    return { sucesso: false, erro: "Sem conexão com o servidor. Tente novamente." };
+  } finally {
+    sincronizarAgora();
+  }
 }
 
 /** Somente para testes: volta o estado em memória ao inicial. */
@@ -298,67 +237,108 @@ function sincronizarComBackend(): Promise<void> {
   return syncEmAndamento;
 }
 
+/** Ignora o intervalo mínimo: usado logo depois de gravar algo no servidor. */
+function sincronizarAgora(): Promise<void> {
+  ultimaSyncOk = 0;
+  return syncEmAndamento ? syncEmAndamento.then(() => sincronizarComBackend()) : sincronizarComBackend();
+}
+
+/** Resposta utilizável: requisição concluída e sem `sucesso: false`. */
+function ok(resultado: PromiseSettledResult<any>): any | null {
+  if (resultado.status !== "fulfilled" || !resultado.value) return null;
+  return resultado.value.sucesso === false ? null : resultado.value;
+}
+
 async function executarSincronizacao() {
   try {
     // Sem sessão válida não há o que buscar (evita rajadas de 401)
     const resMe = await fetch("/api/auth/me", { cache: "no-store" });
     const me = resMe.ok ? await resMe.json() : null;
-    if (!me?.autenticado) return;
-    const equipe = me.usuario?.papel !== "mentorado";
+    if (!me?.autenticado || !me.usuario) return;
 
-    const buscar = (url: string, apenasEquipe = false) =>
-      apenasEquipe && !equipe ? Promise.resolve(null) : fetch(url).then((r) => (r.ok ? r.json() : null));
+    const usuario = me.usuario;
+    const equipe = usuario.papel !== "mentorado";
+    const matriculaId: string | null = usuario.matriculaId ?? null;
 
-    const [resTurmas, resAlunos, resModulos, resSemaforo, resFat, resBloqueios, resEntregas] = await Promise.allSettled([
+    const buscar = (url: string, condicao = true) =>
+      condicao ? fetch(url, { cache: "no-store" }).then((r) => (r.ok ? r.json() : null)) : Promise.resolve(null);
+
+    const [turmas, alunos, modulos, semaforo, faturamentos, bloqueios, entregas, canais] = await Promise.allSettled([
       buscar("/api/turmas"),
-      buscar("/api/alunos", true),
+      buscar("/api/alunos", equipe),
       buscar("/api/modulos"),
-      buscar("/api/semaforo", true),
+      buscar("/api/semaforo", equipe),
       buscar("/api/faturamentos"),
       buscar("/api/bloqueios"),
-      buscar("/api/checkins?pendentes=true", true),
+      buscar(equipe ? "/api/checkins?todas=true" : "/api/checkins", equipe || !!matriculaId),
+      buscar(`/api/canais?matriculaId=${encodeURIComponent(matriculaId ?? "")}`, !equipe && !!matriculaId),
     ]);
     ultimaSyncOk = Date.now();
 
-    const novoEstado = { ...estadoGlobal };
-    let mudou = false;
+    // Sempre substitui pelo que o servidor devolveu, inclusive listas vazias
+    const novo: SistemaState = {
+      ...estadoGlobal,
+      papelAtual: usuario.papel,
+      usuarioAtual: { nome: usuario.nome ?? "", email: usuario.email ?? "", turmaNome: usuario.turma?.nome ?? "" },
+      sessao: { usuarioId: usuario.id ?? null, matriculaId },
+    };
 
-    if (resTurmas.status === "fulfilled" && resTurmas.value?.turmas?.length) {
-      novoEstado.turmas = resTurmas.value.turmas;
-      mudou = true;
-    }
-    if (resAlunos.status === "fulfilled" && resAlunos.value?.alunos?.length) {
-      novoEstado.alunos = resAlunos.value.alunos;
-      mudou = true;
-    }
-    if (resModulos.status === "fulfilled" && resModulos.value?.modulos?.length) {
-      novoEstado.modulos = resModulos.value.modulos;
-      mudou = true;
-    }
-    if (resSemaforo.status === "fulfilled" && resSemaforo.value?.alunos?.length) {
-      novoEstado.alunosSemaforo = resSemaforo.value.alunos;
-      mudou = true;
-    }
-    if (resFat.status === "fulfilled" && resFat.value?.faturamentos?.length) {
-      novoEstado.faturamentos = resFat.value.faturamentos;
-      mudou = true;
-    }
-    if (resBloqueios.status === "fulfilled" && resBloqueios.value?.sucesso) {
-      novoEstado.bloqueiosAcesso = resBloqueios.value.bloqueiosVigentes || {};
-      novoEstado.historicoBloqueios = resBloqueios.value.historico || [];
-      mudou = true;
-    }
-    if (resEntregas.status === "fulfilled" && resEntregas.value?.entregas?.length) {
-      novoEstado.entregas = resEntregas.value.entregas;
-      mudou = true;
+    const rTurmas = ok(turmas);
+    if (rTurmas) novo.turmas = (rTurmas.turmas ?? []).map(mapearTurma);
+
+    const rModulos = ok(modulos);
+    if (rModulos) novo.modulos = (rModulos.modulos ?? []).map(mapearModulo);
+
+    const rFat = ok(faturamentos);
+    if (rFat) novo.faturamentos = (rFat.faturamentos ?? []).map(mapearFaturamento);
+
+    const rBloqueios = ok(bloqueios);
+    if (rBloqueios) {
+      const { vigentes, historico } = mapearBloqueios(rBloqueios);
+      novo.bloqueiosAcesso = vigentes;
+      novo.historicoBloqueios = historico;
     }
 
-    if (mudou) {
-      salvarEstado(novoEstado);
+    if (equipe) {
+      const rAlunos = ok(alunos);
+      if (rAlunos) {
+        novo.alunos = rAlunos.alunos ?? [];
+        novo.metasFaturamentoAlunos = Object.fromEntries(
+          novo.alunos.filter((a: any) => a.id && a.metaFaturamentoAnual).map((a: any) => [a.id, Number(a.metaFaturamentoAnual)])
+        );
+      }
+      const rSemaforo = ok(semaforo);
+      if (rSemaforo) novo.alunosSemaforo = (rSemaforo.alunos ?? []).map(mapearSemaforo);
+      const rEntregas = ok(entregas);
+      if (rEntregas) novo.entregas = (rEntregas.entregas ?? []).map(mapearEntrega);
+      novo.canais = [];
+    } else {
+      novo.alunos = [];
+      novo.alunosSemaforo = [];
+      novo.metasFaturamentoAlunos = usuario.id && usuario.metaFaturamentoAnual ? { [usuario.id]: Number(usuario.metaFaturamentoAnual) } : {};
+      const rEntregas = ok(entregas);
+      novo.entregas = rEntregas ? (rEntregas.checkins ?? []).map((c: any) => mapearCheckinProprio(c, usuario)) : [];
+      const rCanais = ok(canais);
+      novo.canais = rCanais ? mapearCanais(rCanais.canais ?? []) : [];
     }
+
+    salvarEstado(novo);
   } catch {
-    // Offline / fallback para localStorage
+    // Offline: mantém o que já está na tela
   }
+}
+
+/** Nome de quem executa a ação, para registros exibidos antes do servidor responder. */
+function nomeResponsavel(): string {
+  const { usuarioAtual, papelAtual } = estadoGlobal;
+  return usuarioAtual.nome ? `${usuarioAtual.nome} (${ROTULOS_PAPEL[papelAtual]})` : ROTULOS_PAPEL[papelAtual];
+}
+
+/** Matrícula de um aluno: a do próprio mentorado logado ou a do cadastro carregado pela equipe. */
+function matriculaDoAluno(alunoId: string | undefined): string | null {
+  if (!alunoId) return null;
+  if (alunoId === estadoGlobal.sessao.usuarioId) return estadoGlobal.sessao.matriculaId;
+  return (estadoGlobal.alunos.find((a) => a.id === alunoId) as any)?.matriculaId ?? null;
 }
 
 export function useSistemaStore() {
@@ -374,25 +354,35 @@ export function useSistemaStore() {
     salvarEstado({ ...estadoGlobal, papelAtual: novoPapel });
   };
 
-  /** Alinha papel e identidade da interface com a sessão validada no servidor. */
-  const definirUsuarioLogado = (usuario: { nome: string; email: string; papel: PapelUsuario; turmaNome?: string }) => {
+  /** Alinha papel, identidade e matrícula da interface com a sessão validada no servidor. */
+  const definirUsuarioLogado = (usuario: {
+    id?: string;
+    nome: string;
+    email: string;
+    papel: PapelUsuario;
+    turmaNome?: string;
+    matriculaId?: string | null;
+  }) => {
     const atual = estadoGlobal.usuarioAtual;
+    const sessao: SessaoAtual = {
+      usuarioId: usuario.id ?? estadoGlobal.sessao.usuarioId,
+      matriculaId: usuario.matriculaId !== undefined ? usuario.matriculaId : estadoGlobal.sessao.matriculaId,
+    };
     if (
       estadoGlobal.papelAtual === usuario.papel &&
-      atual?.email === usuario.email &&
-      atual?.nome === usuario.nome &&
-      (usuario.turmaNome === undefined || atual?.turmaNome === usuario.turmaNome)
+      atual.email === usuario.email &&
+      atual.nome === usuario.nome &&
+      (usuario.turmaNome === undefined || atual.turmaNome === usuario.turmaNome) &&
+      estadoGlobal.sessao.usuarioId === sessao.usuarioId &&
+      estadoGlobal.sessao.matriculaId === sessao.matriculaId
     ) {
       return;
     }
     salvarEstado({
       ...estadoGlobal,
       papelAtual: usuario.papel,
-      usuarioAtual: {
-        nome: usuario.nome,
-        email: usuario.email,
-        turmaNome: usuario.turmaNome ?? atual?.turmaNome ?? "",
-      },
+      usuarioAtual: { nome: usuario.nome, email: usuario.email, turmaNome: usuario.turmaNome ?? atual.turmaNome ?? "" },
+      sessao,
     });
   };
 
@@ -402,55 +392,34 @@ export function useSistemaStore() {
     );
     salvarEstado({ ...estadoGlobal, modulos: modulosAtualizados });
 
-    // Persistência no backend Supabase
-    if (typeof window !== "undefined") {
-      const turma = estadoGlobal.turmas[0];
-      if (turma?.id) {
-        fetch("/api/modulos/liberar", {
-          method: "POST",
-          headers: { "Content-Type": "application/json" },
-          body: JSON.stringify({
-            turmaId: turma.id,
-            moduloId,
-            status: novoStatus,
-            liberadoPorEmail: estadoGlobal.usuarioAtual?.email,
-          }),
-        }).catch(() => {});
-      }
+    const turma = estadoGlobal.turmas[0];
+    if (turma?.id) {
+      enviarEDepoisSincronizar("/api/modulos/liberar", {
+        method: "POST",
+        body: JSON.stringify({ turmaId: turma.id, moduloId, status: novoStatus }),
+      });
     }
   };
 
-  const submeterCheckin = (entrega: EntregaPendente) => {
-    salvarEstado({
-      ...estadoGlobal,
-      entregas: [entrega, ...estadoGlobal.entregas.filter((e) => e.id !== entrega.id)],
+  const submeterCheckin = async (entrega: EntregaPendente, moduloId: string): Promise<ResultadoEnvio> => {
+    const matriculaId = estadoGlobal.sessao.matriculaId;
+    if (!matriculaId) return { sucesso: false, erro: "Matrícula não encontrada. Faça login novamente." };
+
+    const evidencias = [
+      ...(entrega.links || []).map((l) => ({ tipo: "link", rotulo: l.rotulo || "Evidência", valorUrl: l.url })),
+      ...(entrega.arquivos || []).map((a) => ({ tipo: "arquivo", rotulo: a.nome, storagePath: a.path, nomeArquivo: a.nome })),
+    ];
+    const resultado = await enviarComResultado("/api/checkins", {
+      method: "POST",
+      body: JSON.stringify({ matriculaId, moduloId, travou: entrega.travou, duvidaCall: entrega.duvidaCall, evidencias }),
     });
-
-    // Persistência no backend Supabase
-    if (typeof window !== "undefined") {
-      const aluno = estadoGlobal.alunos.find((a) => a.id === ALUNO_ATUAL_ID || a.email === estadoGlobal.usuarioAtual?.email);
-      const matriculaId = (aluno as any)?.matriculaId || aluno?.id;
-      if (matriculaId) {
-        const matchNumero = (entrega.moduloTitulo || "").match(/(\d+)/);
-        const moduloNumero = matchNumero ? Number(matchNumero[1]) : 1;
-        const evidencias = [
-          ...(entrega.links || []).map((l) => ({ tipo: "link", rotulo: l.rotulo || "Evidência", valorUrl: l.url })),
-          ...(entrega.arquivos || []).map((a) => ({ tipo: "arquivo", rotulo: a.nome, storagePath: a.path, nomeArquivo: a.nome })),
-        ];
-
-        fetch("/api/checkins", {
-          method: "POST",
-          headers: { "Content-Type": "application/json" },
-          body: JSON.stringify({
-            matriculaId,
-            moduloNumero,
-            travou: entrega.travou,
-            duvidaCall: entrega.duvidaCall,
-            evidencias,
-          }),
-        }).catch(() => {});
-      }
+    if (resultado.sucesso) {
+      salvarEstado({
+        ...estadoGlobal,
+        entregas: [entrega, ...estadoGlobal.entregas.filter((e) => e.id !== entrega.id)],
+      });
     }
+    return resultado;
   };
 
   const auditarEntrega = (
@@ -461,85 +430,110 @@ export function useSistemaStore() {
   ): (() => void) => {
     const entregasAtualizadas = estadoGlobal.entregas.map((e) =>
       e.id === id
-        ? {
-            ...e,
-            status: decisao,
-            parecerTexto: parecer,
-            avaliadoEm: new Date().toISOString(),
-            avaliadoPor: estadoGlobal.papelAtual === "anjo" ? "Ana Carolina (Anjo)" : "Flávio Lopes (Concierge)",
-          }
+        ? { ...e, status: decisao, parecerTexto: parecer, avaliadoEm: new Date().toISOString(), avaliadoPor: nomeResponsavel() }
         : e
     );
-    const avaliadorEmail = estadoGlobal.usuarioAtual?.email;
     salvarEstado({ ...estadoGlobal, entregas: entregasAtualizadas });
 
-    // Persistência no backend Supabase (a API não aceita voltar para "aguardando", por isso o envio é adiável)
+    // A API não aceita voltar para "aguardando", por isso o envio é adiável.
+    // Se o servidor recusar, a sincronização desfaz a mudança na tela e o erro é avisado.
     return agendarPersistencia(() => {
-      fetch(`/api/checkins/${id}/auditar`, {
-        method: "PATCH",
+      void enviarComResultado(`/api/checkins/${id}/auditar`, {
         keepalive: true,
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ status: decisao, parecerTexto: parecer, avaliadorEmail }),
-      }).catch(() => {});
+        method: "PATCH",
+        body: JSON.stringify({ status: decisao, parecerTexto: parecer }),
+      }).then((resultado) => {
+        if (!resultado.sucesso) {
+          avisarUsuario(`A avaliação não foi salva: ${resultado.erro}`, { tom: "erro" });
+        }
+      });
     }, opcoes);
   };
 
-  const adicionarFaturamento = (faturamento: DeclaracaoFaturamento) => {
+  /** Mentorado declara o faturamento do mês. */
+  const adicionarFaturamento = async (faturamento: DeclaracaoFaturamento): Promise<ResultadoEnvio> => {
     const nova: DeclaracaoFaturamento = {
       ...faturamento,
-      id: faturamento.id || `fat-${Date.now()}`,
-      alunoId: faturamento.alunoId ?? ALUNO_ATUAL_ID,
-      statusAuditoria: faturamento.statusAuditoria ?? "pendente",
+      id: faturamento.id || `local-${Date.now()}`,
+      alunoId: faturamento.alunoId ?? estadoGlobal.sessao.usuarioId ?? undefined,
+      statusAuditoria: "pendente",
       criadoEm: faturamento.criadoEm ?? new Date().toISOString(),
     };
-    salvarEstado({
-      ...estadoGlobal,
-      faturamentos: [nova, ...estadoGlobal.faturamentos],
-    });
 
-    // Persistência no backend Supabase
-    if (typeof window !== "undefined") {
-      const aluno = estadoGlobal.alunos.find((a) => a.id === nova.alunoId);
-      const matriculaId = (aluno as any)?.matriculaId || aluno?.id;
-      if (matriculaId) {
-        fetch("/api/faturamentos", {
-          method: "POST",
-          headers: { "Content-Type": "application/json" },
-          body: JSON.stringify({
-            matriculaId,
-            mesReferencia: nova.mesReferencia,
-            valorBruto: nova.valorBruto,
-            storageZipPath: nova.comprovantes?.[0]?.path || null,
-          }),
-        }).catch(() => {});
-      }
+    const matriculaId = faturamento.matriculaId && !faturamento.matriculaId.startsWith("mat-") ? faturamento.matriculaId : matriculaDoAluno(nova.alunoId);
+    if (!matriculaId) return { sucesso: false, erro: "Matrícula não encontrada. Faça login novamente." };
+    const resultado = await enviarComResultado("/api/faturamentos", {
+      method: "POST",
+      body: JSON.stringify({
+        matriculaId,
+        mesReferencia: nova.mesReferencia,
+        valorBruto: nova.valorBruto,
+        storageZipPath: nova.comprovantes?.[0]?.path || null,
+      }),
+    });
+    if (resultado.sucesso) {
+      salvarEstado({ ...estadoGlobal, faturamentos: [nova, ...estadoGlobal.faturamentos] });
     }
+    return resultado;
   };
 
-  /** Equipe: cria ou atualiza uma declaração em nome do aluno (upsert por id). */
-  const salvarFaturamento = (faturamento: DeclaracaoFaturamento) => {
-    const editor = NOMES_AVALIADORES[estadoGlobal.papelAtual];
-    const existe = faturamento.id && estadoGlobal.faturamentos.some((f) => f.id === faturamento.id);
-    if (existe) {
+  /**
+   * Equipe: cria ou atualiza uma declaração em nome do aluno.
+   * A edição é adiável (janela de "Desfazer"); a criação vai direto ao servidor.
+   */
+  const salvarFaturamento = (faturamento: DeclaracaoFaturamento, opcoes?: OpcoesAcaoReversivel): (() => void) => {
+    const editor = nomeResponsavel();
+    const existente = faturamento.id ? estadoGlobal.faturamentos.find((f) => f.id === faturamento.id) : undefined;
+
+    if (existente) {
+      const atualizada = { ...existente, ...faturamento, editadoPor: editor };
       salvarEstado({
         ...estadoGlobal,
-        faturamentos: estadoGlobal.faturamentos.map((f) => (f.id === faturamento.id ? { ...f, ...faturamento, editadoPor: editor } : f)),
+        faturamentos: estadoGlobal.faturamentos.map((f) => (f.id === faturamento.id ? atualizada : f)),
       });
-      return;
+      return agendarPersistencia(() => {
+        void enviarComResultado(`/api/faturamentos/${faturamento.id}`, {
+          keepalive: true,
+          method: "PATCH",
+          body: JSON.stringify({
+            mesReferencia: atualizada.mesReferencia,
+            valorBruto: atualizada.valorBruto,
+            statusAuditoria: atualizada.statusAuditoria,
+            parecerAuditoria: atualizada.parecerAuditoria,
+          }),
+        }).then((r) => {
+          if (!r.sucesso) avisarUsuario(`A declaração não foi salva: ${r.erro}`, { tom: "erro" });
+        });
+      }, opcoes);
     }
+
     const nova: DeclaracaoFaturamento = {
       ...faturamento,
-      id: faturamento.id || `fat-${Date.now()}`,
-      alunoId: faturamento.alunoId ?? ALUNO_ATUAL_ID,
+      id: `local-${Date.now()}`,
       statusAuditoria: faturamento.statusAuditoria ?? "pendente",
-      criadoEm: faturamento.criadoEm ?? new Date().toISOString(),
+      criadoEm: new Date().toISOString(),
       editadoPor: editor,
     };
     salvarEstado({ ...estadoGlobal, faturamentos: [nova, ...estadoGlobal.faturamentos] });
+    const matriculaId = matriculaDoAluno(nova.alunoId);
+    if (matriculaId) {
+      void enviarComResultado("/api/faturamentos", {
+        method: "POST",
+        body: JSON.stringify({ matriculaId, mesReferencia: nova.mesReferencia, valorBruto: nova.valorBruto }),
+      }).then((r) => {
+        if (!r.sucesso) avisarUsuario(`A declaração não foi lançada: ${r.erro}`, { tom: "erro" });
+      });
+    }
+    return () => {};
   };
 
-  const excluirFaturamento = (id: string) => {
+  /** Gestão: exclui uma declaração. O envio é adiável (janela de "Desfazer"). */
+  const excluirFaturamento = (id: string, opcoes?: OpcoesAcaoReversivel): (() => void) => {
     salvarEstado({ ...estadoGlobal, faturamentos: estadoGlobal.faturamentos.filter((f) => f.id !== id) });
+    return agendarPersistencia(() => {
+      if (id.startsWith("local-")) return;
+      enviarEDepoisSincronizar(`/api/faturamentos/${id}`, { method: "DELETE" });
+    }, opcoes);
   };
 
   const auditarFaturamento = (
@@ -548,93 +542,87 @@ export function useSistemaStore() {
     parecer?: string,
     opcoes?: OpcoesAcaoReversivel
   ): (() => void) => {
-    const avaliador = NOMES_AVALIADORES[estadoGlobal.papelAtual];
-    const auditadoPorEmail = estadoGlobal.usuarioAtual?.email;
     salvarEstado({
       ...estadoGlobal,
-      faturamentos: estadoGlobal.faturamentos.map((f) => (f.id === id ? processarAuditoriaFaturamento(f, decisao, parecer, avaliador) : f)),
+      faturamentos: estadoGlobal.faturamentos.map((f) => (f.id === id ? processarAuditoriaFaturamento(f, decisao, parecer, nomeResponsavel()) : f)),
     });
 
-    // Persistência no backend Supabase
     return agendarPersistencia(() => {
-      fetch(`/api/faturamentos/${id}/auditar`, {
+      enviarEDepoisSincronizar(`/api/faturamentos/${id}/auditar`, {
         method: "PATCH",
-        keepalive: true,
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ statusAuditoria: decisao, parecerAuditoria: parecer, auditadoPorEmail }),
-      }).catch(() => {});
+        body: JSON.stringify({ statusAuditoria: decisao, parecerAuditoria: parecer }),
+      });
     }, opcoes);
   };
 
-  const definirMetaFaturamentoAnual = (valor: number, alunoId: string = ALUNO_ATUAL_ID) => {
+  /**
+   * Define a meta anual de um aluno (padrão: o mentorado logado).
+   * O envio é adiável (janela de "Desfazer").
+   */
+  const definirMetaFaturamentoAnual = (valor: number, alunoId?: string, opcoes?: OpcoesAcaoReversivel): (() => void) => {
+    const alvo = alunoId ?? estadoGlobal.sessao.usuarioId ?? "";
     const metaValida = Number.isFinite(valor) && valor > 0 ? valor : META_FATURAMENTO_ANUAL_PADRAO;
     salvarEstado({
       ...estadoGlobal,
-      metasFaturamentoAlunos: { ...estadoGlobal.metasFaturamentoAlunos, [alunoId]: metaValida },
+      metasFaturamentoAlunos: { ...estadoGlobal.metasFaturamentoAlunos, [alvo]: metaValida },
     });
+
+    const matriculaId = matriculaDoAluno(alvo);
+    return agendarPersistencia(() => {
+      if (!matriculaId) return;
+      enviarEDepoisSincronizar(`/api/matriculas/${matriculaId}/meta`, {
+        method: "PUT",
+        body: JSON.stringify({ valor: metaValida }),
+      });
+    }, opcoes);
   };
 
   /** Equipe: bloqueia o acesso de um aluno ao sistema. Substitui um bloqueio vigente, se houver. */
   const bloquearAcesso = (dados: DadosNovoBloqueio) => {
-    const autor = NOMES_AVALIADORES[estadoGlobal.papelAtual];
-    const novo = criarBloqueio(dados, autor);
+    const novo = criarBloqueio(dados, nomeResponsavel());
     salvarEstado({
       ...estadoGlobal,
       bloqueiosAcesso: { ...estadoGlobal.bloqueiosAcesso, [dados.alunoId]: novo },
       historicoBloqueios: [novo, ...estadoGlobal.historicoBloqueios],
     });
 
-    // Persistência no backend Supabase
-    if (typeof window !== "undefined") {
-      fetch("/api/bloqueios", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({
-          acao: "bloquear",
-          usuarioId: dados.alunoId,
-          motivo: dados.motivo,
-          observacoes: dados.observacaoInterna || dados.mensagemAoAluno || null,
-          responsavelNome: autor,
-        }),
-      }).catch(() => {});
-    }
+    enviarEDepoisSincronizar("/api/bloqueios", {
+      method: "POST",
+      body: JSON.stringify({
+        acao: "bloquear",
+        usuarioId: dados.alunoId,
+        motivo: dados.motivo,
+        observacoes: dados.observacaoInterna || dados.mensagemAoAluno || null,
+      }),
+    });
   };
 
   /** Equipe: encerra o bloqueio vigente do aluno, registrando quem liberou e por quê. */
   const desbloquearAcesso = (alunoId: string, observacao?: string) => {
     const vigente = estadoGlobal.bloqueiosAcesso[alunoId];
     if (!vigente || vigente.desbloqueadoEm) return;
-    const autor = NOMES_AVALIADORES[estadoGlobal.papelAtual];
-    const encerrado = encerrarBloqueio(vigente, autor, observacao);
+    const encerrado = encerrarBloqueio(vigente, nomeResponsavel(), observacao);
     salvarEstado({
       ...estadoGlobal,
       bloqueiosAcesso: { ...estadoGlobal.bloqueiosAcesso, [alunoId]: encerrado },
       historicoBloqueios: estadoGlobal.historicoBloqueios.map((b) => (b.id === encerrado.id ? encerrado : b)),
     });
 
-    // Persistência no backend Supabase
-    if (typeof window !== "undefined") {
-      fetch("/api/bloqueios", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({
-          acao: "desbloquear",
-          usuarioId: alunoId,
-          responsavelNome: autor,
-          justificativaDesbloqueio: observacao,
-        }),
-      }).catch(() => {});
-    }
+    enviarEDepoisSincronizar("/api/bloqueios", {
+      method: "POST",
+      body: JSON.stringify({ acao: "desbloquear", usuarioId: alunoId, justificativaDesbloqueio: observacao }),
+    });
   };
 
   // Seletores do aluno da sessão
-  const bloqueioAlunoAtual = obterBloqueioVigente(estadoGlobal.bloqueiosAcesso ?? {}, ALUNO_ATUAL_ID);
-  const faturamentosAlunoAtual = filtrarFaturamentosPorAluno(estadoGlobal.faturamentos, ALUNO_ATUAL_ID);
-  const metaAnualAlunoAtual = obterMetaAnualAluno(estadoGlobal.metasFaturamentoAlunos, ALUNO_ATUAL_ID);
+  const alunoAtualId = estadoGlobal.sessao.usuarioId ?? "";
+  const bloqueioAlunoAtual = alunoAtualId ? obterBloqueioVigente(estadoGlobal.bloqueiosAcesso, alunoAtualId) : undefined;
+  const faturamentosAlunoAtual = alunoAtualId ? filtrarFaturamentosPorAluno(estadoGlobal.faturamentos, alunoAtualId) : [];
+  const metaAnualAlunoAtual = obterMetaAnualAluno(estadoGlobal.metasFaturamentoAlunos, alunoAtualId);
   const faturamentosPendentesAuditoria = estadoGlobal.faturamentos.filter(
     (f) => ((f.statusAuditoria ?? "pendente") as StatusAuditoriaFaturamento) === "pendente"
   ).length;
-  /** Só mentorados: o cadastro também traz contas da equipe (admin, concierge, anjo, mentor). */
+  /** Só mentorados: o cadastro também traz contas da equipe. */
   const mentorados = apenasMentorados(estadoGlobal.alunos);
 
   const atualizarCanal = (nomeCanal: string, status: "ativo" | "nao_iniciado", url?: string) => {
@@ -643,50 +631,35 @@ export function useSistemaStore() {
     );
     salvarEstado({ ...estadoGlobal, canais: canaisAtualizados });
 
-    // Persistência no backend Supabase
-    if (typeof window !== "undefined") {
-      const aluno = estadoGlobal.alunos.find((a) => a.id === ALUNO_ATUAL_ID);
-      const matriculaId = (aluno as any)?.matriculaId || aluno?.id;
-      if (matriculaId) {
-        fetch("/api/canais", {
-          method: "POST",
-          headers: { "Content-Type": "application/json" },
-          body: JSON.stringify({
-            matriculaId,
-            canalNome: nomeCanal,
-            status,
-            urlCanal: url,
-          }),
-        }).catch(() => {});
-      }
-    }
+    const matriculaId = estadoGlobal.sessao.matriculaId;
+    if (!matriculaId) return;
+    enviarEDepoisSincronizar("/api/canais", {
+      method: "POST",
+      body: JSON.stringify({ matriculaId, canalNome: nomeCanal, status, urlCanal: url }),
+    });
   };
 
   const salvarAluno = (aluno: AlunoCadastro) => {
     const existe = estadoGlobal.alunos.some((a) => a.id === aluno.id);
-    let novosAlunos: AlunoCadastro[];
-    if (existe) {
-      novosAlunos = estadoGlobal.alunos.map((a) => (a.id === aluno.id ? aluno : a));
-      // Se tiver id existente, atualiza no backend
-      if (aluno.id && typeof window !== "undefined") {
-        fetch(`/api/alunos/${aluno.id}`, {
-          method: "PATCH",
-          headers: { "Content-Type": "application/json" },
-          body: JSON.stringify(aluno),
-        }).catch(() => {});
-      }
-    } else {
-      novosAlunos = [{ ...aluno, id: aluno.id || String(Date.now()) }, ...estadoGlobal.alunos];
-    }
+    const novosAlunos = existe
+      ? estadoGlobal.alunos.map((a) => (a.id === aluno.id ? aluno : a))
+      : [{ ...aluno, id: aluno.id || `local-${Date.now()}` }, ...estadoGlobal.alunos];
     salvarEstado({ ...estadoGlobal, alunos: novosAlunos });
+
+    if (existe && aluno.id) {
+      enviarEDepoisSincronizar(`/api/alunos/${aluno.id}`, { method: "PATCH", body: JSON.stringify(aluno) });
+    } else {
+      // Cadastro novo é gravado pelo próprio modal (/api/admin/usuarios); aqui só recarrega
+      sincronizarAgora();
+    }
   };
 
   const excluirAluno = (id: string, opcoes?: OpcoesAcaoReversivel): (() => void) => {
     salvarEstado({ ...estadoGlobal, alunos: estadoGlobal.alunos.filter((a) => a.id !== id) });
-    // Exclui no backend (apaga usuário e acesso de forma definitiva, por isso o envio é adiável)
+    // Apaga usuário e acesso de forma definitiva no backend, por isso o envio é adiável
     return agendarPersistencia(() => {
       if (!id) return;
-      fetch(`/api/alunos/${id}`, { method: "DELETE", keepalive: true }).catch(() => {});
+      enviarEDepoisSincronizar(`/api/alunos/${id}`, { method: "DELETE" });
     }, opcoes);
   };
 
@@ -695,44 +668,39 @@ export function useSistemaStore() {
   // estiver exatamente como a ação o deixou; caso contrário retornam false.
   // -------------------------------------------------------------------------
   const reverterFaturamento = (alvo: AlvoReversao<DeclaracaoFaturamento>): boolean => {
-    const { lista, ok } = reverterRegistro(estadoGlobal.faturamentos, alvo);
-    if (ok) salvarEstado({ ...estadoGlobal, faturamentos: lista });
-    return ok;
+    const { lista, ok: revertido } = reverterRegistro(estadoGlobal.faturamentos, alvo);
+    if (revertido) salvarEstado({ ...estadoGlobal, faturamentos: lista });
+    return revertido;
   };
 
   const reverterEntrega = (alvo: AlvoReversao<EntregaPendente>): boolean => {
-    const { lista, ok } = reverterRegistro(estadoGlobal.entregas, alvo);
-    if (ok) salvarEstado({ ...estadoGlobal, entregas: lista });
-    return ok;
+    const { lista, ok: revertido } = reverterRegistro(estadoGlobal.entregas, alvo);
+    if (revertido) salvarEstado({ ...estadoGlobal, entregas: lista });
+    return revertido;
   };
 
   const reverterAluno = (alvo: AlvoReversao<AlunoCadastro>): boolean => {
-    const { lista, ok } = reverterRegistro(estadoGlobal.alunos, alvo);
-    if (ok) salvarEstado({ ...estadoGlobal, alunos: lista });
-    return ok;
+    const { lista, ok: revertido } = reverterRegistro(estadoGlobal.alunos, alvo);
+    if (revertido) salvarEstado({ ...estadoGlobal, alunos: lista });
+    return revertido;
   };
 
   const reverterMetaFaturamento = (alunoId: string, anterior: number | undefined, posterior: number): boolean => {
-    const { mapa, ok } = reverterValorPorChave(estadoGlobal.metasFaturamentoAlunos, alunoId, anterior, posterior);
-    if (ok) salvarEstado({ ...estadoGlobal, metasFaturamentoAlunos: mapa });
-    return ok;
+    const { mapa, ok: revertido } = reverterValorPorChave(estadoGlobal.metasFaturamentoAlunos, alunoId, anterior, posterior);
+    if (revertido) salvarEstado({ ...estadoGlobal, metasFaturamentoAlunos: mapa });
+    return revertido;
   };
 
   const salvarTurma = (turma: TurmaCadastro) => {
     salvarEstado({ ...estadoGlobal, turmas: [turma, ...estadoGlobal.turmas] });
-    if (typeof window !== "undefined") {
-      fetch("/api/turmas", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify(turma),
-      }).catch(() => {});
-    }
+    enviarEDepoisSincronizar("/api/turmas", { method: "POST", body: JSON.stringify(turma) });
   };
 
   return {
     estado,
     mentorados,
     carregado,
+    alunoAtualId,
     mudarPapel,
     definirUsuarioLogado,
     alternarModulo,
@@ -759,4 +727,3 @@ export function useSistemaStore() {
     reverterMetaFaturamento,
   };
 }
-

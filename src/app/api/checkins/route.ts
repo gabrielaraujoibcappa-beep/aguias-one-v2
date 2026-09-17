@@ -1,25 +1,30 @@
 import { NextRequest, NextResponse } from "next/server";
 import { exigirSessao, podeAcessarMatricula, respostaProibida } from "@/lib/auth/sessao-api";
 import { supabaseAdmin } from "@/lib/supabase/admin";
+import { normalizarEvidencias } from "@/lib/api/checkin";
+import { caminhoPertenceAoUsuario, caminhoSeguro } from "@/lib/arquivos/regras";
 
 export async function GET(req: NextRequest) {
   const auth = await exigirSessao(req);
   if (auth.erro) return auth.erro;
   try {
     const { searchParams } = new URL(req.url);
+    // pendentes=true: só a fila (aguardando/ajuste); todas=true: fila + histórico avaliado
     const pendentes = searchParams.get("pendentes") === "true";
+    const todas = searchParams.get("todas") === "true";
     const matriculaId = searchParams.get("matriculaId");
     const moduloNumero = searchParams.get("moduloNumero");
     const moduloId = searchParams.get("moduloId");
-    if (pendentes && !auth.sessao.equipe) return respostaProibida();
+    if ((pendentes || todas) && !auth.sessao.equipe) return respostaProibida();
     if (matriculaId && !podeAcessarMatricula(auth.sessao, matriculaId)) return respostaProibida();
 
-    // 1. Fila de Auditoria da Equipe (/painel/auditoria)
-    if (pendentes) {
-      const { data: checkins, error } = await supabaseAdmin
+    // 1. Fila e histórico de auditoria da equipe (/painel/auditoria)
+    if (pendentes || todas) {
+      let consulta = supabaseAdmin
         .from("checkins_modulo")
         .select(`
           id, status, travou, duvida_call, parecer_texto, enviado_em, avaliado_em,
+          avaliador:usuarios!avaliado_por (nome),
           matriculas (
             id, status,
             usuarios (id, nome, email, whatsapp, area_pericial),
@@ -28,8 +33,9 @@ export async function GET(req: NextRequest) {
           modulos (id, numero, titulo, disciplina_ref),
           checkin_evidencias (id, tipo, rotulo, valor_url, storage_path, nome_arquivo)
         `)
-        .in("status", ["aguardando_avaliacao", "ajuste_solicitado"])
         .order("enviado_em", { ascending: true });
+      if (!todas) consulta = consulta.in("status", ["aguardando_avaliacao", "ajuste_solicitado"]);
+      const { data: checkins, error } = await consulta;
 
       if (error) {
         return NextResponse.json({ sucesso: false, erro: error.message }, { status: 500 });
@@ -50,6 +56,8 @@ export async function GET(req: NextRequest) {
         duvidaCall: c.duvida_call || "",
         parecerTexto: c.parecer_texto || "",
         dataEnvio: c.enviado_em,
+        avaliadoEm: c.avaliado_em || null,
+        avaliadoPor: c.avaliador?.nome || null,
         evidencias: c.checkin_evidencias || [],
       }));
 
@@ -93,74 +101,102 @@ export async function GET(req: NextRequest) {
   }
 }
 
+function erroCheckin(erro: string, status: number) {
+  return NextResponse.json({ sucesso: false, erro }, { status });
+}
+
 export async function POST(req: NextRequest) {
   const auth = await exigirSessao(req);
   if (auth.erro) return auth.erro;
   try {
     const body = await req.json();
-    const { matriculaId, moduloId, moduloNumero, travou, duvidaCall, evidencias = [] } = body;
-    if (matriculaId && !podeAcessarMatricula(auth.sessao, matriculaId)) return respostaProibida();
-
-    let targetModuloId = moduloId;
-
-    if (!targetModuloId && moduloNumero) {
-      const { data: m } = await supabaseAdmin
-        .from("modulos")
-        .select("id")
-        .eq("numero", Number(moduloNumero))
-        .single();
-      targetModuloId = m?.id;
+    const { matriculaId, moduloId, moduloNumero, travou, duvidaCall, evidencias } = body;
+    if (typeof matriculaId !== "string" || !podeAcessarMatricula(auth.sessao, matriculaId)) {
+      return matriculaId ? respostaProibida() : erroCheckin("matriculaId é obrigatório.", 400);
     }
 
-    if (!matriculaId || !targetModuloId) {
-      return NextResponse.json(
-        { sucesso: false, erro: "matriculaId e moduloId (ou moduloNumero) são obrigatórios." },
-        { status: 400 }
-      );
+    // 1. Módulo: pelo id ou pelo número
+    let moduloQuery = supabaseAdmin.from("modulos").select("id, numero");
+    if (typeof moduloId === "string" && moduloId) moduloQuery = moduloQuery.eq("id", moduloId);
+    else if (Number.isInteger(Number(moduloNumero))) moduloQuery = moduloQuery.eq("numero", Number(moduloNumero));
+    else return erroCheckin("moduloId (ou moduloNumero) é obrigatório.", 400);
+    const { data: modulo } = await moduloQuery.maybeSingle();
+    if (!modulo) return erroCheckin("Módulo não encontrado.", 404);
+
+    // 2. Evidências: links http(s) e arquivos enviados pela rota de upload
+    const validarCaminho = (caminho: unknown) =>
+      auth.sessao.equipe ? caminhoSeguro(caminho) : caminhoPertenceAoUsuario(caminho, auth.sessao.usuarioId);
+    const evid = normalizarEvidencias(evidencias, validarCaminho);
+    if (evid.erro !== undefined) return erroCheckin(evid.erro, 400);
+
+    // 3. O módulo precisa estar liberado para a turma (módulo 1 é liberado por padrão)
+    const { data: matricula } = await supabaseAdmin
+      .from("matriculas")
+      .select("turma_id")
+      .eq("id", matriculaId)
+      .maybeSingle();
+    if (!matricula) return erroCheckin("Matrícula não encontrada.", 404);
+    const { data: liberacao } = await supabaseAdmin
+      .from("modulo_liberacoes")
+      .select("status")
+      .eq("turma_id", matricula.turma_id)
+      .eq("modulo_id", modulo.id)
+      .maybeSingle();
+    const liberado = liberacao ? liberacao.status === "liberado" : modulo.numero === 1;
+    if (!liberado) return erroCheckin("Este módulo ainda não foi liberado para a sua turma.", 409);
+
+    // 4. Entrega já aprovada não volta para a fila
+    const { data: existente } = await supabaseAdmin
+      .from("checkins_modulo")
+      .select("id, status")
+      .eq("matricula_id", matriculaId)
+      .eq("modulo_id", modulo.id)
+      .maybeSingle();
+    if (existente?.status === "aprovado") {
+      return erroCheckin("Esta entrega já foi aprovada e não pode ser reenviada.", 409);
     }
 
-    // 1. Upsert do checkin
+    const agora = new Date().toISOString();
     const { data: checkin, error: errCheckin } = await supabaseAdmin
       .from("checkins_modulo")
       .upsert(
         {
           matricula_id: matriculaId,
-          modulo_id: targetModuloId,
+          modulo_id: modulo.id,
           status: "aguardando_avaliacao",
-          travou: travou ? travou.trim() : null,
-          duvida_call: duvidaCall ? duvidaCall.trim() : null,
-          enviado_em: new Date().toISOString(),
-          atualizado_em: new Date().toISOString(),
+          travou: typeof travou === "string" && travou.trim() ? travou.trim().slice(0, 500) : null,
+          duvida_call: typeof duvidaCall === "string" && duvidaCall.trim() ? duvidaCall.trim().slice(0, 500) : null,
+          enviado_em: agora,
+          atualizado_em: agora,
         },
         { onConflict: "matricula_id,modulo_id" }
       )
       .select()
       .single();
 
-    if (errCheckin) {
-      return NextResponse.json({ sucesso: false, erro: errCheckin.message }, { status: 400 });
+    if (errCheckin || !checkin) {
+      console.error("[Check-in upsert]:", errCheckin?.message);
+      return erroCheckin("Não foi possível registrar a entrega. Tente novamente.", 500);
     }
 
-    // 2. Insere evidências se houverem
-    if (Array.isArray(evidencias) && evidencias.length > 0) {
-      // Limpa evidências anteriores desse check-in para evitar duplicados
-      await supabaseAdmin
-        .from("checkin_evidencias")
-        .delete()
-        .eq("checkin_id", checkin.id);
+    // 5. Troca as evidências: grava as novas antes de apagar as antigas, para nunca ficar sem nenhuma
+    const { data: anteriores } = await supabaseAdmin
+      .from("checkin_evidencias")
+      .select("id")
+      .eq("checkin_id", checkin.id);
 
-      const rowsParaInserir = evidencias.map((ev: any) => ({
-        checkin_id: checkin.id,
-        tipo: ev.tipo || "link",
-        rotulo: ev.rotulo || "Evidência",
-        valor_url: ev.valorUrl || null,
-        storage_path: ev.storagePath || null,
-        nome_arquivo: ev.nomeArquivo || null,
-      }));
+    const { error: errEvidencias } = await supabaseAdmin
+      .from("checkin_evidencias")
+      .insert(evid.linhas.map((linha) => ({ ...linha, checkin_id: checkin.id })));
+    if (errEvidencias) {
+      console.error("[Check-in evidências]:", errEvidencias.message);
+      return erroCheckin("Não foi possível salvar as evidências. Tente novamente.", 500);
+    }
 
-      await supabaseAdmin
-        .from("checkin_evidencias")
-        .insert(rowsParaInserir);
+    const idsAnteriores = (anteriores || []).map((e) => e.id);
+    if (idsAnteriores.length > 0) {
+      const { error: errLimpeza } = await supabaseAdmin.from("checkin_evidencias").delete().in("id", idsAnteriores);
+      if (errLimpeza) console.error("[Check-in limpeza de evidências]:", checkin.id, errLimpeza.message);
     }
 
     return NextResponse.json({
@@ -169,6 +205,7 @@ export async function POST(req: NextRequest) {
       mensagem: "Check-in submetido para avaliação com sucesso.",
     });
   } catch (err: any) {
-    return NextResponse.json({ sucesso: false, erro: err?.message }, { status: 500 });
+    console.error("[Check-in]:", err?.message || err);
+    return erroCheckin("Não foi possível registrar a entrega. Tente novamente.", 500);
   }
 }

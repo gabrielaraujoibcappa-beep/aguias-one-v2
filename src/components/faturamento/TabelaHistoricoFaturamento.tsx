@@ -1,14 +1,16 @@
 "use client";
 
-import React from "react";
+import React, { useState } from "react";
 import { DeclaracaoFaturamento, formatarMoedaReal } from "@/lib/api/faturamento";
 import { BadgeStatusAuditoria } from "./BadgeStatusAuditoria";
+import { ArquivoVisualizavel, ModalArquivo } from "../ui/ModalArquivo";
 
 interface TabelaHistoricoFaturamentoProps {
   historico: DeclaracaoFaturamento[];
 }
 
 export function TabelaHistoricoFaturamento({ historico }: TabelaHistoricoFaturamentoProps) {
+  const [comprovanteAberto, setComprovanteAberto] = useState<ArquivoVisualizavel | null>(null);
   const formatarMes = (mesRef: string) => {
     const [ano, mes] = mesRef.split("-");
     const data = new Date(Number(ano), Number(mes) - 1, 1);
@@ -51,14 +53,15 @@ export function TabelaHistoricoFaturamento({ historico }: TabelaHistoricoFaturam
                   ) : (
                     <div style={{ display: "flex", gap: "6px", flexWrap: "wrap" }}>
                       {item.comprovantes.map((c, i) => (
-                        <a
+                        <button
                           key={i}
-                          href={`#download-${c.path}`}
+                          type="button"
+                          onClick={() => setComprovanteAberto({ nome: c.nome, path: c.path })}
                           className="btn-secondary"
                           style={{ fontSize: "11px", padding: "2px 8px", borderRadius: "var(--radius-xs)" }}
                         >
-                          {c.tipo === "zip" ? "Baixar .ZIP" : "Ver Arquivo"}
-                        </a>
+                          {c.tipo === "zip" ? "Abrir .ZIP" : "Ver Arquivo"}
+                        </button>
                       ))}
                     </div>
                   )}
@@ -79,6 +82,8 @@ export function TabelaHistoricoFaturamento({ historico }: TabelaHistoricoFaturam
           )}
         </tbody>
       </table>
+
+      <ModalArquivo arquivo={comprovanteAberto} bucket="comprovantes" onFechar={() => setComprovanteAberto(null)} />
     </div>
   );
 }

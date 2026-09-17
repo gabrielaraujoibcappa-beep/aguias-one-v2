@@ -1,5 +1,5 @@
 import { NextRequest, NextResponse } from "next/server";
-import { exigirSessao, PAPEIS_GESTAO } from "@/lib/auth/sessao-api";
+import { exigirSessao, limparCacheMatriculas, PAPEIS_GESTAO } from "@/lib/auth/sessao-api";
 import { supabaseAdmin } from "@/lib/supabase/admin";
 
 interface RouteParams {
@@ -63,6 +63,7 @@ export async function PATCH(req: NextRequest, { params }: RouteParams) {
           .from("matriculas")
           .insert({ usuario_id: id, turma_id: turmaId, status: "ativo" });
       }
+      limparCacheMatriculas(id);
     }
 
     return NextResponse.json({ sucesso: true, usuario });
@@ -92,6 +93,7 @@ export async function DELETE(req: NextRequest, { params }: RouteParams) {
       }
     }
 
+    limparCacheMatriculas(id);
     const { error } = await supabaseAdmin
       .from("usuarios")
       .delete()

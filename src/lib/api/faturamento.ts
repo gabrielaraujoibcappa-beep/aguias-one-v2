@@ -54,94 +54,6 @@ export function formatarMoedaReal(valor: number): string {
 
 export const formatarMoedaBRL = formatarMoedaReal;
 
-export const FATURAMENTOS_HISTORICO_MOCK: DeclaracaoFaturamento[] = [
-  {
-    id: "fat-1",
-    matriculaId: "mat-1",
-    alunoId: "1",
-    mesReferencia: "2026-08-01",
-    valorBruto: 14200.0,
-    comprovantes: [
-      { nome: "extrato_e_recibos_agosto.zip", path: "faturamentos/extrato_agosto.zip", tipo: "zip" },
-    ],
-    criadoEm: "2026-09-02T10:00:00Z",
-    statusAuditoria: "pendente",
-  },
-  {
-    id: "fat-2",
-    matriculaId: "mat-1",
-    alunoId: "1",
-    mesReferencia: "2026-07-01",
-    valorBruto: 11800.0,
-    comprovantes: [
-      { nome: "comprovante_julho.pdf", path: "faturamentos/comp_julho.pdf", tipo: "arquivo" },
-    ],
-    criadoEm: "2026-08-03T11:30:00Z",
-    statusAuditoria: "aprovado",
-    auditadoPor: "Flávio Lopes (Concierge)",
-    auditadoEm: "2026-08-05T14:10:00Z",
-  },
-  {
-    id: "fat-3",
-    matriculaId: "mat-2",
-    alunoId: "2",
-    mesReferencia: "2026-08-01",
-    valorBruto: 22400.0,
-    comprovantes: [
-      { nome: "notas_agosto.zip", path: "faturamentos/notas_agosto_mariana.zip", tipo: "zip" },
-    ],
-    criadoEm: "2026-09-01T09:20:00Z",
-    statusAuditoria: "pendente",
-  },
-  {
-    id: "fat-4",
-    matriculaId: "mat-2",
-    alunoId: "2",
-    mesReferencia: "2026-07-01",
-    valorBruto: 19750.0,
-    comprovantes: [
-      { nome: "recibos_julho.pdf", path: "faturamentos/recibos_julho_mariana.pdf", tipo: "arquivo" },
-    ],
-    criadoEm: "2026-08-02T16:45:00Z",
-    statusAuditoria: "aprovado",
-    auditadoPor: "Ana Carolina (Anjo)",
-    auditadoEm: "2026-08-04T10:00:00Z",
-  },
-  {
-    id: "fat-5",
-    matriculaId: "mat-2",
-    alunoId: "2",
-    mesReferencia: "2026-06-01",
-    valorBruto: 17300.0,
-    comprovantes: [],
-    criadoEm: "2026-07-03T11:00:00Z",
-    statusAuditoria: "aprovado",
-    auditadoPor: "Ana Carolina (Anjo)",
-    auditadoEm: "2026-07-06T09:30:00Z",
-  },
-  {
-    id: "fat-6",
-    matriculaId: "mat-3",
-    alunoId: "3",
-    mesReferencia: "2026-07-01",
-    valorBruto: 4100.0,
-    comprovantes: [
-      { nome: "print_extrato.jpg", path: "faturamentos/print_extrato_andre.jpg", tipo: "arquivo" },
-    ],
-    criadoEm: "2026-08-09T20:15:00Z",
-    statusAuditoria: "ajuste_solicitado",
-    parecerAuditoria: "O print está ilegível. Reenvie o extrato completo do mês em PDF ou .zip.",
-    auditadoPor: "Flávio Lopes (Concierge)",
-    auditadoEm: "2026-08-11T13:00:00Z",
-  },
-];
-
-/** Metas anuais iniciais por aluno (demonstração). */
-export const METAS_FATURAMENTO_ALUNOS_MOCK: Record<string, number> = {
-  "1": 240000,
-  "2": 300000,
-  "3": 150000,
-};
 
 // ---------------------------------------------------------------------------
 // Meta de faturamento anual (dividida em 12 metas mensais iguais)
@@ -330,4 +242,37 @@ export function formatarMesReferencia(mesRef: string): string {
   const data = new Date(Number(ano), Number(mes) - 1, 1);
   const texto = data.toLocaleDateString("pt-BR", { month: "long", year: "numeric" });
   return texto.charAt(0).toUpperCase() + texto.slice(1);
+}
+
+/** Mês corrente no formato de referência: "2026-09-01". */
+export function mesReferenciaAtual(agora: Date = new Date()): string {
+  return `${agora.getFullYear()}-${String(agora.getMonth() + 1).padStart(2, "0")}-01`;
+}
+
+/** Os últimos `quantidade` meses de referência, do mais recente para o mais antigo. */
+export function ultimosMesesReferencia(quantidade = 12, agora: Date = new Date()): string[] {
+  return Array.from({ length: quantidade }, (_, i) => {
+    const d = new Date(agora.getFullYear(), agora.getMonth() - i, 1);
+    return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, "0")}-01`;
+  });
+}
+
+/** Valor máximo aceito numa declaração mensal (R$ 100 milhões). */
+export const VALOR_BRUTO_MAXIMO = 100_000_000;
+
+/** "2026-08" ou "2026-08-01" → "2026-08-01"; qualquer outro formato devolve null. */
+export function normalizarMesReferencia(valor: unknown): string | null {
+  if (typeof valor !== "string") return null;
+  const m = valor.match(/^(\d{4})-(\d{2})(?:-\d{2})?$/);
+  if (!m || Number(m[2]) < 1 || Number(m[2]) > 12) return null;
+  return `${m[1]}-${m[2]}-01`;
+}
+
+/** Aceita número ou texto numérico; recusa null, vazio, NaN, zero, negativo e absurdo. */
+export function normalizarValorBruto(valor: unknown): number | null {
+  if (valor === null || valor === undefined || valor === "") return null;
+  if (typeof valor !== "number" && typeof valor !== "string") return null;
+  const numero = Number(valor);
+  if (!Number.isFinite(numero) || numero <= 0 || numero > VALOR_BRUTO_MAXIMO) return null;
+  return Math.round(numero * 100) / 100;
 }
