@@ -14,6 +14,7 @@ export default async function HomePage() {
   const perfil = await resolverPerfil(token).catch(() => null);
 
   if (!perfil) return <PortaEntrada />;
+  if (perfil.precisaTrocarSenha) redirect("/trocar-senha");
   if (perfil.papel === "resgate") redirect("/resgate");
   redirect(ehEquipe(perfil.papel) ? "/painel/turma" : "/dashboard");
 }

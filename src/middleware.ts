@@ -34,6 +34,11 @@ export async function middleware(request: NextRequest) {
 
   const equipe = ehEquipe(perfil.papel);
 
+  // Senha temporária: só a troca libera o restante (vale para todos os papéis)
+  if (perfil.precisaTrocarSenha && pathname !== "/trocar-senha" && !pathname.startsWith("/trocar-senha/")) {
+    return redirecionar(request, "/trocar-senha");
+  }
+
   // Resgate (Adelayne) só opera /resgate: sem painéis, sem área do aluno
   if (perfil.papel === "resgate") {
     return pathname === "/resgate" || pathname.startsWith("/resgate/")
@@ -79,5 +84,6 @@ export const config = {
     "/concierge/:path*",
     "/mentor/:path*",
     "/resgate/:path*",
+    "/trocar-senha/:path*",
   ],
 };

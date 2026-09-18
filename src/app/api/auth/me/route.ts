@@ -35,6 +35,7 @@ export async function GET(req: NextRequest) {
         areaPericial: usuario?.area_pericial ?? null,
         papel: sessao.papel,
         status: sessao.status,
+        precisaTrocarSenha: sessao.precisaTrocarSenha,
         matriculaId: matricula?.id ?? null,
         metaFaturamentoAnual:
           (matricula as any)?.meta_faturamento_anual != null ? Number((matricula as any).meta_faturamento_anual) : null,

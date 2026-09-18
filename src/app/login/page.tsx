@@ -31,6 +31,12 @@ export default function LoginPage() {
 
     mudarPapel(usuario.papel);
 
+    // Senha temporária (primeiro acesso ou pós-reset): troca obrigatória antes de tudo
+    if (usuario.precisaTrocarSenha) {
+      router.replace("/trocar-senha");
+      return;
+    }
+
     const destino = new URLSearchParams(window.location.search).get("redirect");
     const destinoSeguro = destino && destino.startsWith("/") && !destino.startsWith("//") ? destino : null;
     const rotaInicial =

@@ -34,6 +34,7 @@ export interface UsuarioLogado {
   papel: PapelUsuario;
   status: string;
   matriculaId: string | null;
+  precisaTrocarSenha?: boolean;
 }
 
 export async function obterUsuarioLogado(): Promise<UsuarioLogado | null> {

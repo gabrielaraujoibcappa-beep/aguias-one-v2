@@ -90,6 +90,7 @@ export async function POST(req: NextRequest) {
         cpf: cpf ? cpf.trim() : null,
         area_pericial: areaPericial ? areaPericial.trim() : null,
         papel,
+        precisa_trocar_senha: true,
       })
       .select()
       .single();

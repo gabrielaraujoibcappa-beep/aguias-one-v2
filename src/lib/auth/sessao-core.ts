@@ -16,6 +16,7 @@ export interface PerfilSessao {
   email: string;
   papel: PapelUsuario;
   status: string;
+  precisaTrocarSenha: boolean;
 }
 
 const CACHE_TTL_MS = 30_000;
@@ -34,7 +35,7 @@ function configSupabase() {
 async function buscarUsuario(filtro: string): Promise<PerfilSessao | null> {
   const { url, service } = configSupabase();
   const res = await fetch(
-    `${url}/rest/v1/usuarios?${filtro}&select=id,auth_id,nome,email,papel,status&limit=1`,
+    `${url}/rest/v1/usuarios?${filtro}&select=id,auth_id,nome,email,papel,status,precisa_trocar_senha&limit=1`,
     { headers: { apikey: service, Authorization: `Bearer ${service}` }, cache: "no-store" }
   );
   if (!res.ok) return null;
@@ -47,6 +48,7 @@ async function buscarUsuario(filtro: string): Promise<PerfilSessao | null> {
     email: u.email,
     papel: u.papel,
     status: u.status || "ativo",
+    precisaTrocarSenha: u.precisa_trocar_senha === true,
   };
 }
 
