@@ -45,22 +45,27 @@ DO $$
 DECLARE
   v_inesperado text;
 BEGIN
-  SELECT string_agg(format('%s.%s', c.conrelid::regclass, a.attname), ', ')
+  SELECT string_agg(format('%s.%s (%s)', tabela, a.attname, c.confdeltype), ', ')
   INTO v_inesperado
   FROM pg_constraint c
   JOIN pg_attribute a ON a.attrelid = c.conrelid AND a.attnum = ANY (c.conkey)
   JOIN pg_class cl ON cl.oid = c.confrelid
   JOIN pg_namespace n ON n.oid = cl.relnamespace
+  JOIN LATERAL (
+    SELECT n2.nspname || '.' || cl2.relname AS tabela
+    FROM pg_class cl2 JOIN pg_namespace n2 ON n2.oid = cl2.relnamespace
+    WHERE cl2.oid = c.conrelid
+  ) t ON true
   WHERE c.contype = 'f'
     AND n.nspname = 'public'
     AND cl.relname = 'usuarios'
     AND NOT (
-      (c.conrelid::regclass::text IN (
+      (tabela IN (
         'public.modulo_liberacoes', 'public.checkins_modulo', 'public.faturamentos',
         'public.diagnostico_historico', 'public.evento_sistema') AND c.confdeltype = 'n')
-      OR (c.conrelid::regclass::text IN ('public.matriculas', 'public.bloqueios_acesso') AND c.confdeltype = 'c')
-      OR (c.conrelid::regclass::text = 'public.audit_exports' AND c.confdeltype = 'n')
-      OR (c.conrelid::regclass::text IN (
+      OR (tabela IN ('public.matriculas', 'public.bloqueios_acesso') AND c.confdeltype = 'c')
+      OR (tabela = 'public.audit_exports' AND c.confdeltype = 'n')
+      OR (tabela IN (
         'public.anjo_nota', 'public.acesso_faturamento_log', 'public.contato_resgate')
         AND c.confdeltype = 'a')
     );
