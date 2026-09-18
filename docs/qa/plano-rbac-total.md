@@ -82,7 +82,8 @@ Todos os 9 CTs passaram, contas-teste removidas, nenhuma evidência com dado sen
 - Causa raiz (schema): FKs de autoria/auditoria para `usuarios(id)` sem regra de delete travam o `DELETE` — `modulo_liberacoes.liberado_por`, `checkins_modulo.avaliado_por`, `faturamentos.auditado_por`, `diagnostico_historico.autor_id`, `evento_sistema.ator_id` (anuláveis, sem `SET NULL`) e `anjo_nota.autor_id`, `acesso_faturamento_log.leitor_id` (`NOT NULL`). O desenho previa delete ("DELETE em cascata da matrícula continua possível"), mas as FKs de autor foram esquecidas.
 - Defeito associado no cliente: erro do `DELETE` engolido pelo `.catch(()=>{})` + resync restaura sem aviso — falhar deve notificar, nunca restaurar em silêncio.
 - Evolução 18/09/2026: `SET NULL` em `diagnostico_historico`/`evento_sistema` conflitou com o trigger append-only ("UPDATE não permitido") — revertido para `NO ACTION` (migração `20260918120000`); pré-check 409 estendido às 5 trilhas. Conta-teste com histórico/eventos agora recebe 409 com mensagem clara (comportamento correto, não falha).
-- Status: EM CORREÇÃO — CT-008 bloqueado; aceite do RF-004 suspenso; reexecutar CT-008 em produção após a correção
+- Status: EM CORREÇÃO — CT-008 bloqueado; aceite do RF-004 suspenso
+- Evidência 18/09/2026: exclusão da aluno1 retorna 409 "possui registros de auditoria" — comportamento correto pós-correção (conta com histórico não se exclui; usa-se conta sem rastro para o CT-008); reexecutar CT-008 em produção após a correção
 
 ## Observações gerais
 - Proposta revisada e aprovada pelo produto; registrada para execução em 18/09/2026.
