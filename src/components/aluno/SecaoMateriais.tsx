@@ -1,43 +1,55 @@
-import React from "react";
+"use client";
+
+import React, { useEffect, useState } from "react";
 import { IconDownload, IconFolder } from "../ui/Icons";
 
 export interface MaterialItem {
   id: string;
   titulo: string;
-  tipo: "PDF" | "HTML" | "ZIP" | "PLANILHA";
+  tipo: "PDF" | "HTML" | "ZIP" | "PLANILHA" | "IMAGEM" | "LINK";
   tamanho: string;
   descricao: string;
   downloadUrl: string;
 }
 
-const MATERIAIS_PADRAO: MaterialItem[] = [
-  {
-    id: "mat-1",
-    titulo: "Estrutura de 8 Pastas do Google Drive",
-    tipo: "ZIP",
-    tamanho: "1.2 MB",
-    descricao: "Template da árvore de diretórios padronizada para escritórios periciais individuais.",
-    downloadUrl: "#",
-  },
-  {
-    id: "mat-2",
-    titulo: "Kits de Produtos em HTML (Bancário, Trabalhista, Tributário)",
-    tipo: "HTML",
-    tamanho: "450 KB",
-    descricao: "Modelos das 7 peças de abordagem e apresentação de proposta técnica.",
-    downloadUrl: "#",
-  },
-  {
-    id: "mat-3",
-    titulo: "Contrato Modelo de Parceria por Indicação",
-    tipo: "PDF",
-    tamanho: "320 KB",
-    descricao: "Minuta jurídica para parceria com advogados e peritos parceiros (PPC §10).",
-    downloadUrl: "#",
-  },
-];
+/**
+ * Materiais publicados pela coordenação (bucket `materiais`, via GET /api/materiais).
+ * Sem material publicado, mostra estado vazio — nenhum item mockado.
+ * A prop `materiais` permite injetar a lista (testes); quando omitida, busca da API.
+ */
+export function SecaoMateriais({ materiais: iniciais }: { materiais?: MaterialItem[] }) {
+  const [materiais, setMateriais] = useState<MaterialItem[] | null>(iniciais ?? null);
+  const [erro, setErro] = useState<string | null>(null);
 
-export function SecaoMateriais() {
+  useEffect(() => {
+    if (iniciais) return;
+    let ativo = true;
+    fetch("/api/materiais")
+      .then(async (resp) => {
+        const dados = await resp.json();
+        if (!dados.sucesso) throw new Error(dados.erro || "Falha ao carregar.");
+        if (!ativo) return;
+        setMateriais(
+          (dados.materiais || []).map((m: any) => ({
+            id: m.path,
+            titulo: m.titulo,
+            tipo: m.tipo,
+            tamanho: m.tamanho,
+            descricao: "",
+            downloadUrl: m.downloadUrl,
+          }))
+        );
+      })
+      .catch((e) => {
+        if (!ativo) return;
+        setErro(e?.message || "Não foi possível carregar os materiais.");
+        setMateriais([]);
+      });
+    return () => {
+      ativo = false;
+    };
+  }, [iniciais]);
+
   return (
     <div style={{
       backgroundColor: "#fff",
@@ -53,8 +65,21 @@ export function SecaoMateriais() {
         Documentos de referência, roteiros operacionais e minutas disponibilizadas pela coordenação.
       </p>
 
+      {materiais === null ? (
+        <p style={{ color: "var(--cor-muted)", fontSize: "13px" }}>
+          Carregando materiais...
+        </p>
+      ) : erro ? (
+        <p role="alert" style={{ color: "#991b1b", fontSize: "13px" }}>
+          {erro}
+        </p>
+      ) : materiais.length === 0 ? (
+        <p style={{ color: "var(--cor-muted)", fontSize: "13px" }}>
+          Nenhum material publicado pela coordenação ainda.
+        </p>
+      ) : (
       <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(280px, 1fr))", gap: "var(--espaco-md)" }}>
-        {MATERIAIS_PADRAO.map((mat) => (
+        {materiais.map((mat) => (
           <div key={mat.id} style={{
             border: "1px solid var(--cor-border-light)",
             borderRadius: "var(--radius-xs)",
@@ -84,28 +109,49 @@ export function SecaoMateriais() {
               <h4 style={{ fontSize: "14px", fontWeight: 600, margin: "var(--espaco-xs) 0", color: "var(--cor-ink)" }}>
                 {mat.titulo}
               </h4>
-              <p style={{ fontSize: "12px", color: "var(--cor-body-muted)", marginBottom: "var(--espaco-md)" }}>
-                {mat.descricao}
-              </p>
+              {mat.descricao ? (
+                <p style={{ fontSize: "12px", color: "var(--cor-body-muted)", marginBottom: "var(--espaco-md)" }}>
+                  {mat.descricao}
+                </p>
+              ) : null}
             </div>
 
-            <a
-              href={mat.downloadUrl}
-              className="btn-secondary"
-              style={{
-                width: "100%",
-                justifyContent: "center",
-                fontSize: "12px",
-                borderRadius: "var(--radius-xs)",
-                gap: "6px",
-              }}
-            >
-              <IconDownload size={13} />
-              <span>Baixar Arquivo</span>
-            </a>
+            {mat.downloadUrl ? (
+              <a
+                href={mat.downloadUrl}
+                className="btn-secondary"
+                style={{
+                  width: "100%",
+                  justifyContent: "center",
+                  fontSize: "12px",
+                  borderRadius: "var(--radius-xs)",
+                  gap: "6px",
+                }}
+                {...(mat.tipo === "LINK" ? { target: "_blank", rel: "noopener noreferrer" } : {})}
+              >
+                <IconDownload size={13} />
+                <span>{mat.tipo === "LINK" ? "Abrir Link" : "Baixar Arquivo"}</span>
+              </a>
+            ) : (
+              <span
+                className="btn-secondary"
+                aria-disabled="true"
+                style={{
+                  width: "100%",
+                  justifyContent: "center",
+                  fontSize: "12px",
+                  borderRadius: "var(--radius-xs)",
+                  opacity: 0.6,
+                  cursor: "default",
+                }}
+              >
+                Disponível em breve
+              </span>
+            )}
           </div>
         ))}
       </div>
+      )}
     </div>
   );
 }

@@ -44,6 +44,7 @@ export async function GET(req: NextRequest) {
       const formatados = (checkins || []).map((c: any) => ({
         id: c.id,
         status: c.status,
+        matricula_id: c.matriculas?.id ?? null,
         alunoNome: c.matriculas?.usuarios?.nome || "Mentorado",
         alunoEmail: c.matriculas?.usuarios?.email || "",
         alunoWhatsapp: c.matriculas?.usuarios?.whatsapp || "",

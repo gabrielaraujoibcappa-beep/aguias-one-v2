@@ -30,7 +30,7 @@ export default function AdminEmailsPage() {
 
   // Modal de Envio de Teste
   const [modalEnvioAberto, setModalEnvioAberto] = useState(false);
-  const [emailDestino, setEmailDestino] = useState("roberto.silva@pericia.com.br");
+  const [emailDestino, setEmailDestino] = useState("");
   const [enviando, setEnviando] = useState(false);
 
   useEffect(() => {

@@ -14,7 +14,7 @@ interface PainelKpisTurmaProps {
   turmaNome?: string;
 }
 
-export function PainelKpisTurma({ alunos, entregas, turmaNome = "Turma 2026.1" }: PainelKpisTurmaProps) {
+export function PainelKpisTurma({ alunos, entregas, turmaNome = "" }: PainelKpisTurmaProps) {
   const totalAlunos = alunos.length;
   const alunosVermelho = alunos.filter((a) => a.semaforoAtual === "vermelho");
   const alunosAmarelo = alunos.filter((a) => a.semaforoAtual === "amarelo");

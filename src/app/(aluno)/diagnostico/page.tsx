@@ -167,7 +167,14 @@ export default function MeuDiagnosticoPage() {
             Corrigir até {formatarData(diag.corrigirAte)}
           </button>
         )}
+        <div style={{ marginTop: "var(--espaco-md)" }}>
+          <a href="/api/diagnostico/export" className="btn-secondary" style={{ display: "inline-flex", textDecoration: "none", minHeight: "44px", alignItems: "center" }}>
+            Exportar placar (.zip)
+          </a>
+        </div>
       </div>
+
+      <SecaoComprovantes congelado={diag.status === "congelado"} />
 
       {editando ? (
         <form
@@ -243,6 +250,148 @@ export default function MeuDiagnosticoPage() {
         ))
       )}
     </div>
+  );
+}
+
+interface ComprovantePlacar {
+  id: string;
+  nome_arquivo: string;
+  tamanho_bytes: number | null;
+  criado_em: string;
+}
+
+function formatarTamanho(bytes: number | null): string {
+  if (bytes == null) return "—";
+  if (bytes < 1024) return `${bytes} B`;
+  const kb = bytes / 1024;
+  if (kb < 1024) return `${kb >= 100 ? Math.round(kb) : kb.toFixed(1).replace(".", ",")} KB`;
+  const mb = kb / 1024;
+  return `${mb >= 100 ? Math.round(mb) : mb.toFixed(1).replace(".", ",")} MB`;
+}
+
+function SecaoComprovantes({ congelado }: { congelado: boolean }) {
+  const [itens, setItens] = useState<ComprovantePlacar[]>([]);
+  const [carregando, setCarregando] = useState(true);
+  const [enviando, setEnviando] = useState(false);
+  const [removendoId, setRemovendoId] = useState<string | null>(null);
+  const [erro, setErro] = useState<string | null>(null);
+
+  const carregar = () =>
+    fetch("/api/diagnostico/comprovantes", { cache: "no-store" })
+      .then(async (r) => {
+        const dados = await r.json();
+        if (!r.ok || !dados.sucesso) throw new Error(dados?.erro?.mensagem || dados?.erro || "Falha ao carregar.");
+        setItens(dados.comprovantes || []);
+      })
+      .catch((e) => setErro(e?.message || "Não foi possível carregar os comprovantes."))
+      .finally(() => setCarregando(false));
+
+  useEffect(() => {
+    carregar();
+  }, []);
+
+  const enviarArquivo = async (file: File) => {
+    setEnviando(true);
+    setErro(null);
+    try {
+      const form = new FormData();
+      form.append("file", file);
+      form.append("bucket", "comprovantes");
+      const up = await fetch("/api/upload", { method: "POST", body: form });
+      const upDados = await up.json();
+      if (!up.ok || !upDados.sucesso) throw new Error(upDados.erro || "Falha no envio.");
+      const vinc = await fetch("/api/diagnostico/comprovantes", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          storagePath: upDados.storagePath,
+          nomeArquivo: file.name.slice(0, 200),
+          tamanhoBytes: file.size,
+        }),
+      });
+      const vincDados = await vinc.json();
+      if (!vinc.ok || !vincDados.sucesso) throw new Error(vincDados?.erro?.mensagem || vincDados?.erro || "Falha ao vincular.");
+      await carregar();
+    } catch (e: any) {
+      setErro(e?.message || "Não foi possível enviar o comprovante.");
+    } finally {
+      setEnviando(false);
+    }
+  };
+
+  const remover = async (id: string) => {
+    if (removendoId || !confirm("Remover este comprovante do placar?")) return;
+    setRemovendoId(id);
+    setErro(null);
+    try {
+      const r = await fetch("/api/diagnostico/comprovantes", {
+        method: "DELETE",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ id }),
+      });
+      const dados = await r.json();
+      if (!r.ok || !dados.sucesso) throw new Error(dados?.erro?.mensagem || dados?.erro || "Falha ao remover.");
+      await carregar();
+    } catch (e: any) {
+      setErro(e?.message || "Não foi possível remover.");
+    } finally {
+      setRemovendoId(null);
+    }
+  };
+
+  return (
+    <section className="card" aria-labelledby="placar-comprovantes" style={{ padding: "var(--espaco-lg)", marginBottom: "var(--espaco-lg)" }}>
+      <h2 id="placar-comprovantes" style={{ fontSize: "18px", marginBottom: "4px" }}>Comprovantes</h2>
+      <p style={{ color: "var(--cor-muted)", fontSize: "13px", marginBottom: "var(--espaco-md)" }}>
+        Extratos e arquivos que sustentam os números do placar. Entram no pacote exportado (.zip).
+      </p>
+
+      {erro && (
+        <div className="adm-alerta-erro" role="alert" style={{ marginBottom: "var(--espaco-sm)" }}>
+          {erro}
+        </div>
+      )}
+
+      {carregando ? (
+        <p style={{ color: "var(--cor-muted)", fontSize: "13px" }}>Carregando comprovantes…</p>
+      ) : itens.length === 0 ? (
+        <p style={{ color: "var(--cor-muted)", fontSize: "13px", marginBottom: "var(--espaco-md)" }}>
+          Nenhum comprovante enviado ainda.
+        </p>
+      ) : (
+        <ul style={{ listStyle: "none", margin: "0 0 var(--espaco-md)", padding: 0, display: "flex", flexDirection: "column", gap: "8px" }}>
+          {itens.map((item) => (
+            <li key={item.id} style={{ display: "flex", justifyContent: "space-between", alignItems: "center", gap: "8px", borderBottom: "1px solid var(--cor-border-light)", paddingBottom: "8px", fontSize: "14px" }}>
+              <span>{item.nome_arquivo} <span style={{ color: "var(--cor-muted)", fontSize: "12px" }}>· {formatarTamanho(item.tamanho_bytes)}</span></span>
+              {!congelado && (
+                <button type="button" className="btn-secondary btn-sm" onClick={() => remover(item.id)} disabled={removendoId === item.id}>
+                  {removendoId === item.id ? "Removendo…" : "Remover"}
+                </button>
+              )}
+            </li>
+          ))}
+        </ul>
+      )}
+
+      {congelado ? (
+        <p style={{ color: "var(--cor-muted)", fontSize: "13px" }}>Placar congelado: comprovantes só pela coordenação.</p>
+      ) : (
+        <label style={{ display: "flex", flexDirection: "column", gap: "6px", fontSize: "13px", fontWeight: 600 }}>
+          Enviar mais comprovantes (PDF, PNG, JPG, ZIP até 25 MB)
+          <input
+            type="file"
+            accept=".pdf,.png,.jpg,.jpeg,.zip"
+            disabled={enviando}
+            onChange={(e) => {
+              const file = e.target.files?.[0];
+              e.target.value = "";
+              if (file) enviarArquivo(file);
+            }}
+          />
+        </label>
+      )}
+      {enviando && <p style={{ color: "var(--cor-muted)", fontSize: "13px" }}>Enviando…</p>}
+    </section>
   );
 }
 

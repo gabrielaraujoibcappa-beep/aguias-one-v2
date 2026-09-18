@@ -22,7 +22,8 @@ export type NomeCanalOficial = (typeof CANAIS_OFICIAIS)[number];
 
 export interface CanalItem {
   id?: string;
-  nome: NomeCanalOficial;
+  /** Nome do canal como vem do servidor (lista canônica em CANAIS_TEMPLATE). */
+  nome: string;
   ordem: number;
   url?: string;
   status: "nao_iniciado" | "ativo";
@@ -43,53 +44,33 @@ export function atualizarStatusCanal(
   };
 }
 
-export const CANAIS_INICIAIS_MOCK: CanalItem[] = [
-  {
-    nome: "WhatsApp Business",
-    ordem: 1,
-    descricao: "Catálogo com 3 produtos e link rastreável.",
-    status: "ativo",
-    url: "https://wa.me/c/5511987654321",
-    atualizadoEm: "2026-09-10",
-  },
-  {
-    nome: "Google Meu Negócio",
-    ordem: 2,
-    descricao: "Ficha verificada com produtos periciais e avaliação.",
-    status: "ativo",
-    url: "https://g.page/r/periciaroberto",
-    atualizadoEm: "2026-09-12",
-  },
-  {
-    nome: "Instagram",
-    ordem: 3,
-    descricao: "Perfil posicionado com 4 posts e direct automatizado.",
-    status: "nao_iniciado",
-  },
-  {
-    nome: "Site Próprio",
-    ordem: 4,
-    descricao: "Página no ar no domínio próprio e e-mail profissional.",
-    status: "ativo",
-    url: "https://periciaroberto.com.br",
-    atualizadoEm: "2026-09-14",
-  },
-  {
-    nome: "Newsletter",
-    ordem: 5,
-    descricao: "Lista inicial e primeiro envio quinzenal.",
-    status: "nao_iniciado",
-  },
-  {
-    nome: "YouTube",
-    ordem: 6,
-    descricao: "Canal com 1º vídeo de autoridade publicado.",
-    status: "nao_iniciado",
-  },
-  {
-    nome: "Google Ads",
-    ordem: 7,
-    descricao: "Campanha de pesquisa no valor mínimo diário da plataforma.",
-    status: "nao_iniciado",
-  },
-];
+/**
+ * Salva um canal em nome do aluno (uso da equipe na visão do aluno).
+ * A API aceita sessão da equipe para qualquer matrícula (upsert idempotente).
+ */
+export async function salvarCanalEquipe(args: {
+  matriculaId: string;
+  canalNome: string;
+  status: "nao_iniciado" | "ativo";
+  urlCanal?: string;
+}): Promise<{ sucesso: boolean; erro?: string }> {
+  try {
+    const res = await fetch("/api/canais", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({
+        matriculaId: args.matriculaId,
+        canalNome: args.canalNome,
+        status: args.status,
+        urlCanal: args.urlCanal || "",
+      }),
+    });
+    const json = await res.json();
+    if (!res.ok || !json.sucesso) {
+      return { sucesso: false, erro: json.erro || "Falha ao salvar o canal." };
+    }
+    return { sucesso: true };
+  } catch (err: any) {
+    return { sucesso: false, erro: err?.message || "Erro ao conectar com servidor." };
+  }
+}

@@ -20,14 +20,8 @@ export async function POST(req: NextRequest) {
       papel = "mentorado",
       status = "ativo",
     } = body;
-    if (!["admin", "concierge", "anjo", "mentor", "mentorado"].includes(papel)) {
+    if (!["admin", "concierge", "anjo", "mentor", "resgate", "mentorado"].includes(papel)) {
       return NextResponse.json({ sucesso: false, erro: "Papel inválido." }, { status: 400 });
-    }
-    if (papel !== "mentorado" && auth.sessao.papel !== "admin") {
-      return NextResponse.json(
-        { sucesso: false, erro: "Apenas administradores podem criar contas da equipe." },
-        { status: 403 }
-      );
     }
 
     // 1. Validação dos campos obrigatórios

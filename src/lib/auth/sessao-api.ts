@@ -8,7 +8,7 @@ import type { PapelUsuario } from "./roles";
 import { COOKIE_SESSAO, PAPEIS_EQUIPE, PerfilSessao, ehEquipe, resolverPerfil } from "./sessao-core";
 
 export { PAPEIS_EQUIPE };
-export const PAPEIS_GESTAO: PapelUsuario[] = ["admin", "concierge"];
+export const PAPEIS_GESTAO: PapelUsuario[] = ["admin", "concierge", "mentor", "anjo"];
 
 export interface Sessao extends PerfilSessao {
   equipe: boolean;

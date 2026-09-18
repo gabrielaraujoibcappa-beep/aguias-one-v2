@@ -35,10 +35,12 @@ export function SessaoSync() {
     obterUsuarioLogado().then((usuario: any) => {
       if (cancelado || !usuario) return;
       definirUsuarioLogado({
+        id: usuario.id,
         nome: usuario.nome,
         email: usuario.email,
         papel: usuario.papel,
         turmaNome: usuario.turma?.nome,
+        matriculaId: usuario.matriculaId ?? null,
       });
     });
     return () => {

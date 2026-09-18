@@ -350,17 +350,21 @@ export default function LoginPage() {
                 <span>Lembrar de mim</span>
               </label>
 
-              <span
+              <button
+                type="button"
+                onClick={enviarLinkMagico}
+                disabled={carregando || enviandoLink}
                 style={{
+                  background: "none",
+                  border: "none",
                   color: "var(--cor-action-vibrant, #0052ff)",
                   fontSize: "12px",
-                  textDecoration: "none",
-                  cursor: "pointer",
+                  cursor: carregando || enviandoLink ? "not-allowed" : "pointer",
+                  padding: 0,
                 }}
-                onClick={() => alert("Para recuperar seu acesso, favor contatar o Concierge pelo WhatsApp.")}
               >
                 Esqueceu a senha?
-              </span>
+              </button>
             </div>
 
             {/* Botão de Envio Primário */}
@@ -423,17 +427,8 @@ export default function LoginPage() {
 
         </div>
 
-        {/* Rodapé Seguro e Suporte */}
         <div style={{ textAlign: "center", fontSize: "12px", color: "rgba(255, 255, 255, 0.5)" }}>
-          <span>Dúvidas ou dificuldades de acesso? </span>
-          <a
-            href="https://wa.me/5511987654321?text=Ol%C3%A1%2C%20preciso%20de%20ajuda%20para%20acessar%20o%20%C3%81GUIAS%20ONE"
-            target="_blank"
-            rel="noopener noreferrer"
-            style={{ color: "var(--cor-action-glow, #00c2ff)", textDecoration: "none", fontWeight: 500 }}
-          >
-            Fale com o Concierge no WhatsApp
-          </a>
+          Acesso pela matrícula. Sem cadastro nesta tela.
         </div>
       </div>
     </div>

@@ -196,6 +196,7 @@ export function Sidebar() {
         { rotulo: "Gestão de Turmas", href: "/admin/turmas", icone: IconBuilding },
         { rotulo: "Chamadas (Presenças)", href: "/admin/chamadas", icone: IconCheckCircle },
         { rotulo: "Central de Relatórios", href: "/admin/relatorios", icone: IconFolder },
+        { rotulo: "Materiais de Apoio", href: "/admin/materiais", icone: IconFolder },
         { rotulo: "Templates de E-mail", href: "/admin/emails", icone: IconMail },
       ],
     },

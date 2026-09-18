@@ -8,7 +8,11 @@ Sistema institucional e operacional de gestão e acompanhamento da **Mentoria Á
 
 ## 🏛️ Arquitetura e Módulos do Sistema
 
-O sistema é dividido em duas grandes áreas de trabalho:
+O sistema é dividido em duas grandes áreas de trabalho. A rota pública
+`/` é a porta de entrada do mentorado (não é página de venda): visitante
+sem sessão vê o lobby; com sessão, segue para `/dashboard`,
+`/painel/turma` ou `/resgate`. O login fica em `/login`. Telas públicas
+não expõem WhatsApp do instituto.
 
 ### 1. Área do Mentorado (Perito Solo)
 * **Dashboard Central (`/dashboard`):** Visão geral semáforo do aluno, atalhos prioritários e downloads de materiais (kits HTML, modelos de contrato e templates do Google Drive).

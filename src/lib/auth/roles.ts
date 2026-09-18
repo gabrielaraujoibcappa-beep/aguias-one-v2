@@ -30,7 +30,7 @@ export function canManageCohorts(papel: PapelUsuario): boolean {
 }
 
 export function canManageUsers(papel: PapelUsuario): boolean {
-  return ["admin", "concierge"].includes(papel);
+  return ["admin", "concierge", "mentor", "anjo"].includes(papel);
 }
 
 export const ROTULOS_PAPEL: Record<PapelUsuario, string> = {

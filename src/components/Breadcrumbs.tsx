@@ -57,6 +57,10 @@ const ROTAS_MAP: Record<string, BreadcrumbItem[]> = {
     { rotulo: "Gestão & Cadastros" },
     { rotulo: "Templates de E-mail", href: "/admin/emails" },
   ],
+  "/admin/materiais": [
+    { rotulo: "Gestão & Cadastros" },
+    { rotulo: "Materiais de Apoio", href: "/admin/materiais" },
+  ],
 };
 
 export function Breadcrumbs() {

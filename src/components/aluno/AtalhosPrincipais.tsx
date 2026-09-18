@@ -55,7 +55,7 @@ export function obterAtalhosDashboard(contexto: ContextoDashboard): AtalhoDashbo
   ];
 }
 
-export function AtalhosPrincipais({ contexto }: { contexto: ContextoDashboard }) {
+export function AtalhosPrincipais({ contexto, somenteLeitura = false }: { contexto: ContextoDashboard; somenteLeitura?: boolean }) {
   const atalhos = obterAtalhosDashboard(contexto);
 
   return (
@@ -119,20 +119,39 @@ export function AtalhosPrincipais({ contexto }: { contexto: ContextoDashboard })
             </div>
 
             <div style={{ marginTop: "var(--espaco-lg)" }}>
-              <Link
-                href={atalho.href}
-                className="btn-primary"
-                style={{
-                  width: "100%",
-                  justifyContent: "center",
-                  fontSize: "13px",
-                  borderRadius: "var(--radius-xs)",
-                  padding: "8px 16px",
-                }}
-              >
-                <span>{atalho.botaoTexto}</span>
-                <IconArrowRight size={14} />
-              </Link>
+              {somenteLeitura ? (
+                <span
+                  aria-disabled="true"
+                  className="btn-primary"
+                  style={{
+                    width: "100%",
+                    justifyContent: "center",
+                    fontSize: "13px",
+                    borderRadius: "var(--radius-xs)",
+                    padding: "8px 16px",
+                    opacity: 0.6,
+                    cursor: "default",
+                  }}
+                >
+                  <span>{atalho.botaoTexto}</span>
+                  <IconArrowRight size={14} />
+                </span>
+              ) : (
+                <Link
+                  href={atalho.href}
+                  className="btn-primary"
+                  style={{
+                    width: "100%",
+                    justifyContent: "center",
+                    fontSize: "13px",
+                    borderRadius: "var(--radius-xs)",
+                    padding: "8px 16px",
+                  }}
+                >
+                  <span>{atalho.botaoTexto}</span>
+                  <IconArrowRight size={14} />
+                </Link>
+              )}
             </div>
           </div>
         );

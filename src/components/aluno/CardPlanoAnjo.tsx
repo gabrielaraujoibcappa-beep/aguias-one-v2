@@ -16,17 +16,17 @@ interface Plano {
 }
 
 /** Plano dos 6 meses escrito pelo Anjo. Só leitura; aparece quando ativo ou em reavaliação. */
-export function CardPlanoAnjo() {
+export function CardPlanoAnjo({ matriculaId: matriculaProp }: { matriculaId?: string | null }) {
   const [plano, setPlano] = useState<Plano | null>(null);
 
   useEffect(() => {
     let ativo = true;
     (async () => {
       try {
-        const me = await fetch("/api/auth/me", { cache: "no-store" }).then((r) => (r.ok ? r.json() : null));
-        const matriculaId = me?.usuario?.matriculaId;
-        if (!matriculaId) return;
-        const res = await fetch(`/api/anjo/plano/${encodeURIComponent(matriculaId)}`, { cache: "no-store" });
+        const matriculaId = matriculaProp ?? null;
+        const alvo = matriculaId ?? (await fetch("/api/auth/me", { cache: "no-store" }).then((r) => (r.ok ? r.json() : null)))?.usuario?.matriculaId;
+        if (!alvo) return;
+        const res = await fetch(`/api/anjo/plano/${encodeURIComponent(alvo)}`, { cache: "no-store" });
         if (!res.ok) return;
         const json = await res.json();
         if (ativo && json?.plano && ["ativo", "reavaliar"].includes(json.plano.status)) setPlano(json.plano);
@@ -37,7 +37,7 @@ export function CardPlanoAnjo() {
     return () => {
       ativo = false;
     };
-  }, []);
+  }, [matriculaProp]);
 
   if (!plano) return null;
 

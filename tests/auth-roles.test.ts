@@ -34,11 +34,11 @@ describe("RBAC Permissions (ÁGUIAS ONE v2)", () => {
     expect(canManageCohorts("mentorado" as PapelUsuario)).toBe(false);
   });
 
-  it("tanto admin quanto concierge (operação) podem criar e gerenciar usuários", () => {
+  it("equipe (admin, concierge, mentor, anjo) pode criar e gerenciar usuários", () => {
     expect(canManageUsers("admin" as PapelUsuario)).toBe(true);
     expect(canManageUsers("concierge" as PapelUsuario)).toBe(true);
-    expect(canManageUsers("anjo" as PapelUsuario)).toBe(false);
-    expect(canManageUsers("mentor" as PapelUsuario)).toBe(false);
+    expect(canManageUsers("anjo" as PapelUsuario)).toBe(true);
+    expect(canManageUsers("mentor" as PapelUsuario)).toBe(true);
     expect(canManageUsers("mentorado" as PapelUsuario)).toBe(false);
   });
 });

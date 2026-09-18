@@ -1,7 +1,7 @@
 import { NextRequest, NextResponse } from "next/server";
 import { exigirSessao, respostaProibida } from "@/lib/auth/sessao-api";
 import { supabaseAdmin } from "@/lib/supabase/admin";
-import { caminhoPertenceAoUsuario, caminhoSeguro, ehBucketArquivo } from "@/lib/arquivos/regras";
+import { PASTA_MATERIAIS, caminhoPertenceAoUsuario, caminhoSeguro, ehBucketArquivo, ehBucketCompartilhado } from "@/lib/arquivos/regras";
 
 const VALIDADE_LINK_SEGUNDOS = 300;
 
@@ -19,7 +19,12 @@ export async function GET(req: NextRequest) {
   if (!ehBucketArquivo(bucket) || !caminhoSeguro(caminho)) {
     return NextResponse.json({ sucesso: false, erro: "Arquivo inválido." }, { status: 400 });
   }
-  if (!auth.sessao.equipe && !caminhoPertenceAoUsuario(caminho, auth.sessao.usuarioId)) {
+  // Bucket compartilhado: qualquer usuário autenticado lê (publicado pela equipe)
+  if (ehBucketCompartilhado(bucket)) {
+    if (!caminho.startsWith(`${PASTA_MATERIAIS}/`)) {
+      return NextResponse.json({ sucesso: false, erro: "Arquivo inválido." }, { status: 400 });
+    }
+  } else if (!auth.sessao.equipe && !caminhoPertenceAoUsuario(caminho, auth.sessao.usuarioId)) {
     return respostaProibida();
   }
 

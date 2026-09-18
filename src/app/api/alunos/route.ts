@@ -15,7 +15,7 @@ export async function GET(req: NextRequest) {
       .select(`
         id, auth_id, nome, email, whatsapp, cpf, area_pericial, papel, status, criado_em,
         matriculas (
-          id, status, matriculado_em, turma_id,
+          id, status, matriculado_em, turma_id, meta_faturamento_anual,
           turmas (id, codigo, nome)
         )
       `)
@@ -46,6 +46,7 @@ export async function GET(req: NextRequest) {
         papel: u.papel,
         status: u.status || "ativo",
         matriculaId: matricula?.id || null,
+        metaFaturamentoAnual: matricula?.meta_faturamento_anual != null ? Number(matricula.meta_faturamento_anual) : null,
         turmaId: matricula?.turma_id || turma?.id || "",
         turmaNome: turma?.nome || "Sem Turma Vinculada",
       };

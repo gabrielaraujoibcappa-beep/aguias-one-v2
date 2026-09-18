@@ -9,6 +9,7 @@ import { StatusDot, StatusVariant } from "../ui/StatusDot";
 import { BadgeStatusAuditoria } from "../faturamento/BadgeStatusAuditoria";
 import { BucketArquivo } from "@/lib/arquivos/regras";
 import { ArquivoVisualizavel, ModalArquivo } from "../ui/ModalArquivo";
+import { BotaoExportDossie } from "./BotaoExportDossie";
 
 interface FichaAlunoProps {
   ficha: FichaAlunoDados;
@@ -104,6 +105,12 @@ export function FichaAluno({ ficha, contexto }: FichaAlunoProps) {
             <Link href="/admin/alunos" className="btn-secondary" style={{ fontSize: "12px", padding: "5px 12px", borderRadius: "var(--radius-xs)" }}>
               Editar cadastro
             </Link>
+            {ficha.aluno.id && (
+              <Link href={`/painel/aluno/${encodeURIComponent(ficha.aluno.id)}/visao`} className="btn-secondary" style={{ fontSize: "12px", padding: "5px 12px", borderRadius: "var(--radius-xs)" }}>
+                Ver como aluno
+              </Link>
+            )}
+            {s?.matriculaId && <BotaoExportDossie matriculaId={s.matriculaId} />}
           </div>
         </div>
       </div>

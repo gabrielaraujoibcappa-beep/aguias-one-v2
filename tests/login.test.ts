@@ -33,4 +33,11 @@ describe("Tela de Login (ÁGUIAS ONE v2)", () => {
     // 5. Identidade da Marca
     expect(html).toContain("ÁGUIAS ONE");
   });
+
+  it("não expõe WhatsApp nem número de contato na tela pública de login", () => {
+    const html = renderToStaticMarkup(React.createElement(LoginPage));
+    expect(html).not.toContain("wa.me");
+    expect(html).not.toMatch(/WhatsApp/i);
+    expect(html).toContain("Receber link de acesso por e-mail");
+  });
 });
