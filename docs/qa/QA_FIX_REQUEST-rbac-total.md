@@ -107,7 +107,7 @@ ALTER TABLE public.modulo_liberacoes
 --  diagnostico_historico.autor_id, evento_sistema.ator_id)
 ```
 
-Para as `NOT NULL` de auditoria (`anjo_nota.autor_id`, `acesso_faturamento_log.leitor_id`): pré-checagem no `DELETE` retornando **409 explícito** ("possui registros de auditoria") em vez de 400 genérico — com asserções na migração no padrão do repo.
+Para as trilhas sem `SET NULL` (`anjo_nota.autor_id`, `acesso_faturamento_log.leitor_id`, `contato_resgate.autor_id` por serem `NOT NULL`; `diagnostico_historico.autor_id` e `evento_sistema.ator_id` por serem append-only com trigger anti-`UPDATE` — anular autor seria adulteração): pré-checagem no `DELETE` retornando **409 explícito** ("possui registros de auditoria") em vez de 400 genérico — com asserções na migração no padrão do repo. Ver `20260918120000_historico_evento_sem_set_null.sql`.
 
 **Verification:**
 

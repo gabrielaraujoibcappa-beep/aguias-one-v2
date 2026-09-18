@@ -61,6 +61,15 @@ describe("DELETE /api/alunos/[id] com rastro de auditoria", () => {
     expect(resp.status).toBe(409);
   });
 
+  it("bloqueia com 409 quando há histórico ou evento do placar (append-only)", async () => {
+    mocks.contagens = { diagnostico_historico: 1, evento_sistema: 3 };
+    const resp = await excluir(reqDelete(), { params: Promise.resolve({ id: "usr-1" }) } as any);
+    const dados = await resp.json();
+    expect(resp.status).toBe(409);
+    expect(dados.erro).toMatch(/auditoria/);
+    expect(mocks.authDelete).not.toHaveBeenCalled();
+  });
+
   it("exclui quando não há trilha NOT NULL", async () => {
     const resp = await excluir(reqDelete(), { params: Promise.resolve({ id: "usr-1" }) } as any);
     const dados = await resp.json();

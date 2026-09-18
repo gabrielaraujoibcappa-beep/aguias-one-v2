@@ -89,14 +89,18 @@ export async function DELETE(req: NextRequest, { params }: RouteParams) {
       return NextResponse.json({ sucesso: false, erro: "Usuário não encontrado." }, { status: 404 });
     }
 
-    // Trilha de auditoria NOT NULL (sem SET NULL): bloqueia com 409 explícito
-    // em vez de deixar o banco responder 400 genérico
-    const [notas, acessos, contatos] = await Promise.all([
+    // Trilha de auditoria (sem SET NULL — append-only ou NOT NULL): bloqueia com
+    // 409 explícito em vez de deixar o banco responder 400/500 genérico
+    const [notas, acessos, contatos, historico, eventos] = await Promise.all([
       supabaseAdmin.from("anjo_nota").select("id", { count: "exact", head: true }).eq("autor_id", id),
       supabaseAdmin.from("acesso_faturamento_log").select("id", { count: "exact", head: true }).eq("leitor_id", id),
       supabaseAdmin.from("contato_resgate").select("id", { count: "exact", head: true }).eq("autor_id", id),
+      supabaseAdmin.from("diagnostico_historico").select("id", { count: "exact", head: true }).eq("autor_id", id),
+      supabaseAdmin.from("evento_sistema").select("id", { count: "exact", head: true }).eq("ator_id", id),
     ]);
-    const bloqueios = (notas.count ?? 0) + (acessos.count ?? 0) + (contatos.count ?? 0);
+    const bloqueios =
+      (notas.count ?? 0) + (acessos.count ?? 0) + (contatos.count ?? 0) +
+      (historico.count ?? 0) + (eventos.count ?? 0);
     if (bloqueios > 0) {
       return NextResponse.json(
         { sucesso: false, erro: "Este usuário possui registros de auditoria e não pode ser excluído." },
