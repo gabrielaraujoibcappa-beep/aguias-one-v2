@@ -456,6 +456,7 @@ export function ModalAluno({ aberto, alunoInicial, turmas, onSalvar, onFechar }:
                     <option value="anjo">Anjo & Auditoria</option>
                     <option value="mentor">Mentor / Coordenação</option>
                     <option value="admin">Administrador Geral</option>
+                    <option value="resgate">Resgate de Alunos</option>
                   </select>
                 </div>
 

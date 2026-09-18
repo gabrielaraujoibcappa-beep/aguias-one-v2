@@ -662,11 +662,20 @@ export function useSistemaStore() {
   };
 
   const excluirAluno = (id: string, opcoes?: OpcoesAcaoReversivel): (() => void) => {
-    salvarEstado({ ...estadoGlobal, alunos: estadoGlobal.alunos.filter((a) => a.id !== id) });
-    // Apaga usuário e acesso de forma definitiva no backend, por isso o envio é adiável
+    const lista = estadoGlobal.alunos;
+    const indice = lista.findIndex((a) => a.id === id);
+    const anterior = indice >= 0 ? lista[indice] : undefined;
+    salvarEstado({ ...estadoGlobal, alunos: lista.filter((a) => a.id !== id) });
+    // Apaga usuário e acesso de forma definitiva no backend, por isso o envio é adiável.
+    // Falha nunca restaura em silêncio: devolve o registro e avisa para nova tentativa.
     return agendarPersistencia(() => {
       if (!id) return;
-      enviarEDepoisSincronizar(`/api/alunos/${id}`, { method: "DELETE" });
+      enviarComResultado(`/api/alunos/${id}`, { method: "DELETE" }).then((r) => {
+        if (r.sucesso || !anterior) return;
+        const { lista: restaurada } = reverterRegistro(estadoGlobal.alunos, { anterior, indice });
+        salvarEstado({ ...estadoGlobal, alunos: restaurada });
+        avisarUsuario(`Não foi possível excluir ${anterior.nome}: ${r.erro}`, { tom: "erro" });
+      });
     }, opcoes);
   };
 

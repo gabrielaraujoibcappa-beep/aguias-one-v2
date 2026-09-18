@@ -85,6 +85,25 @@ export async function DELETE(req: NextRequest, { params }: RouteParams) {
       .eq("id", id)
       .maybeSingle();
 
+    if (!user) {
+      return NextResponse.json({ sucesso: false, erro: "Usuário não encontrado." }, { status: 404 });
+    }
+
+    // Trilha de auditoria NOT NULL (sem SET NULL): bloqueia com 409 explícito
+    // em vez de deixar o banco responder 400 genérico
+    const [notas, acessos, contatos] = await Promise.all([
+      supabaseAdmin.from("anjo_nota").select("id", { count: "exact", head: true }).eq("autor_id", id),
+      supabaseAdmin.from("acesso_faturamento_log").select("id", { count: "exact", head: true }).eq("leitor_id", id),
+      supabaseAdmin.from("contato_resgate").select("id", { count: "exact", head: true }).eq("autor_id", id),
+    ]);
+    const bloqueios = (notas.count ?? 0) + (acessos.count ?? 0) + (contatos.count ?? 0);
+    if (bloqueios > 0) {
+      return NextResponse.json(
+        { sucesso: false, erro: "Este usuário possui registros de auditoria e não pode ser excluído." },
+        { status: 409 }
+      );
+    }
+
     if (user?.auth_id) {
       try {
         await supabaseAdmin.auth.admin.deleteUser(user.auth_id);
