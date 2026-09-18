@@ -1,0 +1,181 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Guia de Execução — QA RBAC total (v2.1.0)</title>
+<style>
+  :root { --ink:#111827; --muted:#6b7280; --line:#e5e7eb; --ok:#166534; --okbg:#f0fdf4; --bad:#991b1b; --badbg:#fef2f2; --info:#1e40af; --infobg:#eff6ff; }
+  * { box-sizing: border-box; }
+  body { font-family: system-ui, -apple-system, "Segoe UI", Roboto, sans-serif; color: var(--ink); max-width: 900px; margin: 0 auto; padding: 24px 16px 80px; background: #fafafa; }
+  h1 { font-size: 24px; margin-bottom: 4px; }
+  .sub { color: var(--muted); font-size: 14px; margin-bottom: 16px; }
+  .progress { position: sticky; top: 0; background: #fff; border: 1px solid var(--line); border-radius: 8px; padding: 12px 16px; margin-bottom: 20px; z-index: 10; }
+  .bar { height: 10px; background: var(--line); border-radius: 5px; overflow: hidden; margin-top: 8px; }
+  .bar > div { height: 100%; background: var(--ok); width: 0%; transition: width .2s; }
+  .card { background: #fff; border: 1px solid var(--line); border-radius: 8px; padding: 18px; margin-bottom: 16px; }
+  .card.done { border-left: 5px solid var(--ok); }
+  .card.failed { border-left: 5px solid var(--bad); }
+  .ct-id { font-family: monospace; font-size: 12px; color: var(--muted); }
+  .card h2 { font-size: 18px; margin: 4px 0 8px; }
+  .meta { font-size: 13px; color: var(--muted); margin-bottom: 10px; }
+  ol.passos { margin: 8px 0; padding-left: 4px; list-style: none; }
+  ol.passos li { display: flex; gap: 8px; align-items: flex-start; padding: 6px 0; border-bottom: 1px dashed var(--line); font-size: 14px; }
+  ol.passos input { margin-top: 3px; width: 18px; height: 18px; accent-color: var(--ok); flex-shrink: 0; }
+  ol.passos li.feito span { text-decoration: line-through; color: var(--muted); }
+  code { background: #f3f4f6; padding: 1px 5px; border-radius: 4px; font-size: 13px; }
+  .esperado { background: var(--infobg); border: 1px solid #bfdbfe; border-radius: 6px; padding: 10px 12px; font-size: 14px; margin: 10px 0; }
+  .row { display: flex; gap: 10px; flex-wrap: wrap; margin-top: 10px; }
+  .row label { font-size: 13px; display: flex; flex-direction: column; gap: 4px; }
+  input[type=text], input[type=date], textarea { border: 1px solid var(--line); border-radius: 6px; padding: 8px; font-size: 14px; font-family: inherit; }
+  textarea { width: 100%; min-height: 56px; }
+  .veredito { display: flex; gap: 12px; margin-top: 10px; font-size: 14px; }
+  .veredito label { display: flex; gap: 6px; align-items: center; cursor: pointer; }
+  .alerta { background: #fffbeb; border: 1px solid #fde68a; border-radius: 6px; padding: 10px 12px; font-size: 13px; margin-bottom: 16px; }
+  .toolbar { display: flex; gap: 8px; margin-bottom: 16px; flex-wrap: wrap; }
+  button { border: 1px solid var(--line); background: #fff; border-radius: 6px; padding: 8px 14px; font-size: 14px; cursor: pointer; }
+  button:hover { background: #f3f4f6; }
+  @media print {
+    .toolbar, .progress { display: none; }
+    body { background: #fff; }
+    .card { break-inside: avoid; }
+  }
+</style>
+</head>
+<body>
+
+<h1>Guia de Execução — QA RBAC total</h1>
+<div class="sub">Release v2.1.0 · Produção: <code>https://mentoria.one.axelpro.com.br</code> · Marque cada passo ao concluir. Tudo fica salvo neste navegador.</div>
+
+<div class="alerta"><strong>Antes de começar:</strong> separe sessões de <code>concierge</code>, <code>mentor</code>, <code>anjo</code>, <code>mentorado</code> e <code>resgate</code>; use e-mails <code>+qa</code> de inbox controlada; anote 2 turmas distintas; nunca reutilize e-mail real. Ordem: negações → criações → edição → limpeza.</div>
+
+<div class="progress">
+  <strong id="placar">0 de 9 CTs passaram</strong>
+  <div class="bar"><div id="barra"></div></div>
+  <div class="toolbar" style="margin:12px 0 0">
+    <button onclick="window.print()">Imprimir / salvar PDF</button>
+    <button onclick="limparTudo()">Recomeçar do zero</button>
+  </div>
+</div>
+
+<div id="cts"></div>
+
+<script>
+const CTS = [
+{ id:"CT-HT-RBAC-004", titulo:"Mentorado não cria conta (403, nada criado)", perfil:"mentorado", tipo:"negativo/permissão", rf:"RF-003",
+  pre:"Sessão mentorado (sem credencial da equipe no ambiente).",
+  passos:["Envie POST /api/admin/usuarios com corpo de mentorado válido.","Anote status e corpo da resposta.","Busque o e-mail na Gestão de Alunos (perfil da equipe, sessão separada)."],
+  esperado:"Status 403 com mensagem de permissão; e-mail NÃO aparece na lista; nenhum login criado." },
+{ id:"CT-HT-RBAC-005", titulo:"Resgate é redirecionado para /resgate", perfil:"resgate", tipo:"permissão", rf:"RF-003",
+  pre:"Perfil resgate.",
+  passos:["Acesse /admin/alunos logado como resgate.","Observe o destino final."],
+  esperado:"Redirecionamento para /resgate; nenhum dado de aluno exibido." },
+{ id:"CT-HT-RBAC-009", titulo:"Mentorado é negado em turmas e bloqueios (regressão)", perfil:"mentorado", tipo:"permissão/regressão", rf:"RF-005",
+  pre:"Sessão mentorado.",
+  passos:["Envie POST /api/turmas com corpo mínimo válido e anote o status.","Envie POST /api/bloqueios com corpo mínimo válido e anote o status."],
+  esperado:"Ambos retornam 403; nada criado em turmas nem em bloqueios." },
+{ id:"CT-HT-RBAC-001", titulo:"Concierge cria mentorado com turma", perfil:"concierge", tipo:"feliz", rf:"RF-001",
+  pre:"Perfil concierge; turma-alvo identificada (código anotado).",
+  passos:["Acesse Gestão de Alunos / Mentorados (/admin/alunos).",'Acione "Novo mentorado".',"Preencha nome, e-mail +qa, WhatsApp com DDD, senha ≥ 6 caracteres e selecione a turma-alvo.","Salve e observe a lista."],
+  esperado:"Conta na lista com status ativo e turma = turma-alvo; matrícula visível na ficha do aluno." },
+{ id:"CT-HT-RBAC-002", titulo:"Mentor cria conta da equipe (anjo)", perfil:"mentor", tipo:"feliz", rf:"RF-002",
+  pre:"Perfil mentor.",
+  passos:["Acesse Gestão de Alunos / Mentorados.",'Acione "Novo cadastro" (aba Equipe).',"Preencha os dados da conta-teste com papel anjo.","Salve e observe o retorno."],
+  esperado:"Conta criada sem mensagem de falta de permissão; papel gravado = anjo." },
+{ id:"CT-HT-RBAC-003", titulo:"Anjo cria mentorado em qualquer turma", perfil:"anjo", tipo:"feliz", rf:"RF-001",
+  pre:"Perfil anjo; 2 turmas distintas identificadas.",
+  passos:["Acesse Gestão de Alunos / Mentorados.",'Acione "Novo mentorado" selecionando a turma onde o anjo NÃO atua.',"Salve e abra a ficha do aluno criado."],
+  esperado:"Matrícula vinculada à turma escolhida (não à de atuação do anjo)." },
+{ id:"CT-HT-RBAC-006", titulo:"E-mail duplicado retorna 409 sem login órfão", perfil:"concierge", tipo:"negativo", rf:"RF-002",
+  pre:"Perfil concierge; e-mail já cadastrado (o da conta-teste do CT-001).",
+  passos:["Tente criar novo mentorado com o mesmo e-mail.","Anote status e mensagem.","Confirme que existe apenas 1 conta com esse e-mail na Gestão."],
+  esperado:'Status 409 ("já existe conta"); nenhuma conta duplicada; nenhum login sem cadastro.' },
+{ id:"CT-HT-RBAC-007", titulo:"Anjo edita cadastro e persiste após reload", perfil:"anjo", tipo:"estado/persistência", rf:"RF-004",
+  pre:"Perfil anjo; conta-teste do CT-001 existente.",
+  passos:["Na Gestão de Alunos, edite o WhatsApp da conta-teste e salve.","Recarregue a página e confira o valor."],
+  esperado:"Telefone editado persiste após reload." },
+{ id:"CT-HT-RBAC-008", titulo:"Excluir as contas-teste (limpeza)", perfil:"anjo", tipo:"estado/limpeza", rf:"RF-004",
+  pre:"Perfil anjo; contas-teste do CT-001 e do CT-002 existentes.",
+  passos:['Na Gestão de Alunos, acione "Excluir cadastro" na conta-teste do CT-001.','Confirme "Excluir aluno" e aguarde expirar o "Desfazer exclusão".',"Busque a conta na lista.","Repita para a conta-teste do CT-002."],
+  esperado:"Após a janela, contas-teste ausentes da lista; fila de auditoria sem resíduo órfão vinculado." },
+];
+
+const CHAVE = "qa-rbac-total-v210";
+let estado = {};
+try { estado = JSON.parse(localStorage.getItem(CHAVE) || "{}"); } catch(e) { estado = {}; }
+
+function salvar() { localStorage.setItem(CHAVE, JSON.stringify(estado)); atualizarPlacar(); }
+
+function atualizarPlacar() {
+  const ids = CTS.map(c => c.id);
+  const ok = ids.filter(id => estado[id] && estado[id].veredito === "passou").length;
+  document.getElementById("placar").textContent = ok + " de " + ids.length + " CTs passaram";
+  document.getElementById("barra").style.width = (ok / ids.length * 100) + "%";
+  ids.forEach(id => {
+    const el = document.getElementById("card-" + id);
+    if (!el) return;
+    el.classList.toggle("done", estado[id] && estado[id].veredito === "passou");
+    el.classList.toggle("failed", estado[id] && estado[id].veredito === "falhou");
+  });
+}
+
+function limparTudo() {
+  if (!confirm("Apagar todo o progresso marcado?")) return;
+  estado = {}; salvar(); montar();
+}
+
+function montar() {
+  const raiz = document.getElementById("cts");
+  raiz.innerHTML = "";
+  CTS.forEach((ct, i) => {
+    const st = estado[ct.id] || { passos: [], executor: "", data: "", veredito: "", evidencias: "" };
+    const card = document.createElement("div");
+    card.className = "card"; card.id = "card-" + ct.id;
+    card.innerHTML =
+      '<div class="ct-id">Passo ' + (i+1) + ' de ' + CTS.length + ' · ' + ct.id + '</div>' +
+      '<h2>' + ct.titulo + '</h2>' +
+      '<div class="meta">RF: ' + ct.rf + ' · Perfil: <code>' + ct.perfil + '</code> · Tipo: ' + ct.tipo + ' · Pré: ' + ct.pre + '</div>' +
+      '<ol class="passos">' + ct.passos.map((p, j) =>
+        '<li class="' + (st.passos[j] ? "feito" : "") + '"><input type="checkbox" data-ct="' + ct.id + '" data-passo="' + j + '"' + (st.passos[j] ? " checked" : "") + '><span>' + (j+1) + '. ' + p + '</span></li>'
+      ).join("") + '</ol>' +
+      '<div class="esperado"><strong>Esperado:</strong> ' + ct.esperado + '</div>' +
+      '<div class="row"><label>Executor<input type="text" data-ct="' + ct.id + '" data-campo="executor" value="' + (st.executor || "") + '"></label>' +
+      '<label>Data<input type="date" data-ct="' + ct.id + '" data-campo="data" value="' + (st.data || "") + '"></label></div>' +
+      '<div class="row"><label style="flex:1">Evidências<textarea data-ct="' + ct.id + '" data-campo="evidencias" placeholder="Print, IDs, links… (sem senhas/tokens)">' + (st.evidencias || "") + '</textarea></label></div>' +
+      '<div class="veredito"><label><input type="radio" name="v-' + ct.id + '" value="passou"' + (st.veredito === "passou" ? " checked" : "") + '> Passou</label>' +
+      '<label><input type="radio" name="v-' + ct.id + '" value="falhou"' + (st.veredito === "falhou" ? " checked" : "") + '> Falhou</label></div>';
+    raiz.appendChild(card);
+  });
+
+  raiz.querySelectorAll('input[type=checkbox]').forEach(cb => {
+    cb.addEventListener("change", () => {
+      const id = cb.dataset.ct, j = +cb.dataset.passo;
+      estado[id] = estado[id] || { passos: [] };
+      estado[id].passos[j] = cb.checked;
+      cb.closest("li").classList.toggle("feito", cb.checked);
+      salvar();
+    });
+  });
+  raiz.querySelectorAll('input[type=text], input[type=date], textarea').forEach(el => {
+    el.addEventListener("input", () => {
+      const id = el.dataset.ct;
+      estado[id] = estado[id] || { passos: [] };
+      estado[id][el.dataset.campo] = el.value;
+      salvar();
+    });
+  });
+  raiz.querySelectorAll('input[type=radio]').forEach(r => {
+    r.addEventListener("change", () => {
+      const id = r.name.replace("v-", "");
+      estado[id] = estado[id] || { passos: [] };
+      estado[id].veredito = r.value;
+      salvar();
+    });
+  });
+  atualizarPlacar();
+}
+
+montar();
+</script>
+</body>
+</html>
