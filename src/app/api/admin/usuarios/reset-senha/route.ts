@@ -1,16 +1,7 @@
-import { randomInt } from "crypto";
 import { NextRequest, NextResponse } from "next/server";
 import { exigirSessao, PAPEIS_GESTAO } from "@/lib/auth/sessao-api";
 import { supabaseAdmin } from "@/lib/supabase/admin";
-
-/** Senha temporária legível para repasse por WhatsApp (8 caracteres). */
-export function gerarSenhaTemporaria(): string {
-  const letras = "ABCDEFGHJKLMNPQRSTUVWXYZ";
-  let senha = "AG";
-  for (let i = 0; i < 4; i++) senha += String(randomInt(0, 10));
-  for (let i = 0; i < 2; i++) senha += letras[randomInt(0, letras.length)];
-  return senha;
-}
+import { gerarSenhaTemporaria } from "@/lib/auth/senha-temporaria";
 
 /**
  * POST /api/admin/usuarios/reset-senha { usuarioId } — equipe gera senha

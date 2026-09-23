@@ -35,7 +35,8 @@ vi.mock("@/lib/supabase/admin", () => ({
 }));
 
 import { POST as trocarSenha } from "../src/app/api/usuarios/senha/route";
-import { POST as resetarSenha, gerarSenhaTemporaria } from "../src/app/api/admin/usuarios/reset-senha/route";
+import { POST as resetarSenha } from "../src/app/api/admin/usuarios/reset-senha/route";
+import { gerarSenhaTemporaria } from "../src/lib/auth/senha-temporaria";
 
 function reqJson(url: string, corpo: unknown) {
   return new NextRequest(url, { method: "POST", body: JSON.stringify(corpo) });
