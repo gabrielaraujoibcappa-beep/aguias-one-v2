@@ -10,7 +10,7 @@ describe("Porta de entrada do sistema (não é página de venda)", () => {
   const html = renderToStaticMarkup(React.createElement(PortaEntrada));
 
   it("identifica o sistema e oferece acesso ao login", () => {
-    expect(html).toContain("Esta é a porta do ÁGUIAS ONE.");
+    expect(html).toContain("Sua jornada pericial, <span>semana a semana.</span>");
     expect(html).toContain("Entre com o acesso que o Concierge já liberou.");
     expect(html).toContain('href="/login"');
     expect(html).toContain("Entrar no sistema");

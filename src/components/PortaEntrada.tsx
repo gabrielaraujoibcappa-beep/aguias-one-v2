@@ -53,7 +53,7 @@ const PASSOS = [
   {
     n: "2",
     titulo: "Entre com senha ou link",
-    texto: "No login você informa a senha ou pede um link de acesso no e-mail, válido por 1 hora.",
+    texto: "Informe a senha ou peça um link de acesso no e-mail, válido por 1 hora.",
   },
   {
     n: "3",
@@ -85,22 +85,29 @@ export function PortaEntrada() {
       <div className="porta-corpo">
         <div className="porta-abertura">
           <section className="porta-hero" aria-labelledby="porta-titulo">
+            <p className="porta-selo">
+              <span className="porta-selo-ponto" aria-hidden="true" />
+              Área do mentorado
+            </p>
             <h1 id="porta-titulo" className="porta-titulo">
-              Esta é a porta do ÁGUIAS ONE.
+              Sua jornada pericial, <span>semana a semana.</span>
             </h1>
             <p className="porta-lead">
-              Entre com o acesso que o Concierge já liberou.
-              <br />
-              Aqui você acompanha a jornada, entrega o check-in e declara o faturamento.
+              Entre com o acesso que o Concierge já liberou. Aqui você acompanha a jornada, entrega o
+              check-in e declara o faturamento.
             </p>
             <div className="porta-acoes">
               <Link href="/login" className="btn-primary btn-lg">
                 Entrar no sistema
               </Link>
               <Link href="/login" className="porta-ajuda">
+                <IconMail size={16} aria-hidden="true" />
                 Receber link no e-mail cadastrado
               </Link>
             </div>
+            <p className="porta-nota">
+              Sem senha? Peça o link na tela Entrar. Não há canal público de WhatsApp nesta porta.
+            </p>
           </section>
 
           <section className="porta-passos" aria-labelledby="porta-passos-titulo">
@@ -136,27 +143,11 @@ export function PortaEntrada() {
                 <span className="porta-lista-icone" aria-hidden="true">
                   <Icone size={18} />
                 </span>
-                <div>
-                  <h3>{titulo}</h3>
-                  <p>{texto}</p>
-                </div>
+                <h3>{titulo}</h3>
+                <p>{texto}</p>
               </li>
             ))}
           </ul>
-        </section>
-
-        <section className="porta-ajuda-bloco" aria-labelledby="porta-ajuda-titulo">
-          <IconMail size={20} aria-hidden="true" />
-          <div>
-            <h2 id="porta-ajuda-titulo">Sem senha?</h2>
-            <p>
-              Na tela Entrar, peça o link no e-mail da matrícula. Não há canal público de WhatsApp
-              nesta porta.
-            </p>
-          </div>
-          <Link href="/login" className="btn-secondary">
-            Ir para o login
-          </Link>
         </section>
       </div>
 

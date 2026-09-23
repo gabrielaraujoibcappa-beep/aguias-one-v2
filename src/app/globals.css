@@ -1153,34 +1153,34 @@ button:focus-visible {
 
 /* Porta de entrada (/) — lobby do mentorado, não página de venda */
 .porta-entrada {
+  --porta-largura: 1160px;
+  --porta-linha: rgba(255, 255, 255, 0.09);
+  --porta-texto-2: rgba(255, 255, 255, 0.66);
+  --porta-texto-3: rgba(255, 255, 255, 0.5);
   position: relative;
   isolation: isolate;
   min-height: 100vh;
   display: flex;
   flex-direction: column;
-  padding: 28px 40px 28px 48px;
+  padding: 24px 32px 28px;
   color: var(--cor-on-dark, #ffffff);
   overflow-x: hidden;
+  background:
+    radial-gradient(60rem 36rem at 12% -10%, rgba(0, 82, 255, 0.16), transparent 60%),
+    radial-gradient(40rem 30rem at 100% 10%, rgba(0, 194, 255, 0.07), transparent 60%),
+    var(--cor-dark-deep, #0a0a0b);
 }
 
-.porta-entrada::before {
-  content: "";
-  position: absolute;
-  inset: 0 auto 0 0;
-  width: 6px;
-  background: var(--cor-deep-green, #003c33);
-  z-index: 1;
-}
-
+/* Marca d'água do símbolo, ancorada à coluna do conteúdo e não à borda da janela */
 .porta-entrada::after {
   content: "";
   position: absolute;
-  right: -8%;
-  top: 12%;
-  width: min(48vw, 520px);
-  height: min(48vw, 520px);
+  left: calc(50% + min(22vw, 300px));
+  top: 70px;
+  width: min(40vw, 460px);
+  aspect-ratio: 1;
   background: url("/logo-simbolo.png") center / contain no-repeat;
-  opacity: 0.06;
+  opacity: 0.04;
   pointer-events: none;
   z-index: 0;
 }
@@ -1209,8 +1209,10 @@ button:focus-visible {
 .porta-rodape {
   position: relative;
   z-index: 1;
+  width: 100%;
+  max-width: var(--porta-largura);
+  margin-inline: auto;
   min-width: 0;
-  max-width: 100%;
 }
 
 .porta-topo {
@@ -1219,7 +1221,7 @@ button:focus-visible {
   justify-content: space-between;
   gap: 16px;
   padding-bottom: 20px;
-  border-bottom: 1px solid rgba(255, 255, 255, 0.1);
+  border-bottom: 1px solid var(--porta-linha);
 }
 
 .porta-topo-acoes {
@@ -1229,15 +1231,15 @@ button:focus-visible {
 }
 
 .porta-logo {
-  height: 40px;
-  max-width: 220px;
+  height: 36px;
+  max-width: 200px;
   object-fit: contain;
 }
 
 .porta-instituicao {
   margin: 0;
   font-size: 12px;
-  color: rgba(255, 255, 255, 0.48);
+  color: var(--porta-texto-3);
   font-family: var(--font-family-ui);
 }
 
@@ -1245,63 +1247,93 @@ button:focus-visible {
   flex: 1;
   display: flex;
   flex-direction: column;
-  gap: 56px;
-  width: 100%;
-  max-width: 1080px;
-  padding: 44px 0 40px;
+  gap: 72px;
+  padding: 72px 0 56px;
 }
 
 .porta-abertura {
   display: grid;
-  grid-template-columns: minmax(0, 1.25fr) minmax(0, 0.9fr);
-  gap: 40px 56px;
-  align-items: end;
+  grid-template-columns: minmax(0, 1.3fr) minmax(0, 1fr);
+  gap: 48px 72px;
+  align-items: center;
 }
 
-.porta-hero {
-  max-width: none;
+.porta-selo {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  margin: 0 0 22px;
+  padding: 6px 12px;
+  border: 1px solid var(--porta-linha);
+  border-radius: var(--radius-full, 9999px);
+  background: rgba(255, 255, 255, 0.03);
+  color: var(--porta-texto-2);
+  font-size: 12px;
+  font-weight: 500;
+}
+
+.porta-selo-ponto {
+  width: 6px;
+  height: 6px;
+  border-radius: 50%;
+  background: var(--semaforo-verde, #10b981);
+  box-shadow: 0 0 0 3px rgba(16, 185, 129, 0.18);
 }
 
 .porta-titulo {
   margin: 0;
-  max-width: 12ch;
+  max-width: none;
   color: var(--cor-on-dark, #ffffff);
   font-family: var(--font-family-display);
-  font-size: clamp(2.4rem, 6vw, 4.4rem);
+  font-size: clamp(2.4rem, 4.6vw, 3.75rem);
   font-weight: 600;
-  line-height: 0.98;
-  letter-spacing: -0.045em;
+  line-height: 1;
+  letter-spacing: -0.04em;
+  text-wrap: balance;
+}
+
+.porta-titulo span {
+  display: block;
+  width: fit-content;
+  background: linear-gradient(100deg, #ffffff 0%, #7fd9ff 55%, #00c2ff 100%);
+  -webkit-background-clip: text;
+  background-clip: text;
+  color: transparent;
 }
 
 .porta-lead {
-  margin: 20px 0 0;
-  width: 100%;
+  margin: 22px 0 0;
   max-width: 34rem;
-  min-width: 0;
-  color: rgba(255, 255, 255, 0.68);
+  color: var(--porta-texto-2);
   font-size: 17px;
-  line-height: 1.45;
-  overflow-wrap: break-word;
+  line-height: 1.55;
+  text-wrap: pretty;
 }
 
 .porta-acoes {
   display: flex;
   flex-wrap: wrap;
   align-items: center;
-  gap: 16px 24px;
-  margin-top: 28px;
+  gap: 14px 24px;
+  margin-top: 32px;
 }
 
 .porta-ajuda {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
   color: var(--cor-action-glow, #00c2ff);
   font-size: 14px;
   font-weight: 500;
   text-decoration: underline;
-  text-underline-offset: 3px;
+  text-decoration-color: rgba(0, 194, 255, 0.4);
+  text-underline-offset: 4px;
+  transition: color 0.15s ease, text-decoration-color 0.15s ease;
 }
 
 .porta-ajuda:hover {
   color: #ffffff;
+  text-decoration-color: currentColor;
 }
 
 .porta-ajuda:focus-visible {
@@ -1310,54 +1342,33 @@ button:focus-visible {
   border-radius: 2px;
 }
 
+.porta-nota {
+  margin: 20px 0 0;
+  max-width: 34rem;
+  color: var(--porta-texto-3);
+  font-size: 13px;
+  line-height: 1.5;
+}
+
+/* Cartão "Como entrar": um painel, não uma coluna solta */
+.porta-passos {
+  padding: 28px;
+  border: 1px solid var(--porta-linha);
+  border-radius: var(--radius-lg, 20px);
+  background: linear-gradient(180deg, rgba(255, 255, 255, 0.05), rgba(255, 255, 255, 0.015));
+  box-shadow: 0 24px 60px -30px rgba(0, 0, 0, 0.8);
+  backdrop-filter: blur(6px);
+}
+
 .porta-mapa h2,
 .porta-passos h2 {
-  margin: 0 0 16px;
-  color: var(--cor-on-dark, #ffffff);
-  font-size: 13px;
+  margin: 0 0 20px;
+  color: var(--porta-texto-3);
+  font-family: var(--font-family-ui);
+  font-size: 12px;
   font-weight: 600;
-  letter-spacing: 0.02em;
-}
-
-.porta-lista {
-  list-style: none;
-  margin: 0;
-  padding: 0;
-  display: grid;
-  grid-template-columns: minmax(0, 1fr) minmax(0, 1fr);
-  gap: 0 40px;
-  border-top: 1px solid rgba(255, 255, 255, 0.1);
-}
-
-.porta-lista li {
-  display: grid;
-  grid-template-columns: 28px minmax(0, 1fr);
-  gap: 12px;
-  padding: 14px 0;
-  border-bottom: 1px solid rgba(255, 255, 255, 0.1);
-}
-
-.porta-lista-icone {
-  color: var(--cor-action-glow, #00c2ff);
-  padding-top: 2px;
-}
-
-.porta-lista h3,
-.porta-passos-lista h3,
-.porta-encontro h3 {
-  margin: 0 0 4px;
-  color: var(--cor-on-dark, #ffffff);
-  font-size: 15px;
-  font-weight: 600;
-}
-
-.porta-lista p,
-.porta-passos-lista p,
-.porta-encontro p {
-  margin: 0;
-  color: rgba(255, 255, 255, 0.55);
-  font-size: 14px;
-  line-height: 1.45;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
 }
 
 .porta-passos-lista {
@@ -1366,13 +1377,25 @@ button:focus-visible {
   padding: 0;
   display: flex;
   flex-direction: column;
-  gap: 18px;
+  gap: 20px;
 }
 
 .porta-passos-lista li {
+  position: relative;
   display: grid;
   grid-template-columns: 32px minmax(0, 1fr);
-  gap: 12px;
+  gap: 14px;
+}
+
+/* Fio ligando os passos */
+.porta-passos-lista li:not(:last-child)::after {
+  content: "";
+  position: absolute;
+  left: 15.5px;
+  top: 36px;
+  bottom: -18px;
+  width: 1px;
+  background: var(--porta-linha);
 }
 
 .porta-passo-n {
@@ -1380,78 +1403,116 @@ button:focus-visible {
   height: 32px;
   display: grid;
   place-items: center;
-  border: 1px solid rgba(255, 255, 255, 0.22);
+  border: 1px solid rgba(0, 194, 255, 0.35);
   border-radius: var(--radius-full, 9999px);
-  color: var(--cor-on-dark, #ffffff);
+  background: rgba(0, 194, 255, 0.08);
+  color: var(--cor-action-glow, #00c2ff);
   font-size: 13px;
   font-weight: 600;
   font-family: var(--font-family-mono);
+}
+
+.porta-lista h3,
+.porta-passos-lista h3,
+.porta-encontro h3 {
+  margin: 0 0 4px;
+  color: var(--cor-on-dark, #ffffff);
+  font-family: var(--font-family-ui);
+  font-size: 15px;
+  font-weight: 600;
+}
+
+.porta-lista p,
+.porta-passos-lista p,
+.porta-encontro p {
+  margin: 0;
+  color: var(--porta-texto-3);
+  font-size: 14px;
+  line-height: 1.5;
 }
 
 .porta-encontro {
   display: grid;
   grid-template-columns: 18px minmax(0, 1fr);
   gap: 12px;
-  margin-top: 28px;
-  padding-top: 22px;
-  border-top: 1px solid rgba(255, 255, 255, 0.1);
+  margin-top: 24px;
+  padding: 16px;
+  border-radius: var(--radius-md, 14px);
+  background: rgba(0, 194, 255, 0.06);
   color: var(--cor-action-glow, #00c2ff);
 }
 
-.porta-ajuda-bloco {
-  display: grid;
-  grid-template-columns: 24px minmax(0, 1fr) auto;
-  gap: 16px 20px;
-  align-items: center;
-  padding: 20px 22px;
-  border: 1px solid rgba(255, 255, 255, 0.12);
-  border-radius: var(--radius-md, 14px);
-  background: rgba(255, 255, 255, 0.03);
-}
-
-.porta-ajuda-bloco h2 {
-  margin: 0 0 4px;
-  color: var(--cor-on-dark, #ffffff);
-  font-size: 16px;
-  font-weight: 600;
-}
-
-.porta-ajuda-bloco p {
+.porta-lista {
+  list-style: none;
   margin: 0;
-  color: rgba(255, 255, 255, 0.55);
-  font-size: 14px;
-  line-height: 1.45;
+  padding: 0;
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 16px;
 }
 
-.porta-ajuda-bloco svg {
+.porta-lista li {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  padding: 22px;
+  border: 1px solid var(--porta-linha);
+  border-radius: var(--radius-md, 14px);
+  background: rgba(255, 255, 255, 0.02);
+  transition: border-color 0.2s ease, background-color 0.2s ease;
+}
+
+.porta-lista li:hover {
+  border-color: rgba(0, 194, 255, 0.28);
+  background: rgba(255, 255, 255, 0.04);
+}
+
+.porta-lista-icone {
+  width: 36px;
+  height: 36px;
+  display: grid;
+  place-items: center;
+  margin-bottom: 12px;
+  border-radius: var(--radius-sm, 8px);
+  background: rgba(0, 194, 255, 0.1);
   color: var(--cor-action-glow, #00c2ff);
 }
 
 .porta-rodape {
+  padding-top: 20px;
+  border-top: 1px solid var(--porta-linha);
   font-size: 12px;
   color: rgba(255, 255, 255, 0.4);
-  padding-top: 8px;
 }
 
-@media (max-width: 860px) {
-  .porta-abertura,
-  .porta-lista {
+@media (max-width: 960px) {
+  .porta-abertura {
     grid-template-columns: minmax(0, 1fr);
   }
-}
 
-@media (max-width: 720px) {
-  .porta-entrada {
-    padding: 20px 20px 24px 26px;
+  .porta-lista {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
   }
 
-  .porta-topo {
-    flex-wrap: wrap;
+  .porta-entrada::after {
+    left: auto;
+    right: -18%;
+    width: 70vw;
+  }
+}
+
+@media (max-width: 640px) {
+  .porta-entrada {
+    padding: 16px 16px 24px;
+  }
+
+  .porta-instituicao {
+    display: none;
   }
 
   .porta-corpo {
-    padding: 32px 0 28px;
-    gap: 40px;
+    padding: 44px 0 36px;
+    gap: 48px;
   }
 
   .porta-lead {
@@ -1460,30 +1521,33 @@ button:focus-visible {
 
   .porta-acoes {
     flex-direction: column;
-    align-items: flex-start;
-    gap: 14px;
+    align-items: stretch;
   }
 
-  .porta-ajuda-bloco {
-    grid-template-columns: 24px minmax(0, 1fr);
+  .porta-acoes .btn-primary {
+    width: 100%;
   }
 
-  .porta-ajuda-bloco .btn-secondary {
-    grid-column: 1 / -1;
-    justify-self: start;
+  .porta-ajuda {
+    justify-content: center;
   }
 
-  .porta-entrada::after {
-    width: 70vw;
-    height: 70vw;
-    right: -22%;
-    top: 6%;
-    opacity: 0.04;
+  .porta-passos {
+    padding: 22px 18px;
+  }
+
+  .porta-lista {
+    grid-template-columns: minmax(0, 1fr);
+  }
+
+  .porta-lista li {
+    padding: 18px;
   }
 }
 
 @media (prefers-reduced-motion: reduce) {
-  .porta-entrada::after {
+  .porta-lista li,
+  .porta-ajuda {
     transition: none;
   }
 }
