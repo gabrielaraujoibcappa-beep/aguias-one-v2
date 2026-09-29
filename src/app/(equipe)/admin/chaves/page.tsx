@@ -3,6 +3,7 @@
 import React, { useCallback, useEffect, useRef, useState } from "react";
 import { EstadoCarregando } from "@/components/ui/EstadoCarregando";
 import { ModalConfirmacaoDestrutiva } from "@/components/ui/ModalConfirmacaoDestrutiva";
+import { montarPromptOperador } from "@/lib/api/prompt-operador";
 
 interface ChaveApi {
   id: string;
@@ -47,6 +48,24 @@ export default function AdminChavesPage() {
 
   const [revogando, setRevogando] = useState<ChaveApi | null>(null);
   const [confirmandoRevogar, setConfirmandoRevogar] = useState(false);
+
+  // Prompt do agente operador para o usuário copiar e colar no agente.
+  const [baseUrl, setBaseUrl] = useState("");
+  const [promptCopiado, setPromptCopiado] = useState(false);
+  useEffect(() => {
+    setBaseUrl(window.location.origin);
+  }, []);
+  const promptOperador = montarPromptOperador(baseUrl || "https://seu-app.vercel.app");
+
+  const handleCopiarPrompt = async () => {
+    try {
+      await navigator.clipboard.writeText(promptOperador);
+      setPromptCopiado(true);
+      setTimeout(() => setPromptCopiado(false), 2500);
+    } catch {
+      setErro("Não foi possível copiar. Selecione o texto manualmente.");
+    }
+  };
 
   const carregar = useCallback(async () => {
     setCarregando(true);
@@ -213,6 +232,37 @@ export default function AdminChavesPage() {
           </div>
         </div>
       )}
+
+      <div className="card" style={{ marginBottom: "var(--espaco-lg)" }}>
+        <details>
+          <summary style={{ cursor: "pointer", fontWeight: 700, fontSize: "15px" }}>
+            Prompt do agente operador
+          </summary>
+          <p style={{ color: "var(--cor-muted)", fontSize: "13px", margin: "8px 0 10px 0" }}>
+            Copie e cole como prompt de sistema do agente (n8n, script ou outro).
+            Depois troque <code>{"{{CHAVE_API}}"}</code> pela chave gerada acima.
+          </p>
+          <pre
+            style={{
+              whiteSpace: "pre-wrap",
+              wordBreak: "break-word",
+              fontSize: "12px",
+              backgroundColor: "#f9fafb",
+              border: "1px solid var(--cor-border-light)",
+              borderRadius: "var(--radius-xs)",
+              padding: "12px",
+              maxHeight: "320px",
+              overflowY: "auto",
+              margin: "0 0 10px 0",
+            }}
+          >
+            {promptOperador}
+          </pre>
+          <button type="button" className="btn-secondary btn-sm" onClick={handleCopiarPrompt}>
+            {promptCopiado ? "Prompt copiado!" : "Copiar prompt"}
+          </button>
+        </details>
+      </div>
 
       <div className="card">
         {carregando ? (

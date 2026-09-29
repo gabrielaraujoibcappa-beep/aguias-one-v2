@@ -6,6 +6,7 @@ import {
   operacoesDespachaveis,
 } from "../src/lib/api/gateway-registry";
 import { PREFIXO_CHAVE, hashChave, validarPedidoChave } from "../src/lib/api/chaves";
+import { montarPromptOperador } from "../src/lib/api/prompt-operador";
 
 describe("Gateway de API — registro de todas as funções", () => {
   it("cobre todas as rotas conhecidas do sistema", () => {
@@ -57,6 +58,13 @@ describe("Gateway de API — registro de todas as funções", () => {
     expect(buscarOperacao("nao.existe")).toBeUndefined();
   });
 
+  it("monta o prompt do operador com base e catálogo", () => {
+    const prompt = montarPromptOperador("https://app.exemplo.com");
+    expect(prompt).toContain("https://app.exemplo.com/api/gateway");
+    expect(prompt).toContain("{{CHAVE_API}}");
+    expect(prompt).toContain("alunos.listar");
+    expect(prompt).toContain("NUNCA");
+  });
   it("valida pedido de chave sem gravar segredo", () => {
     expect(validarPedidoChave("n8n – resgate", 90)).toEqual({ nome: "n8n – resgate", expiraDias: 90 });
     expect(validarPedidoChave("ab", 90)).toHaveProperty("erro");
