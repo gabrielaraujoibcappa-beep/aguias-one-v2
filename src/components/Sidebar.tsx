@@ -198,6 +198,7 @@ export function Sidebar() {
         { rotulo: "Central de Relatórios", href: "/admin/relatorios", icone: IconFolder },
         { rotulo: "Materiais de Apoio", href: "/admin/materiais", icone: IconFolder },
         { rotulo: "Templates de E-mail", href: "/admin/emails", icone: IconMail },
+        { rotulo: "Chaves de API", href: "/admin/chaves", icone: IconUnlock },
       ],
     },
   ];

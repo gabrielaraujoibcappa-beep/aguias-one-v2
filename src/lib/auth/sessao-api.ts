@@ -6,6 +6,7 @@ import { NextRequest, NextResponse } from "next/server";
 import { supabaseAdmin } from "@/lib/supabase/admin";
 import type { PapelUsuario } from "./roles";
 import { COOKIE_SESSAO, PAPEIS_EQUIPE, PerfilSessao, ehEquipe, resolverPerfil } from "./sessao-core";
+import { resolverChaveApi, tocarUsoChave } from "@/lib/api/chaves";
 
 export { PAPEIS_EQUIPE };
 export const PAPEIS_GESTAO: PapelUsuario[] = ["admin", "concierge", "mentor", "anjo"];
@@ -28,6 +29,38 @@ function extrairToken(req: NextRequest): string | null {
   return req.cookies.get(COOKIE_SESSAO)?.value ?? null;
 }
 
+/** Mesmo rigor para sessão e chave de API: bloqueio + papéis exigidos. */
+function autorizarPerfil(
+  perfil: PerfilSessao,
+  papeis?: PapelUsuario[],
+  opcoes: { permitirBloqueado?: boolean } = {}
+): boolean {
+  if (perfil.status === "bloqueado" && !ehEquipe(perfil.papel) && !opcoes.permitirBloqueado) {
+    return false;
+  }
+  if (papeis && !papeis.includes(perfil.papel)) return false;
+  return true;
+}
+
+/** Perfil do dono da chave direto de public.usuarios (papel nunca vem do cliente). */
+async function buscarPerfilPorId(usuarioId: string): Promise<PerfilSessao | null> {
+  const { data, error } = await supabaseAdmin
+    .from("usuarios")
+    .select("id, auth_id, nome, email, papel, status, precisa_trocar_senha")
+    .eq("id", usuarioId)
+    .maybeSingle();
+  if (error || !data) return null;
+  return {
+    usuarioId: data.id,
+    authId: data.auth_id,
+    nome: data.nome,
+    email: data.email,
+    papel: data.papel,
+    status: data.status || "ativo",
+    precisaTrocarSenha: data.precisa_trocar_senha === true,
+  };
+}
+
 /** Exige usuário autenticado e, opcionalmente, um dos papéis informados. */
 export async function exigirSessao(
   req: NextRequest,
@@ -35,12 +68,27 @@ export async function exigirSessao(
   opcoes: { permitirBloqueado?: boolean } = {}
 ): Promise<Resultado> {
   const perfil = await resolverPerfil(extrairToken(req));
-  if (!perfil) return negar(401, "Sessão inválida ou expirada. Faça login novamente.");
-
-  if (perfil.status === "bloqueado" && !ehEquipe(perfil.papel) && !opcoes.permitirBloqueado) {
-    return negar(403, "Acesso bloqueado pela coordenação.");
+  if (!perfil) {
+    // Fallback: chave de API do gateway (Bearer aq1_...) — mesmo rigor de
+    // papel/bloqueio da sessão; o segredo em si nunca é logado.
+    const chave = await resolverChaveApi(req.headers.get("authorization"));
+    if (chave) {
+      const perfilChave = await buscarPerfilPorId(chave.usuarioId);
+      if (perfilChave && autorizarPerfil(perfilChave, papeis, opcoes)) {
+        void tocarUsoChave(chave.chaveId);
+        const { matriculaIds, turmaIds } = await matriculasDoUsuario(perfilChave.usuarioId);
+        return {
+          sessao: { ...perfilChave, equipe: ehEquipe(perfilChave.papel), matriculaIds, turmaIds },
+        };
+      }
+    }
+    return negar(401, "Sessão inválida ou expirada. Faça login novamente.");
   }
-  if (papeis && !papeis.includes(perfil.papel)) {
+
+  if (!autorizarPerfil(perfil, papeis, opcoes)) {
+    if (perfil.status === "bloqueado" && !ehEquipe(perfil.papel) && !opcoes.permitirBloqueado) {
+      return negar(403, "Acesso bloqueado pela coordenação.");
+    }
     return negar(403, "Você não tem permissão para esta operação.");
   }
 
