@@ -3,7 +3,6 @@ import { exigirSessao, podeAcessarMatricula, respostaProibida } from "@/lib/auth
 import { supabaseAdmin } from "@/lib/supabase/admin";
 import { caminhoPertenceAoUsuario, caminhoSeguro } from "@/lib/arquivos/regras";
 import { mesesDoPlacar } from "@/lib/diagnostico/regras";
-import { ANJO_LE_FATURAMENTO } from "@/lib/diagnostico/parametros";
 import type { PayloadDiagnostico } from "@/lib/diagnostico/campos";
 import type { MesPlacarEntrada } from "@/lib/api/faturamento";
 import type { Sessao } from "@/lib/auth/sessao-api";
@@ -16,12 +15,9 @@ import {
 
 /**
  * Meses do Placar de entrada (diagnóstico enviado) para o gráfico de meta anual.
- * Mesma regra de leitura do diagnóstico: concierge não lê faturamento mensal e o
- * Anjo só lê com ANJO_LE_FATURAMENTO ligado.
+ * Toda a operação vê (mesmo público desta rota); mentorado, só o próprio.
  */
 async function buscarPlacarEntrada(sessao: Sessao, matriculaId: string | null, turmaId: string | null): Promise<MesPlacarEntrada[]> {
-  if (sessao.papel === "concierge" || (sessao.papel === "anjo" && !ANJO_LE_FATURAMENTO)) return [];
-
   let query = supabaseAdmin
     .from("diagnostico")
     .select("matricula_id, payload, matriculas!inner (matriculado_em, turma_id, usuarios (id))")
