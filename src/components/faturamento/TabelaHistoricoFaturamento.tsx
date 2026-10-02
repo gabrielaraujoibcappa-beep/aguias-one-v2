@@ -1,5 +1,6 @@
 "use client";
 
+import { LinkArquivoNovaAba } from "../ui/LinkArquivoNovaAba";
 import React, { useState } from "react";
 import { DeclaracaoFaturamento, formatarMoedaReal } from "@/lib/api/faturamento";
 import { BadgeStatusAuditoria } from "./BadgeStatusAuditoria";
@@ -53,15 +54,17 @@ export function TabelaHistoricoFaturamento({ historico }: TabelaHistoricoFaturam
                   ) : (
                     <div style={{ display: "flex", gap: "6px", flexWrap: "wrap" }}>
                       {item.comprovantes.map((c, i) => (
-                        <button
-                          key={i}
-                          type="button"
-                          onClick={() => setComprovanteAberto({ nome: c.nome, path: c.path })}
-                          className="btn-secondary"
-                          style={{ fontSize: "11px", padding: "2px 8px", borderRadius: "var(--radius-xs)" }}
-                        >
-                          {c.tipo === "zip" ? "Abrir .ZIP" : "Ver Arquivo"}
-                        </button>
+                        <React.Fragment key={i}>
+                          <button
+                            type="button"
+                            onClick={() => setComprovanteAberto({ nome: c.nome, path: c.path })}
+                            className="btn-secondary"
+                            style={{ fontSize: "11px", padding: "2px 8px", borderRadius: "var(--radius-xs)" }}
+                          >
+                            {c.tipo === "zip" ? "Abrir .ZIP" : "Ver Arquivo"}
+                          </button>
+                          <LinkArquivoNovaAba bucket="comprovantes" path={c.path} nome={c.nome} style={{ fontSize: "11px", padding: "2px 8px" }} />
+                        </React.Fragment>
                       ))}
                     </div>
                   )}

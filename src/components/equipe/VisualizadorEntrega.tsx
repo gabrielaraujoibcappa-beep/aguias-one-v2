@@ -1,5 +1,6 @@
 "use client";
 
+import { LinkArquivoNovaAba } from "@/components/ui/LinkArquivoNovaAba";
 import React, { useState } from "react";
 import { EntregaPendente } from "@/lib/api/auditoria";
 import { ArquivoVisualizavel, ModalArquivo } from "@/components/ui/ModalArquivo";
@@ -112,14 +113,17 @@ export function VisualizadorEntrega({
               }}>
                 <div style={{ fontSize: "13px", fontWeight: 500, marginBottom: "4px" }}>{arq.rotulo}</div>
                 <div style={{ fontSize: "12px", color: "var(--cor-muted)", marginBottom: "8px" }}>{arq.nome}</div>
-                <button
-                  type="button"
-                  onClick={() => setArquivoAberto({ nome: arq.nome, path: arq.path, rotulo: arq.rotulo })}
-                  className="btn-secondary"
-                  style={{ width: "100%", textAlign: "center", fontSize: "11px", padding: "4px 8px" }}
-                >
-                  Visualizar Arquivo
-                </button>
+                <div style={{ display: "flex", gap: "6px" }}>
+                  <button
+                    type="button"
+                    onClick={() => setArquivoAberto({ nome: arq.nome, path: arq.path, rotulo: arq.rotulo })}
+                    className="btn-secondary"
+                    style={{ flex: 1, textAlign: "center", fontSize: "11px", padding: "4px 8px" }}
+                  >
+                    Visualizar Arquivo
+                  </button>
+                  <LinkArquivoNovaAba bucket="evidencias" path={arq.path} nome={arq.nome} style={{ fontSize: "11px", padding: "4px 8px" }} />
+                </div>
               </div>
             ))}
           </div>

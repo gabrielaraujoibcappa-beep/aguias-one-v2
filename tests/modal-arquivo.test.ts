@@ -59,7 +59,7 @@ describe("ModalArquivo", () => {
 });
 
 describe("VisualizadorEntrega", () => {
-  it("usa botão de visualizar, não link direto para o arquivo", () => {
+  it("tem botão de visualizar e opção de abrir em nova aba", () => {
     const html = renderToStaticMarkup(
       React.createElement(VisualizadorEntrega, {
         entrega,
@@ -70,8 +70,8 @@ describe("VisualizadorEntrega", () => {
     );
     expect(html).toContain("Visualizar Arquivo");
     expect(html).not.toContain("#download-");
-    // o arquivo só é buscado ao abrir o modal
-    expect(html).not.toContain("/api/arquivos?");
+    // link direto só pela rota protegida e sempre em outra aba
+    expect(html).toContain('href="/api/arquivos?bucket=evidencias&amp;path=aluno-1%2F2026-09%2Fabc.png" target="_blank"');
   });
 });
 
@@ -87,7 +87,7 @@ describe("Comprovantes de faturamento", () => {
     criadoEm: "2026-09-16T12:00:00Z",
   };
 
-  it("fila da equipe abre o comprovante em modal, sem link direto", async () => {
+  it("fila da equipe abre o comprovante em modal ou em nova aba", async () => {
     const { FilaAuditoriaFaturamento } = await import("../src/components/equipe/FilaAuditoriaFaturamento");
     const html = renderToStaticMarkup(
       React.createElement(FilaAuditoriaFaturamento, {
@@ -101,15 +101,15 @@ describe("Comprovantes de faturamento", () => {
       })
     );
     expect(html).toContain("Ver arquivo");
-    expect(html).not.toContain("/api/arquivos?");
+    expect(html).toContain('href="/api/arquivos?bucket=comprovantes&amp;path=aluno-1%2F2026-09%2Fextrato.pdf" target="_blank"');
   });
 
-  it("histórico do mentorado abre o comprovante em modal", async () => {
+  it("histórico do mentorado abre o comprovante em modal ou em nova aba", async () => {
     const { TabelaHistoricoFaturamento } = await import("../src/components/faturamento/TabelaHistoricoFaturamento");
     const html = renderToStaticMarkup(
       React.createElement(TabelaHistoricoFaturamento, { historico: [declaracao] })
     );
     expect(html).toContain("Ver Arquivo");
-    expect(html).not.toContain("/api/arquivos?");
+    expect(html).toContain('href="/api/arquivos?bucket=comprovantes&amp;path=aluno-1%2F2026-09%2Fextrato.pdf" target="_blank"');
   });
 });

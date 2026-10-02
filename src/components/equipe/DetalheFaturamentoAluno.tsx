@@ -1,5 +1,6 @@
 "use client";
 
+import { LinkArquivoNovaAba } from "../ui/LinkArquivoNovaAba";
 import React, { useState } from "react";
 import Link from "next/link";
 import { DeclaracaoFaturamento, MesPlacarEntrada, formatarMesReferencia, formatarMoedaReal } from "@/lib/api/faturamento";
@@ -106,16 +107,18 @@ export function DetalheFaturamentoAluno({
                         ) : (
                           <div style={{ display: "flex", flexDirection: "column", gap: "4px", alignItems: "flex-start" }}>
                             {d.comprovantes.map((c) => (
-                              <button
-                                key={c.path}
-                                type="button"
-                                className="btn-secondary"
-                                onClick={() => setComprovanteAberto({ nome: c.nome, path: c.path })}
-                                style={{ ...BOTAO_PEQUENO, padding: "2px 8px", fontSize: "11px" }}
-                                aria-label={`Ver comprovante ${c.nome}`}
-                              >
-                                Ver comprovante
-                              </button>
+                              <div key={c.path} style={{ display: "flex", gap: "4px" }}>
+                                <button
+                                  type="button"
+                                  className="btn-secondary"
+                                  onClick={() => setComprovanteAberto({ nome: c.nome, path: c.path })}
+                                  style={{ ...BOTAO_PEQUENO, padding: "2px 8px", fontSize: "11px" }}
+                                  aria-label={`Ver comprovante ${c.nome}`}
+                                >
+                                  Ver comprovante
+                                </button>
+                                <LinkArquivoNovaAba bucket="comprovantes" path={c.path} nome={c.nome} style={{ fontSize: "11px", padding: "2px 8px" }} />
+                              </div>
                             ))}
                           </div>
                         )}

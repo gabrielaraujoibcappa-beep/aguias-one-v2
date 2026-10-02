@@ -7,7 +7,7 @@ import { formatarMesReferencia, formatarMoedaReal } from "@/lib/api/faturamento"
 import { ROTULOS_MOTIVO_BLOQUEIO, formatarDataBloqueio } from "@/lib/api/bloqueio-acesso";
 import { StatusDot, StatusVariant } from "../ui/StatusDot";
 import { BadgeStatusAuditoria } from "../faturamento/BadgeStatusAuditoria";
-import { BucketArquivo } from "@/lib/arquivos/regras";
+import { BucketArquivo, urlArquivo } from "@/lib/arquivos/regras";
 import { ArquivoVisualizavel, ModalArquivo } from "../ui/ModalArquivo";
 import { BotaoExportDossie } from "./BotaoExportDossie";
 import { BotaoResetSenha } from "./BotaoResetSenha";
@@ -308,6 +308,18 @@ export function FichaAluno({ ficha, contexto }: FichaAlunoProps) {
                               {c.nome}
                             </button>
                           ))}
+                      {f.comprovantes.map((c) => (
+                        <a
+                          key={`aba-${c.path}`}
+                          href={urlArquivo("comprovantes", c.path)}
+                          target="_blank"
+                          rel="noopener noreferrer"
+                          aria-label={`Abrir ${c.nome} em nova aba`}
+                          style={{ marginLeft: "6px", fontSize: "12px", color: "var(--cor-action-vibrant)" }}
+                        >
+                          ↗ nova aba
+                        </a>
+                      ))}
                     </td>
                     <td style={TD}>
                       <BadgeStatusAuditoria status={f.statusAuditoria} />
@@ -341,6 +353,15 @@ export function FichaAluno({ ficha, contexto }: FichaAlunoProps) {
                 >
                   {d.nome}
                 </button>
+                <a
+                  href={urlArquivo(d.tipo === "comprovante" ? "comprovantes" : "evidencias", d.path)}
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  aria-label={`Abrir ${d.nome} em nova aba`}
+                  style={{ marginLeft: "6px", fontSize: "12px", color: "var(--cor-action-vibrant)" }}
+                >
+                  ↗ nova aba
+                </a>
                 <span style={{ color: "var(--cor-muted)" }}> · {d.origem} · {d.tipo === "comprovante" ? "comprovante de faturamento" : "evidência de check-in"}</span>
               </li>
             ))}
