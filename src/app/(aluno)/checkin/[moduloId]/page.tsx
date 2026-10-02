@@ -3,7 +3,9 @@
 import React from "react";
 import { useParams, useRouter } from "next/navigation";
 import { FormularioCheckinModular } from "@/components/checkin/FormularioCheckinModular";
-import { SubmissaoCheckin } from "@/lib/api/checkin";
+import { EntregaCheckinEnviada } from "@/components/checkin/EntregaCheckinEnviada";
+import { SubmissaoCheckin, entregaTravada } from "@/lib/api/checkin";
+import { EntregaPendente } from "@/lib/api/auditoria";
 import { ModuloItem, filtrarModulosVisiveis } from "@/lib/api/modulos-liberacao";
 import { useSistemaStore } from "@/lib/store/sistema-store";
 import { EstadoCarregando } from "@/components/ui/EstadoCarregando";
@@ -24,6 +26,21 @@ function localizarModulo(modulos: ModuloItem[], parametro: string | undefined): 
     }
   }
   return visiveis[visiveis.length - 1];
+}
+
+function paraSubmissao(entrega: EntregaPendente, moduloId: string): SubmissaoCheckin {
+  return {
+    id: entrega.id,
+    matriculaId: entrega.matriculaId ?? "",
+    moduloId,
+    links: entrega.links,
+    arquivos: entrega.arquivos,
+    travou: entrega.travou,
+    duvidaCall: entrega.duvidaCall,
+    status: entrega.status,
+    parecerTexto: entrega.parecerTexto,
+    enviadoEm: entrega.enviadoEm,
+  };
 }
 
 export default function CheckinModuloPage() {
@@ -67,9 +84,22 @@ export default function CheckinModuloPage() {
     );
   }
 
+  // Uma entrega por módulo: o que o aluno já enviou volta para a tela
+  const existente = estado.entregas.find((e) => e.moduloId === modulo.id);
+
+  if (existente && entregaTravada(existente.status)) {
+    return (
+      <div style={{ maxWidth: "800px", margin: "0 auto", padding: "var(--espaco-xl)" }}>
+        {voltar}
+        <h1 style={{ fontSize: "22px", marginBottom: 0 }}>{modulo.titulo}</h1>
+        <EntregaCheckinEnviada entrega={existente} completa />
+      </div>
+    );
+  }
+
   const handleEnviar = (submissao: SubmissaoCheckin) =>
     submeterCheckin({
-      id: `local-${Date.now()}`,
+      id: existente?.id ?? `local-${Date.now()}`,
       alunoNome: estado.usuarioAtual.nome,
       alunoEmail: estado.usuarioAtual.email || undefined,
       moduloTitulo: `Módulo ${modulo.numero} — ${modulo.titulo}`,
@@ -84,7 +114,9 @@ export default function CheckinModuloPage() {
   return (
     <div style={{ maxWidth: "800px", margin: "0 auto", padding: "var(--espaco-xl)" }}>
       {voltar}
+      {existente && <EntregaCheckinEnviada entrega={existente} />}
       <FormularioCheckinModular
+        submissaoExistente={existente ? paraSubmissao(existente, modulo.id) : null}
         moduloId={modulo.id}
         moduloTitulo={modulo.titulo}
         itensRoteiro={modulo.itensRoteiro}

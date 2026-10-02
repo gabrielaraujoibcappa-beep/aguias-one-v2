@@ -13,12 +13,12 @@ export function InputLinkEvidencia({
   rotulo,
   url,
   onChange,
-  obrigatorio = true,
+  obrigatorio = false,
 }: InputLinkEvidenciaProps) {
   return (
     <div style={{ marginBottom: "var(--espaco-md)" }}>
       <label style={{ display: "block", fontSize: "14px", fontWeight: 500, marginBottom: "4px" }}>
-        {rotulo} {obrigatorio && <span style={{ color: "var(--cor-error)" }}>*</span>}
+        {rotulo} {obrigatorio ? <span style={{ color: "var(--cor-error)" }}>*</span> : <span style={{ fontWeight: 400, color: "var(--cor-muted)" }}>(opcional)</span>}
       </label>
       <input
         type="url"

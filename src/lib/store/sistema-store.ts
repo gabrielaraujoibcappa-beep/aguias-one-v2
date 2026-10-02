@@ -423,7 +423,11 @@ export function useSistemaStore() {
     if (resultado.sucesso) {
       salvarEstado({
         ...estadoGlobal,
-        entregas: [entrega, ...estadoGlobal.entregas.filter((e) => e.id !== entrega.id)],
+        // Uma entrega por módulo: o reenvio substitui a anterior
+        entregas: [
+          { ...entrega, moduloId },
+          ...estadoGlobal.entregas.filter((e) => e.id !== entrega.id && e.moduloId !== moduloId),
+        ],
       });
     }
     return resultado;

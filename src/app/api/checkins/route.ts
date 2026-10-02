@@ -165,6 +165,8 @@ export async function POST(req: NextRequest) {
           matricula_id: matriculaId,
           modulo_id: modulo.id,
           status: "aguardando_avaliacao",
+          // Reenvio abre nova avaliação: o parecer anterior não vale mais
+          parecer_texto: null,
           travou: typeof travou === "string" && travou.trim() ? travou.trim().slice(0, 500) : null,
           duvida_call: typeof duvidaCall === "string" && duvidaCall.trim() ? duvidaCall.trim().slice(0, 500) : null,
           enviado_em: agora,

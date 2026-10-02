@@ -24,6 +24,14 @@ export interface SubmissaoCheckin {
   enviadoEm?: string;
 }
 
+/** Toda entrega precisa de ao menos um arquivo (print ou PDF); link sozinho não comprova. */
+export const ERRO_SEM_COMPROVANTE = "Anexe ao menos um arquivo de comprovante (print ou PDF).";
+
+/** Entrega aprovada não pode mais ser editada nem reenviada (o POST também recusa). */
+export function entregaTravada(status: SubmissaoCheckin["status"]): boolean {
+  return status === "aprovado";
+}
+
 export function validarSubmissaoCheckin(submissao: SubmissaoCheckin): { valido: boolean; erros: string[] } {
   const erros: string[] = [];
 
@@ -36,9 +44,8 @@ export function validarSubmissaoCheckin(submissao: SubmissaoCheckin): { valido: 
     }
   }
 
-  // Validação dos arquivos
-  if (submissao.arquivos.length === 0 && submissao.links.length === 0) {
-    erros.push("É necessário anexar ao menos um link ou arquivo de comprovação.");
+  if (submissao.arquivos.length === 0) {
+    erros.push(ERRO_SEM_COMPROVANTE);
   }
 
   return {
@@ -113,5 +120,6 @@ export function normalizarEvidencias(
       });
     }
   }
+  if (!linhas.some((linha) => linha.tipo === "arquivo")) return { erro: ERRO_SEM_COMPROVANTE };
   return { linhas };
 }

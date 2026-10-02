@@ -6,6 +6,8 @@ export interface EntregaPendente {
   alunoEmail?: string;
   /** Matrícula do dono da entrega — preferir ao nome (homônimos). */
   matriculaId?: string;
+  /** Módulo da entrega — a tela do check-in usa para reabrir o que o aluno enviou. */
+  moduloId?: string;
   moduloTitulo: string;
   links: EvidenciaLinkItem[];
   arquivos: EvidenciaArquivoItem[];

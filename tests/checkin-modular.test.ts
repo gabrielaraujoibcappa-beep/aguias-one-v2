@@ -1,5 +1,5 @@
 import { describe, it, expect } from "vitest";
-import { validarSubmissaoCheckin, SubmissaoCheckin } from "../src/lib/api/checkin";
+import { validarSubmissaoCheckin, SubmissaoCheckin, ERRO_SEM_COMPROVANTE, entregaTravada } from "../src/lib/api/checkin";
 
 describe("Check-in Modular (ÁGUIAS ONE v2)", () => {
   it("deve validar links no formato http ou https", () => {
@@ -31,5 +31,23 @@ describe("Check-in Modular (ÁGUIAS ONE v2)", () => {
     const res = validarSubmissaoCheckin(submissaoValida);
     expect(res.valido).toBe(true);
     expect(res.erros.length).toBe(0);
+  });
+
+  it("recusa entrega só com link, sem arquivo de comprovante", () => {
+    const res = validarSubmissaoCheckin({
+      matriculaId: "mat-1",
+      moduloId: "mod-1",
+      links: [{ rotulo: "Site no Ar", url: "https://periciaroberto.com.br" }],
+      arquivos: [],
+    });
+    expect(res.valido).toBe(false);
+    expect(res.erros).toContain(ERRO_SEM_COMPROVANTE);
+  });
+
+  it("só a entrega aprovada fica travada para edição", () => {
+    expect(entregaTravada("aprovado")).toBe(true);
+    expect(entregaTravada("aguardando_avaliacao")).toBe(false);
+    expect(entregaTravada("ajuste_solicitado")).toBe(false);
+    expect(entregaTravada(undefined)).toBe(false);
   });
 });

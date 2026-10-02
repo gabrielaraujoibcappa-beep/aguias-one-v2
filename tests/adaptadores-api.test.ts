@@ -173,6 +173,14 @@ describe("Adaptadores: respostas reais da API para o formato das telas", () => {
     expect(historico[1].desbloqueadoEm).toBe("2026-08-05T12:00:00Z");
   });
 
+  it("check-in próprio: guarda o módulo para a tela reabrir a entrega enviada", () => {
+    const e = mapearCheckinProprio(
+      { id: "c-1", modulo_id: "mod-uuid", status: "aguardando_avaliacao", enviado_em: "2026-09-10T12:00:00Z", checkin_evidencias: [] },
+      { nome: "Ana" }
+    );
+    expect(e.moduloId).toBe("mod-uuid");
+  });
+
   it("check-in do próprio aluno: linha crua do banco vira entrega com nome do aluno da sessão", () => {
     const e = mapearCheckinProprio(
       {
