@@ -72,15 +72,21 @@ export async function exigirSessao(
     // Fallback: chave de API do gateway (Bearer aq1_...) — mesmo rigor de
     // papel/bloqueio da sessão; o segredo em si nunca é logado.
     const chave = await resolverChaveApi(req.headers.get("authorization"));
-    if (chave) {
-      const perfilChave = await buscarPerfilPorId(chave.usuarioId);
-      if (perfilChave && autorizarPerfil(perfilChave, papeis, opcoes)) {
-        void tocarUsoChave(chave.chaveId);
-        const { matriculaIds, turmaIds } = await matriculasDoUsuario(perfilChave.usuarioId);
-        return {
-          sessao: { ...perfilChave, equipe: ehEquipe(perfilChave.papel), matriculaIds, turmaIds },
-        };
+    const perfilChave = chave ? await buscarPerfilPorId(chave.usuarioId) : null;
+    if (chave && perfilChave) {
+      // A chave é válida: o uso fica registrado mesmo se a operação for negada
+      void tocarUsoChave(chave.chaveId);
+      if (!autorizarPerfil(perfilChave, papeis, opcoes)) {
+        // 403, não 401: a chave funciona, o papel do dono é que não pode esta operação
+        return negar(
+          403,
+          `Chave válida, mas o papel "${perfilChave.papel}" não tem permissão para esta operação.`
+        );
       }
+      const { matriculaIds, turmaIds } = await matriculasDoUsuario(perfilChave.usuarioId);
+      return {
+        sessao: { ...perfilChave, equipe: ehEquipe(perfilChave.papel), matriculaIds, turmaIds },
+      };
     }
     return negar(401, "Sessão inválida ou expirada. Faça login novamente.");
   }
