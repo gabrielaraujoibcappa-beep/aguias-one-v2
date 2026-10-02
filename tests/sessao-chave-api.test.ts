@@ -58,9 +58,12 @@ describe("exigirSessao com chave de API", () => {
     expect(estado.tocou).toEqual(["k1"]);
   });
 
-  it("chave inválida, revogada ou expirada continua 401", async () => {
+  it("chave inválida, revogada ou expirada continua 401, com mensagem de chave (não de login)", async () => {
     estado.chave = null;
     const r = await exigirSessao(req(), ["anjo"]);
     expect(r.erro?.status).toBe(401);
+    const corpo = await r.erro!.json();
+    expect(corpo.erro).toContain("Chave de API não reconhecida");
+    expect(corpo.erro).not.toContain("login");
   });
 });

@@ -88,6 +88,13 @@ export async function exigirSessao(
         sessao: { ...perfilChave, equipe: ehEquipe(perfilChave.papel), matriculaIds, turmaIds },
       };
     }
+    // Quem manda "Bearer aq1_..." é integração, não pessoa: "faça login" não ajuda
+    if (req.headers.get("authorization")?.trim().startsWith("Bearer aq1_")) {
+      return negar(
+        401,
+        "Chave de API não reconhecida: confira se copiou a chave inteira (não só o prefixo da lista) ou se ela foi revogada ou expirou."
+      );
+    }
     return negar(401, "Sessão inválida ou expirada. Faça login novamente.");
   }
 
