@@ -5,7 +5,7 @@ import {
   montarRota,
   operacoesDespachaveis,
 } from "../src/lib/api/gateway-registry";
-import { PREFIXO_CHAVE, hashChave, validarPedidoChave } from "../src/lib/api/chaves";
+import { PAPEIS_CHAVES, PREFIXO_CHAVE, hashChave, validarPedidoChave, veTodasAsChaves } from "../src/lib/api/chaves";
 import { montarPromptOperador } from "../src/lib/api/prompt-operador";
 
 describe("Gateway de API — registro de todas as funções", () => {
@@ -65,6 +65,18 @@ describe("Gateway de API — registro de todas as funções", () => {
     expect(prompt).toContain("alunos.listar");
     expect(prompt).toContain("NUNCA");
   });
+  it("libera chaves para admin, concierge, mentor e anjo; mentorado fica de fora", () => {
+    expect([...PAPEIS_CHAVES].sort()).toEqual(["admin", "anjo", "concierge", "mentor"]);
+    expect((PAPEIS_CHAVES as readonly string[]).includes("mentorado")).toBe(false);
+  });
+
+  it("só admin e concierge veem as chaves do time; mentor e anjo, as próprias", () => {
+    expect(veTodasAsChaves("admin")).toBe(true);
+    expect(veTodasAsChaves("concierge")).toBe(true);
+    expect(veTodasAsChaves("mentor")).toBe(false);
+    expect(veTodasAsChaves("anjo")).toBe(false);
+  });
+
   it("valida pedido de chave sem gravar segredo", () => {
     expect(validarPedidoChave("n8n – resgate", 90)).toEqual({ nome: "n8n – resgate", expiraDias: 90 });
     expect(validarPedidoChave("ab", 90)).toHaveProperty("erro");
