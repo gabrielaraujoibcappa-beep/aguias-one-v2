@@ -6,7 +6,7 @@ import { FormularioFaturamento } from "@/components/faturamento/FormularioFatura
 import { TabelaHistoricoFaturamento } from "@/components/faturamento/TabelaHistoricoFaturamento";
 import { MetaFaturamentoAnual } from "@/components/faturamento/MetaFaturamentoAnual";
 import { lerEstadoSistema, useSistemaStore } from "@/lib/store/sistema-store";
-import { formatarMoedaReal, obterMetaAnualAluno } from "@/lib/api/faturamento";
+import { declaracaoTravada, formatarMoedaReal, obterMetaAnualAluno } from "@/lib/api/faturamento";
 import { notificar } from "@/lib/notificacoes";
 import { EstadoCarregando } from "@/components/ui/EstadoCarregando";
 
@@ -73,7 +73,10 @@ export default function FaturamentoAlunoPage() {
         onDefinirMeta={handleDefinirMeta}
       />
 
-      <FormularioFaturamento onSalvar={adicionarFaturamento} />
+      <FormularioFaturamento
+        onSalvar={adicionarFaturamento}
+        mesesTravados={faturamentosAlunoAtual.filter((f) => declaracaoTravada(f.statusAuditoria)).map((f) => f.mesReferencia)}
+      />
       <TabelaHistoricoFaturamento historico={faturamentosAlunoAtual} />
     </div>
   );

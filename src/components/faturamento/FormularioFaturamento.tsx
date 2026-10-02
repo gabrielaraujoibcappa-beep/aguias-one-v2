@@ -4,6 +4,8 @@ import React, { useState } from "react";
 import {
   ComprovanteItem,
   DeclaracaoFaturamento,
+  ERRO_FATURAMENTO_APROVADO,
+  ERRO_FATURAMENTO_SEM_COMPROVANTE,
   formatarMesReferencia,
   mesReferenciaAtual,
   ultimosMesesReferencia,
@@ -15,18 +17,25 @@ import { useEnvioArquivos } from "../ui/useEnvioArquivos";
 interface FormularioFaturamentoProps {
   /** Resolve depois que o servidor responde; o formulário só limpa se a declaração foi gravada. */
   onSalvar: (declaracao: DeclaracaoFaturamento) => Promise<{ sucesso: boolean; erro?: string }>;
+  /** Meses ("AAAA-MM-01") com declaração já aprovada: não podem ser reenviados. */
+  mesesTravados?: string[];
 }
 
-export function FormularioFaturamento({ onSalvar }: FormularioFaturamentoProps) {
+export function FormularioFaturamento({ onSalvar, mesesTravados = [] }: FormularioFaturamentoProps) {
   const [mesReferencia, setMesReferencia] = useState(() => mesReferenciaAtual());
   const [valorTexto, setValorTexto] = useState("");
   const [erro, setErro] = useState("");
   const [salvando, setSalvando] = useState(false);
   const envio = useEnvioArquivos("comprovantes");
+  const mesTravado = mesesTravados.includes(mesReferencia);
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     if (salvando) return;
+    if (mesTravado) {
+      setErro(ERRO_FATURAMENTO_APROVADO);
+      return;
+    }
     const cleanNumber = valorTexto.replace(/\D/g, "");
     if (!cleanNumber || Number(cleanNumber) <= 0) {
       setErro("Informe um valor bruto válido maior que zero.");
@@ -38,6 +47,10 @@ export function FormularioFaturamento({ onSalvar }: FormularioFaturamentoProps) 
     }
     if (envio.comErro) {
       setErro("Remova ou reenvie o comprovante com erro antes de salvar.");
+      return;
+    }
+    if (envio.concluidos.length === 0) {
+      setErro(ERRO_FATURAMENTO_SEM_COMPROVANTE);
       return;
     }
 
@@ -121,9 +134,15 @@ export function FormularioFaturamento({ onSalvar }: FormularioFaturamentoProps) 
               {ultimosMesesReferencia(12).map((mes) => (
                 <option key={mes} value={mes}>
                   {formatarMesReferencia(mes).replace(" de ", " / ")}
+                  {mesesTravados.includes(mes) ? " (aprovado)" : ""}
                 </option>
               ))}
             </select>
+            {mesTravado && (
+              <p style={{ fontSize: "12px", color: "var(--cor-deep-green)", marginTop: "4px" }}>
+                Declaração deste mês já aprovada pela equipe. Ela não pode mais ser alterada.
+              </p>
+            )}
           </div>
 
           <div>
@@ -157,6 +176,7 @@ export function FormularioFaturamento({ onSalvar }: FormularioFaturamentoProps) 
           formatosPermitidos={extensoesDoBucket("comprovantes")}
           tamanhoMaximoBytes={REGRAS_BUCKET.comprovantes.tamanhoMaximoBytes}
           maximoArquivos={1}
+          obrigatorio
         />
 
         <div style={{ display: "flex", justifyContent: "flex-end", marginTop: "var(--espaco-sm)" }}>
@@ -164,7 +184,7 @@ export function FormularioFaturamento({ onSalvar }: FormularioFaturamentoProps) 
             type="submit"
             className="btn-primary"
             style={{ padding: "10px 24px" }}
-            disabled={salvando || envio.enviando}
+            disabled={salvando || envio.enviando || mesTravado}
             aria-busy={salvando}
           >
             {salvando ? "Salvando…" : envio.enviando ? "Aguardando comprovante…" : "Salvar Declaração Mensal"}

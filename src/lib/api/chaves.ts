@@ -10,7 +10,14 @@ import { createHash, randomBytes } from "crypto";
 import { supabaseAdmin } from "@/lib/supabase/admin";
 
 export const PREFIXO_CHAVE = "aq1_";
-export const PAPEIS_CHAVES = ["admin", "concierge"] as const;
+/** Quem pode gerar chaves. A chave age com o papel do dono (cada rota confere). */
+export const PAPEIS_CHAVES = ["admin", "concierge", "mentor", "anjo"] as const;
+/** Gestão vê e revoga as chaves de todo o time; mentor e anjo, só as próprias. */
+export const PAPEIS_GESTAO_CHAVES: readonly string[] = ["admin", "concierge"];
+
+export function veTodasAsChaves(papel: string): boolean {
+  return PAPEIS_GESTAO_CHAVES.includes(papel);
+}
 
 export interface ChaveApiPublica {
   id: string;

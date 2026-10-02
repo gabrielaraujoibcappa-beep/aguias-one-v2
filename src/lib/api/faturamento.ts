@@ -29,6 +29,15 @@ export interface DeclaracaoFaturamento {
   editadoPor?: string;
 }
 
+/** Declaração do mentorado sem comprovante não é aceita (tela e servidor). */
+export const ERRO_FATURAMENTO_SEM_COMPROVANTE = "Anexe o comprovante do faturamento (PDF, foto ou .zip).";
+export const ERRO_FATURAMENTO_APROVADO = "A declaração deste mês já foi aprovada e não pode mais ser alterada.";
+
+/** Declaração aprovada não pode mais ser reenviada nem substituída. */
+export function declaracaoTravada(status: StatusAuditoriaFaturamento | undefined): boolean {
+  return status === "aprovado";
+}
+
 const EXTENSOES_PERMITIDAS = [".zip", ".pdf", ".png", ".jpg", ".jpeg"];
 
 export function validarComprovanteFaturamento(nomeArquivo: string): { valido: boolean; motivo?: string } {

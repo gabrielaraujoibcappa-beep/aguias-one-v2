@@ -75,6 +75,10 @@ describe("normalizarEvidencias", () => {
     expect(normalizarEvidencias([{ tipo: "arquivo", storagePath: "/mock/uploads/x.png" }], doAluno).erro).toBeDefined();
   });
 
+  it("exige ao menos um arquivo de comprovante (link sozinho não basta)", () => {
+    expect(normalizarEvidencias([{ tipo: "link", valorUrl: "https://perito.com.br" }], doAluno).erro).toBeDefined();
+  });
+
   it("gera as linhas de links e arquivos válidos", () => {
     const r = normalizarEvidencias(
       [

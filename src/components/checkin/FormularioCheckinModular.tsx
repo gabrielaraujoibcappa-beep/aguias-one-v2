@@ -4,6 +4,8 @@ import React, { useState } from "react";
 import { InputLinkEvidencia } from "./InputLinkEvidencia";
 import { InputMultiploArquivos } from "./InputMultiploArquivos";
 import { IconCheckCircle } from "../ui/Icons";
+import { ArquivoVisualizavel, ModalArquivo } from "../ui/ModalArquivo";
+import { ListaArquivosEnviados } from "./EntregaCheckinEnviada";
 import {
   SubmissaoCheckin,
   EvidenciaLinkItem,
@@ -27,12 +29,18 @@ export function FormularioCheckinModular({
   submissaoExistente,
   onEnviar,
 }: FormularioCheckinModularProps) {
-  const [links, setLinks] = useState<EvidenciaLinkItem[]>(
-    submissaoExistente?.links || [{ rotulo: "Link do Site / Evidência", url: "" }]
+  const [links, setLinks] = useState<EvidenciaLinkItem[]>(() =>
+    submissaoExistente?.links.length
+      ? submissaoExistente.links.map((l) => ({ ...l }))
+      : [{ rotulo: "Link do Site / Evidência", url: "" }]
   );
-  const [arquivos, setArquivos] = useState<EvidenciaArquivoItem[]>(
-    submissaoExistente?.arquivos || []
+  // Arquivos da entrega anterior (já no Storage) + os enviados agora
+  const [arquivosAnteriores, setArquivosAnteriores] = useState<EvidenciaArquivoItem[]>(
+    () => submissaoExistente?.arquivos ?? []
   );
+  const [arquivosNovos, setArquivosNovos] = useState<EvidenciaArquivoItem[]>([]);
+  const [arquivoAberto, setArquivoAberto] = useState<ArquivoVisualizavel | null>(null);
+  const reenvio = Boolean(submissaoExistente);
   const [travou, setTravou] = useState(submissaoExistente?.travou || "");
   const [duvidaCall, setDuvidaCall] = useState(submissaoExistente?.duvidaCall || "");
   const [erros, setErros] = useState<string[]>([]);
@@ -41,13 +49,11 @@ export function FormularioCheckinModular({
   const [submetendo, setSubmetendo] = useState(false);
 
   const handleUpdateLink = (index: number, novaUrl: string) => {
-    const copia = [...links];
-    copia[index].url = novaUrl;
-    setLinks(copia);
+    setLinks(links.map((link, i) => (i === index ? { ...link, url: novaUrl } : link)));
   };
 
   const handleArquivos = (lista: EvidenciaArquivoItem[], enviando: boolean) => {
-    setArquivos(lista);
+    setArquivosNovos(lista);
     setArquivosEnviando(enviando);
   };
 
@@ -65,7 +71,7 @@ export function FormularioCheckinModular({
       moduloId,
       // Link em branco é opcional: a entrega pode ser só com arquivos
       links: links.filter((l) => l.url.trim() !== ""),
-      arquivos,
+      arquivos: [...arquivosAnteriores, ...arquivosNovos],
       travou: travou.trim(),
       duvidaCall: duvidaCall.trim(),
       status: "aguardando_avaliacao",
@@ -93,7 +99,9 @@ export function FormularioCheckinModular({
     return (
       <div className="card" style={{ textAlign: "center", padding: "var(--espaco-xxl)" }}>
         <IconCheckCircle size={40} style={{ color: "var(--cor-deep-green)", margin: "0 auto var(--espaco-sm) auto" }} />
-        <h2 style={{ fontSize: "20px", fontWeight: 600, marginBottom: "var(--espaco-xs)" }}>Entrega Submetida</h2>
+        <h2 style={{ fontSize: "20px", fontWeight: 600, marginBottom: "var(--espaco-xs)" }}>
+          {reenvio ? "Entrega Reenviada" : "Entrega Submetida"}
+        </h2>
         <p style={{ color: "var(--cor-muted)", fontSize: "14px", marginBottom: "var(--espaco-lg)" }}>
           Seus links e arquivos foram recebidos e estão na fila de auditoria da equipe.
         </p>
@@ -153,7 +161,7 @@ export function FormularioCheckinModular({
       )}
 
       {/* 1. Links de Evidência */}
-      <h3 style={{ fontSize: "16px", marginBottom: "var(--espaco-sm)" }}>1. Links de Comprovação</h3>
+      <h3 style={{ fontSize: "16px", marginBottom: "var(--espaco-sm)" }}>1. Links de Comprovação (Opcional)</h3>
       {links.map((link, idx) => (
         <InputLinkEvidencia
           key={idx}
@@ -167,9 +175,22 @@ export function FormularioCheckinModular({
       <h3 style={{ fontSize: "16px", marginTop: "var(--espaco-lg)", marginBottom: "var(--espaco-sm)" }}>
         2. Prints e Arquivos de Comprovação
       </h3>
+      {arquivosAnteriores.length > 0 && (
+        <div style={{ marginBottom: "var(--espaco-md)" }}>
+          <p style={{ fontSize: "13px", color: "var(--cor-muted)", marginBottom: "6px" }}>
+            Arquivos já enviados (continuam na entrega, a menos que você remova):
+          </p>
+          <ListaArquivosEnviados
+            arquivos={arquivosAnteriores}
+            onAbrir={setArquivoAberto}
+            onRemover={(indice) => setArquivosAnteriores(arquivosAnteriores.filter((_, i) => i !== indice))}
+          />
+        </div>
+      )}
       <InputMultiploArquivos
-        rotulo="Anexar Prints das Pastas / E-mail / Telas"
+        rotulo={arquivosAnteriores.length > 0 ? "Anexar mais arquivos" : "Anexar Prints das Pastas / E-mail / Telas"}
         onChange={handleArquivos}
+        obrigatorio={arquivosAnteriores.length === 0}
       />
 
       {/* 3. Travas e Dúvidas */}
@@ -225,9 +246,16 @@ export function FormularioCheckinModular({
           disabled={submetendo || arquivosEnviando}
           aria-busy={submetendo}
         >
-          {submetendo ? "Enviando…" : arquivosEnviando ? "Aguardando arquivos…" : "Submeter Entrega do Módulo →"}
+          {submetendo
+            ? "Enviando…"
+            : arquivosEnviando
+              ? "Aguardando arquivos…"
+              : reenvio
+                ? "Reenviar Entrega do Módulo →"
+                : "Submeter Entrega do Módulo →"}
         </button>
       </div>
+      <ModalArquivo arquivo={arquivoAberto} bucket="evidencias" onFechar={() => setArquivoAberto(null)} />
     </form>
   );
 }

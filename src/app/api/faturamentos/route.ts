@@ -2,7 +2,12 @@ import { NextRequest, NextResponse } from "next/server";
 import { exigirSessao, podeAcessarMatricula, respostaProibida } from "@/lib/auth/sessao-api";
 import { supabaseAdmin } from "@/lib/supabase/admin";
 import { caminhoPertenceAoUsuario, caminhoSeguro } from "@/lib/arquivos/regras";
-import { normalizarMesReferencia, normalizarValorBruto } from "@/lib/api/faturamento";
+import {
+  ERRO_FATURAMENTO_APROVADO,
+  ERRO_FATURAMENTO_SEM_COMPROVANTE,
+  normalizarMesReferencia,
+  normalizarValorBruto,
+} from "@/lib/api/faturamento";
 
 export async function GET(req: NextRequest) {
   const auth = await exigirSessao(req);
@@ -113,6 +118,11 @@ export async function POST(req: NextRequest) {
       );
     }
 
+    // Mentorado sempre anexa comprovante; a coordenação pode lançar sem (ex.: declaração por telefone)
+    if (!storageZipPath && !auth.sessao.equipe) {
+      return NextResponse.json({ sucesso: false, erro: ERRO_FATURAMENTO_SEM_COMPROVANTE }, { status: 400 });
+    }
+
     // Comprovante precisa ter vindo da rota de upload (mentorado: só da própria pasta)
     if (storageZipPath) {
       const caminhoValido = auth.sessao.equipe
@@ -126,6 +136,17 @@ export async function POST(req: NextRequest) {
       }
     }
 
+    // Declaração aprovada não volta para a fila (a equipe corrige pelo PATCH, se preciso)
+    const { data: existente } = await supabaseAdmin
+      .from("faturamentos")
+      .select("id, status_auditoria")
+      .eq("matricula_id", matriculaId)
+      .eq("mes_referencia", dataFormatada)
+      .maybeSingle();
+    if (existente?.status_auditoria === "aprovado") {
+      return NextResponse.json({ sucesso: false, erro: ERRO_FATURAMENTO_APROVADO }, { status: 409 });
+    }
+
     const { data: faturamento, error } = await supabaseAdmin
       .from("faturamentos")
       .upsert(
@@ -135,6 +156,8 @@ export async function POST(req: NextRequest) {
           valor_bruto: valor,
           storage_zip_path: storageZipPath || null,
           status_auditoria: "pendente",
+          // Reenvio abre nova auditoria: o parecer anterior não vale mais
+          parecer_auditoria: null,
           atualizado_em: new Date().toISOString(),
         },
         { onConflict: "matricula_id,mes_referencia" }

@@ -20,6 +20,8 @@ vi.mock("@/lib/supabase/admin", () => {
       return b;
     },
     select: () => b,
+    eq: () => b,
+    maybeSingle: () => Promise.resolve({ data: null, error: null }),
     single: () => Promise.resolve({ data: { id: "f1" }, error: null }),
   };
   return { supabaseAdmin: { from: () => b } };
@@ -30,7 +32,7 @@ import { POST } from "../src/app/api/faturamentos/route";
 const declarar = (corpo: object) =>
   POST(new NextRequest("http://localhost/api/faturamentos", { method: "POST", body: JSON.stringify(corpo) }));
 
-const base = { matriculaId: "mat-1", mesReferencia: "2026-09", valorBruto: 18500.5 };
+const base = { matriculaId: "mat-1", mesReferencia: "2026-09", valorBruto: 18500.5, storageZipPath: "aluno-1/2026-09/extrato.pdf" };
 
 describe("normalizarValorBruto", () => {
   it("recusa null, vazio, texto, zero, negativo e valor absurdo", () => {

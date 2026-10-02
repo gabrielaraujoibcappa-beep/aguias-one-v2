@@ -56,6 +56,7 @@ export function mapearEntrega(api: any): EntregaPendente {
     alunoNome: api.alunoNome,
     alunoEmail: texto(api.alunoEmail),
     matriculaId: texto(api.matricula_id) ?? texto(api.matriculaId),
+    ...(texto(api.moduloId) ? { moduloId: api.moduloId } : {}),
     moduloTitulo: api.moduloNumero ? `Módulo ${api.moduloNumero} — ${titulo}` : titulo,
     links: evidencias
       .filter((ev) => ev.tipo === "link" && texto(ev.valor_url))
@@ -81,6 +82,7 @@ export function mapearCheckinProprio(linha: any, aluno: { nome: string; email?: 
     alunoNome: aluno.nome,
     alunoEmail: aluno.email,
     matricula_id: linha.matricula_id ?? aluno.matriculaId,
+    moduloId: linha.modulo_id,
     moduloNumero: linha.modulos?.numero,
     moduloTitulo: linha.modulos?.titulo,
     travou: linha.travou,

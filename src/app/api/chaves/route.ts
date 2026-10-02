@@ -7,17 +7,20 @@ import {
   hashChave,
   mapearChave,
   validarPedidoChave,
+  veTodasAsChaves,
 } from "@/lib/api/chaves";
 
-/** GET /api/chaves — lista chaves do time (sem o segredo). Admin e concierge. */
+/** GET /api/chaves — lista chaves (sem o segredo). Admin e concierge: do time; mentor e anjo: as próprias. */
 export async function GET(req: NextRequest) {
   const auth = await exigirSessao(req, [...PAPEIS_CHAVES]);
   if (auth.erro) return auth.erro;
 
-  const { data, error } = await supabaseAdmin
+  let consulta = supabaseAdmin
     .from("chaves_api")
     .select("id, nome, prefixo, escopos, expira_em, revogada_em, ultimo_uso_em, criado_em")
     .order("criado_em", { ascending: false });
+  if (!veTodasAsChaves(auth.sessao.papel)) consulta = consulta.eq("usuario_id", auth.sessao.usuarioId);
+  const { data, error } = await consulta;
   if (error) {
     return NextResponse.json({ sucesso: false, erro: error.message }, { status: 500 });
   }
@@ -26,7 +29,7 @@ export async function GET(req: NextRequest) {
 
 /**
  * POST /api/chaves { nome, expiraDias? } — gera chave e devolve o texto
- * claro UMA única vez. Admin e concierge.
+ * claro UMA única vez. Admin, concierge, mentor e anjo (a chave fica no nome de quem gerou).
  */
 export async function POST(req: NextRequest) {
   const auth = await exigirSessao(req, [...PAPEIS_CHAVES]);

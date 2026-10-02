@@ -12,6 +12,7 @@ const db = vi.hoisted(() => ({
   anteriores: [] as any[],
   insertEvidencias: { error: null } as { error: any },
   chamadas: [] as string[],
+  gravado: null as any,
 }));
 
 vi.mock("@/lib/auth/sessao-api", () => ({
@@ -33,7 +34,8 @@ vi.mock("@/lib/supabase/admin", () => {
         if (operacao === "delete") db.chamadas.push("delete-evidencias");
         return operacao === "delete" ? Promise.resolve({ error: null }) : b;
       },
-      upsert: () => {
+      upsert: (linha: any) => {
+        db.gravado = linha;
         operacao = "upsert";
         db.chamadas.push(`upsert-${tabela}`);
         return b;
@@ -94,10 +96,22 @@ describe("POST /api/checkins", () => {
     expect(db.chamadas).toEqual(["upsert-checkins_modulo", "insert-checkin_evidencias", "delete-evidencias"]);
   });
 
+  it("reenvio volta para avaliação e limpa o parecer anterior", async () => {
+    db.existente = { id: "chk-1", status: "ajuste_solicitado" };
+    expect((await POST(corpo())).status).toBe(200);
+    expect(db.gravado).toMatchObject({ status: "aguardando_avaliacao", parecer_texto: null });
+  });
+
   it("recusa reenvio de entrega já aprovada", async () => {
     db.existente = { id: "chk-1", status: "aprovado" };
     const res = await POST(corpo());
     expect(res.status).toBe(409);
+    expect(db.chamadas).toEqual([]);
+  });
+
+  it("recusa entrega só com link, sem arquivo de comprovante", async () => {
+    const res = await POST(corpo({ evidencias: [{ tipo: "link", rotulo: "Site", valorUrl: "https://perito.com.br" }] }));
+    expect(res.status).toBe(400);
     expect(db.chamadas).toEqual([]);
   });
 
