@@ -1,5 +1,6 @@
 "use client";
 
+import { LinkArquivoNovaAba } from "../ui/LinkArquivoNovaAba";
 import React, { useState } from "react";
 import { EntregaPendente } from "@/lib/api/auditoria";
 import { ArquivoVisualizavel, ModalArquivo } from "../ui/ModalArquivo";
@@ -160,6 +161,7 @@ export function ListaArquivosEnviados({ arquivos, onAbrir, onRemover }: ListaArq
             >
               Ver arquivo
             </button>
+            <LinkArquivoNovaAba bucket="evidencias" path={arq.path} nome={arq.nome} />
             {onRemover && (
               <button
                 type="button"

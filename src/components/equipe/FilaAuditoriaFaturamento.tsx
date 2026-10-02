@@ -1,5 +1,6 @@
 "use client";
 
+import { LinkArquivoNovaAba } from "../ui/LinkArquivoNovaAba";
 import React, { useState } from "react";
 import {
   DeclaracaoFaturamento,
@@ -87,9 +88,12 @@ export function FilaAuditoriaFaturamento({ declaracoes, nomesAlunos, metas, modo
                       ) : (
                         <div style={{ display: "flex", gap: "6px", flexWrap: "wrap" }}>
                           {d.comprovantes.map((c, i) => (
-                            <button key={i} type="button" onClick={() => setComprovanteAberto({ nome: c.nome, path: c.path })} className="btn-secondary" style={{ fontSize: "11px", padding: "2px 8px", borderRadius: "var(--radius-xs)" }}>
-                              {c.tipo === "zip" ? "Abrir .ZIP" : "Ver arquivo"}
-                            </button>
+                            <React.Fragment key={i}>
+                              <button type="button" onClick={() => setComprovanteAberto({ nome: c.nome, path: c.path })} className="btn-secondary" style={{ fontSize: "11px", padding: "2px 8px", borderRadius: "var(--radius-xs)" }}>
+                                {c.tipo === "zip" ? "Abrir .ZIP" : "Ver arquivo"}
+                              </button>
+                              <LinkArquivoNovaAba bucket="comprovantes" path={c.path} nome={c.nome} style={{ fontSize: "11px", padding: "2px 8px" }} />
+                            </React.Fragment>
                           ))}
                         </div>
                       )}
