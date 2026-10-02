@@ -6,6 +6,7 @@ import { DeclaracaoFaturamento, formatarMesReferencia, formatarMoedaReal } from 
 import { MetaFaturamentoAnual } from "../faturamento/MetaFaturamentoAnual";
 import { BadgeStatusAuditoria } from "../faturamento/BadgeStatusAuditoria";
 import { AcoesAuditoriaFaturamento } from "./AcoesAuditoriaFaturamento";
+import { ArquivoVisualizavel, ModalArquivo } from "../ui/ModalArquivo";
 
 interface DetalheFaturamentoAlunoProps {
   aluno: { id: string; nome: string; email?: string; turmaNome?: string };
@@ -36,6 +37,7 @@ export function DetalheFaturamentoAluno({
   onVoltar,
 }: DetalheFaturamentoAlunoProps) {
   const [confirmandoExclusao, setConfirmandoExclusao] = useState<string | null>(null);
+  const [comprovanteAberto, setComprovanteAberto] = useState<ArquivoVisualizavel | null>(null);
 
   const ordenados = [...faturamentos].sort((a, b) => b.mesReferencia.localeCompare(a.mesReferencia));
 
@@ -97,7 +99,24 @@ export function DetalheFaturamentoAluno({
                       <td style={{ ...CELULA, fontWeight: 500 }}>{formatarMesReferencia(d.mesReferencia)}</td>
                       <td style={{ ...CELULA, textAlign: "right", fontWeight: 600, fontVariantNumeric: "tabular-nums" }}>{formatarMoedaReal(d.valorBruto)}</td>
                       <td style={{ ...CELULA, fontSize: "12px", color: "var(--cor-muted)" }}>
-                        {d.comprovantes.length === 0 ? "Nenhum" : d.comprovantes.map((c) => c.nome).join(", ")}
+                        {d.comprovantes.length === 0 ? (
+                          "Nenhum"
+                        ) : (
+                          <div style={{ display: "flex", flexDirection: "column", gap: "4px", alignItems: "flex-start" }}>
+                            {d.comprovantes.map((c) => (
+                              <button
+                                key={c.path}
+                                type="button"
+                                className="btn-secondary"
+                                onClick={() => setComprovanteAberto({ nome: c.nome, path: c.path })}
+                                style={{ ...BOTAO_PEQUENO, padding: "2px 8px", fontSize: "11px" }}
+                                aria-label={`Ver comprovante ${c.nome}`}
+                              >
+                                Ver comprovante
+                              </button>
+                            ))}
+                          </div>
+                        )}
                       </td>
                       <td style={CELULA}>
                         <BadgeStatusAuditoria status={d.statusAuditoria} />
@@ -141,6 +160,7 @@ export function DetalheFaturamentoAluno({
           </table>
         </div>
       </div>
+      <ModalArquivo arquivo={comprovanteAberto} bucket="comprovantes" onFechar={() => setComprovanteAberto(null)} />
     </div>
   );
 }

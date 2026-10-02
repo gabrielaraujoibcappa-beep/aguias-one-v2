@@ -295,7 +295,20 @@ export function FichaAluno({ ficha, contexto }: FichaAlunoProps) {
                   <tr key={f.id}>
                     <td style={{ ...TD, fontWeight: 500 }}>{formatarMesReferencia(f.mesReferencia)}</td>
                     <td style={{ ...TD, textAlign: "right", fontVariantNumeric: "tabular-nums" }}>{formatarMoedaReal(f.valorBruto)}</td>
-                    <td style={{ ...TD, fontSize: "12px", color: "var(--cor-text-muted)" }}>{f.comprovantes.length === 0 ? "Nenhum" : f.comprovantes.map((c) => c.nome).join(", ")}</td>
+                    <td style={{ ...TD, fontSize: "12px", color: "var(--cor-text-muted)" }}>
+                      {f.comprovantes.length === 0
+                        ? "Nenhum"
+                        : f.comprovantes.map((c) => (
+                            <button
+                              key={c.path}
+                              type="button"
+                              onClick={() => setDocumentoAberto({ arquivo: { nome: c.nome, path: c.path }, bucket: "comprovantes" })}
+                              style={{ background: "none", border: "none", padding: 0, color: "var(--cor-action-vibrant)", textDecoration: "underline", cursor: "pointer", fontSize: "12px", textAlign: "left", overflowWrap: "anywhere" }}
+                            >
+                              {c.nome}
+                            </button>
+                          ))}
+                    </td>
                     <td style={TD}>
                       <BadgeStatusAuditoria status={f.statusAuditoria} />
                       {f.auditadoPor && <div style={{ fontSize: "11px", color: "var(--cor-muted)", marginTop: "2px" }}>{f.auditadoPor} · {dataCurta(f.auditadoEm)}</div>}
