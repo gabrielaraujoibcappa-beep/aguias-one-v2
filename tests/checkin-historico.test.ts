@@ -76,8 +76,13 @@ describe("PATCH /api/checkins/[id]/auditar", () => {
     estado.neq = [];
   });
 
-  it("anjo é recusado", async () => {
+  it("anjo também audita", async () => {
     estado.sessao = { ...estado.sessao, papel: "anjo" };
+    expect((await auditar("aprovado")).status).toBe(200);
+  });
+
+  it("mentorado é recusado", async () => {
+    estado.sessao = { ...estado.sessao, papel: "mentorado" };
     expect((await auditar("aprovado")).status).toBe(403);
   });
 

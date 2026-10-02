@@ -17,12 +17,11 @@ export function ehResgate(papel?: PapelUsuario | null): boolean {
   return papel === "resgate";
 }
 
-/**
- * Parecer em check-in e faturamento. Anjo não edita check-in/faturamento
- * (SPEC diagnóstico §3); mentor dá parecer de auditoria.
- */
+/** Quem dá parecer (aprovar / pedir ajuste) em check-in e faturamento. */
+export const PAPEIS_AUDITORIA: PapelUsuario[] = ["admin", "concierge", "mentor", "anjo"];
+
 export function canAudit(papel: PapelUsuario): boolean {
-  return ["admin", "concierge", "mentor"].includes(papel);
+  return PAPEIS_AUDITORIA.includes(papel);
 }
 
 export function canManageCohorts(papel: PapelUsuario): boolean {
