@@ -3,6 +3,7 @@
 import React, { useMemo, useState } from "react";
 import {
   DeclaracaoFaturamento,
+  MesPlacarEntrada,
   ProgressoMes,
   calcularProgressoMetaAnual,
   formatarMoedaReal,
@@ -14,6 +15,8 @@ interface MetaFaturamentoAnualProps {
   metaAnual: number;
   onDefinirMeta: (valor: number) => void;
   anoInicial?: number;
+  /** Meses do Placar de entrada: barras de referência, fora do realizado e do percentual. */
+  placarEntrada?: MesPlacarEntrada[];
 }
 
 // Geometria do gráfico (viewBox fixo; escala com a largura do container)
@@ -29,6 +32,7 @@ const LINHA_BASE = MARGEM.topo + ALTURA_PLOT;
 
 const COR_BARRA = "var(--cor-action-vibrant, #0052ff)";
 const COR_BARRA_HOVER = "#1a60ff";
+const COR_PLACAR = "rgba(0, 82, 255, 0.14)";
 const COR_META = "var(--cor-text-muted, #4b5563)";
 const COR_GRADE = "var(--cor-hairline, #e5e7eb)";
 const COR_TEXTO_MUTED = "var(--cor-muted, #6b7280)";
@@ -73,19 +77,23 @@ function digitosParaValor(texto: string): number {
   return digitos ? Number(digitos) / 100 : 0;
 }
 
-export function MetaFaturamentoAnual({ faturamentos, metaAnual, onDefinirMeta, anoInicial }: MetaFaturamentoAnualProps) {
+export function MetaFaturamentoAnual({ faturamentos, metaAnual, onDefinirMeta, anoInicial, placarEntrada = [] }: MetaFaturamentoAnualProps) {
   const [ano, setAno] = useState<number>(() => anoInicial ?? new Date().getFullYear());
   const [editandoMeta, setEditandoMeta] = useState(false);
   const [metaTexto, setMetaTexto] = useState("");
   const [mostrarTabela, setMostrarTabela] = useState(false);
   const [mesFocado, setMesFocado] = useState<number | null>(null);
 
-  const anos = useMemo(() => listarAnosDisponiveis(faturamentos, ano), [faturamentos, ano]);
-  const progresso = useMemo(() => calcularProgressoMetaAnual(faturamentos, metaAnual, ano), [faturamentos, metaAnual, ano]);
+  const anos = useMemo(() => listarAnosDisponiveis(faturamentos, ano, placarEntrada), [faturamentos, ano, placarEntrada]);
+  const progresso = useMemo(
+    () => calcularProgressoMetaAnual(faturamentos, metaAnual, ano, placarEntrada),
+    [faturamentos, metaAnual, ano, placarEntrada]
+  );
+  const temPlacar = progresso.meses.some((m) => m.placar !== null);
 
   // Escala vertical: passo redondo (1, 2, 2,5, 5 × 10^n) e teto múltiplo do passo,
   // acomodando a maior coluna e a linha da meta com folga de 10%
-  const maiorValor = Math.max(progresso.metaMensal, ...progresso.meses.map((m) => m.realizado)) * 1.1;
+  const maiorValor = Math.max(progresso.metaMensal, ...progresso.meses.map((m) => Math.max(m.realizado, m.placar ?? 0))) * 1.1;
   const passoEixo = tetoLimpo(maiorValor / 5);
   const tetoEixo = Math.max(Math.ceil(maiorValor / passoEixo) * passoEixo, passoEixo);
   const escalaY = (valor: number) => LINHA_BASE - (Math.min(valor, tetoEixo) / tetoEixo) * ALTURA_PLOT;
@@ -221,6 +229,15 @@ export function MetaFaturamentoAnual({ faturamentos, metaAnual, onDefinirMeta, a
                   {m.realizado > 0 && (
                     <path d={caminhoColuna(xBarra, yTopo, LARGURA_BARRA, LINHA_BASE)} fill={destacado ? COR_BARRA_HOVER : COR_BARRA} />
                   )}
+                  {m.placar !== null && m.placar > 0 && (
+                    <path
+                      d={caminhoColuna(xBarra, escalaY(m.placar), LARGURA_BARRA, LINHA_BASE)}
+                      fill={COR_PLACAR}
+                      stroke={COR_BARRA}
+                      strokeWidth={destacado ? 1.5 : 1}
+                      strokeDasharray="4 3"
+                    />
+                  )}
                   <text x={xSlot + LARGURA_SLOT / 2} y={LINHA_BASE + 18} textAnchor="middle" fontSize={11} fill={destacado ? "var(--cor-ink)" : COR_TEXTO_MUTED} fontWeight={destacado ? 600 : 400}>
                     {m.rotulo}
                   </text>
@@ -232,7 +249,13 @@ export function MetaFaturamentoAnual({ faturamentos, metaAnual, onDefinirMeta, a
                     height={ALTURA_PLOT + MARGEM.base}
                     fill="transparent"
                     tabIndex={0}
-                    aria-label={`${m.rotulo} ${ano}: ${m.declarado ? formatarMoedaReal(m.realizado) : "sem declaração"}, ${formatarPercentual(m.percentual)} da meta mensal`}
+                    aria-label={`${m.rotulo} ${ano}: ${
+                      m.declarado
+                        ? `${formatarMoedaReal(m.realizado)}, ${formatarPercentual(m.percentual)} da meta mensal`
+                        : m.placar !== null
+                          ? `placar de entrada ${formatarMoedaReal(m.placar)}, antes da mentoria, fora da meta`
+                          : "sem declaração"
+                    }`}
                     onPointerEnter={() => setMesFocado(idx)}
                     onPointerLeave={() => setMesFocado(null)}
                     onFocus={() => setMesFocado(idx)}
@@ -260,7 +283,7 @@ export function MetaFaturamentoAnual({ faturamentos, metaAnual, onDefinirMeta, a
               style={{
                 position: "absolute",
                 left: `${((MARGEM.esquerda + (mesFocado! + 0.5) * LARGURA_SLOT) / LARGURA) * 100}%`,
-                top: `${(Math.min(escalaY(mesEmDestaque.realizado), yMeta) / ALTURA) * 100}%`,
+                top: `${(Math.min(escalaY(Math.max(mesEmDestaque.realizado, mesEmDestaque.placar ?? 0)), yMeta) / ALTURA) * 100}%`,
                 transform: `translate(${mesFocado! <= 1 ? "0" : mesFocado! >= 10 ? "-100%" : "-50%"}, calc(-100% - 8px))`,
                 background: "var(--cor-ink)",
                 color: "#fff",
@@ -274,12 +297,33 @@ export function MetaFaturamentoAnual({ faturamentos, metaAnual, onDefinirMeta, a
               }}
             >
               <div style={{ fontWeight: 600 }}>{mesEmDestaque.rotulo} {ano}</div>
-              <div>Realizado: {mesEmDestaque.declarado ? formatarMoedaReal(mesEmDestaque.realizado) : "sem declaração"}</div>
-              <div>Meta: {formatarMoedaReal(mesEmDestaque.meta)} · {formatarPercentual(mesEmDestaque.percentual)}</div>
+              {mesEmDestaque.placar !== null ? (
+                <>
+                  <div>Placar de entrada: {formatarMoedaReal(mesEmDestaque.placar)}</div>
+                  <div style={{ opacity: 0.8 }}>Antes da mentoria · não conta na meta</div>
+                </>
+              ) : (
+                <>
+                  <div>Realizado: {mesEmDestaque.declarado ? formatarMoedaReal(mesEmDestaque.realizado) : "sem declaração"}</div>
+                  <div>Meta: {formatarMoedaReal(mesEmDestaque.meta)} · {formatarPercentual(mesEmDestaque.percentual)}</div>
+                </>
+              )}
             </div>
           )}
         </div>
       </div>
+
+      {temPlacar && (
+        <div style={{ display: "flex", gap: "var(--espaco-md)", flexWrap: "wrap", marginTop: "var(--espaco-sm)", fontSize: "12px", color: COR_TEXTO_MUTED }}>
+          <span style={{ display: "inline-flex", alignItems: "center", gap: "6px" }}>
+            <span aria-hidden style={{ width: 12, height: 12, borderRadius: 3, background: COR_BARRA }} /> Declarado na mentoria
+          </span>
+          <span style={{ display: "inline-flex", alignItems: "center", gap: "6px" }}>
+            <span aria-hidden style={{ width: 12, height: 12, borderRadius: 3, background: COR_PLACAR, border: `1px dashed ${COR_BARRA}` }} />
+            Placar de entrada (antes da mentoria, não conta na meta)
+          </span>
+        </div>
+      )}
 
       {/* Tabela: leitura alternativa dos mesmos dados */}
       <div id="meta-anual-tabela" hidden={!mostrarTabela} style={{ marginTop: "var(--espaco-md)" }}>
@@ -288,6 +332,7 @@ export function MetaFaturamentoAnual({ faturamentos, metaAnual, onDefinirMeta, a
             <tr style={{ borderBottom: "1px solid var(--cor-hairline)", color: "var(--cor-muted)" }}>
               <th style={{ padding: "8px" }}>Mês</th>
               <th style={{ padding: "8px", textAlign: "right" }}>Realizado</th>
+              {temPlacar && <th style={{ padding: "8px", textAlign: "right" }}>Placar de entrada</th>}
               <th style={{ padding: "8px", textAlign: "right" }}>Meta</th>
               <th style={{ padding: "8px", textAlign: "right" }}>Atingido</th>
             </tr>
@@ -299,6 +344,11 @@ export function MetaFaturamentoAnual({ faturamentos, metaAnual, onDefinirMeta, a
                 <td style={{ padding: "8px", textAlign: "right", fontVariantNumeric: "tabular-nums", color: m.declarado ? "var(--cor-ink)" : "var(--cor-muted)" }}>
                   {m.declarado ? formatarMoedaReal(m.realizado) : "—"}
                 </td>
+                {temPlacar && (
+                  <td style={{ padding: "8px", textAlign: "right", fontVariantNumeric: "tabular-nums", color: "var(--cor-muted)" }}>
+                    {m.placar !== null ? formatarMoedaReal(m.placar) : "—"}
+                  </td>
+                )}
                 <td style={{ padding: "8px", textAlign: "right", fontVariantNumeric: "tabular-nums" }}>{formatarMoedaReal(m.meta)}</td>
                 <td style={{ padding: "8px", textAlign: "right", fontVariantNumeric: "tabular-nums" }}>{m.declarado ? formatarPercentual(m.percentual) : "—"}</td>
               </tr>
@@ -308,6 +358,7 @@ export function MetaFaturamentoAnual({ faturamentos, metaAnual, onDefinirMeta, a
             <tr style={{ fontWeight: 600 }}>
               <td style={{ padding: "8px" }}>Total {ano}</td>
               <td style={{ padding: "8px", textAlign: "right", fontVariantNumeric: "tabular-nums" }}>{formatarMoedaReal(progresso.realizadoAcumulado)}</td>
+              {temPlacar && <td style={{ padding: "8px" }} />}
               <td style={{ padding: "8px", textAlign: "right", fontVariantNumeric: "tabular-nums" }}>{formatarMoedaReal(progresso.metaAnual)}</td>
               <td style={{ padding: "8px", textAlign: "right", fontVariantNumeric: "tabular-nums" }}>{formatarPercentual(progresso.percentualAnual)}</td>
             </tr>

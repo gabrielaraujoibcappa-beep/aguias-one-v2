@@ -7,8 +7,10 @@ import { ModuloItem } from "../api/modulos-liberacao";
 import {
   DeclaracaoFaturamento,
   META_FATURAMENTO_ANUAL_PADRAO,
+  MesPlacarEntrada,
   StatusAuditoriaFaturamento,
   filtrarFaturamentosPorAluno,
+  filtrarPlacarPorAluno,
   obterMetaAnualAluno,
   processarAuditoriaFaturamento,
 } from "../api/faturamento";
@@ -71,6 +73,8 @@ export interface SistemaState {
   modulos: ModuloItem[];
   entregas: EntregaPendente[];
   faturamentos: DeclaracaoFaturamento[];
+  /** Meses do Placar de entrada (antes da mentoria): referência no gráfico de meta anual. */
+  placarEntrada: MesPlacarEntrada[];
   /** Meta anual de faturamento por aluno (id do usuário → valor em reais). */
   metasFaturamentoAlunos: Record<string, number>;
   /** Bloqueio de acesso vigente por aluno. */
@@ -93,6 +97,7 @@ const estadoInicial: SistemaState = {
   modulos: [],
   entregas: [],
   faturamentos: [],
+  placarEntrada: [],
   metasFaturamentoAlunos: {},
   bloqueiosAcesso: {},
   historicoBloqueios: [],
@@ -293,7 +298,10 @@ async function executarSincronizacao() {
     if (rModulos) novo.modulos = (rModulos.modulos ?? []).map(mapearModulo);
 
     const rFat = ok(faturamentos);
-    if (rFat) novo.faturamentos = (rFat.faturamentos ?? []).map(mapearFaturamento);
+    if (rFat) {
+      novo.faturamentos = (rFat.faturamentos ?? []).map(mapearFaturamento);
+      novo.placarEntrada = Array.isArray(rFat.placarEntrada) ? rFat.placarEntrada : [];
+    }
 
     const rBloqueios = ok(bloqueios);
     if (rBloqueios) {
@@ -629,6 +637,7 @@ export function useSistemaStore() {
   const alunoAtualId = estadoGlobal.sessao.usuarioId ?? "";
   const bloqueioAlunoAtual = alunoAtualId ? obterBloqueioVigente(estadoGlobal.bloqueiosAcesso, alunoAtualId) : undefined;
   const faturamentosAlunoAtual = alunoAtualId ? filtrarFaturamentosPorAluno(estadoGlobal.faturamentos, alunoAtualId) : [];
+  const placarAlunoAtual = alunoAtualId ? filtrarPlacarPorAluno(estadoGlobal.placarEntrada, alunoAtualId) : [];
   const metaAnualAlunoAtual = obterMetaAnualAluno(estadoGlobal.metasFaturamentoAlunos, alunoAtualId);
   const faturamentosPendentesAuditoria = estadoGlobal.faturamentos.filter(
     (f) => ((f.statusAuditoria ?? "pendente") as StatusAuditoriaFaturamento) === "pendente"
@@ -736,6 +745,7 @@ export function useSistemaStore() {
     desbloquearAcesso,
     bloqueioAlunoAtual,
     faturamentosAlunoAtual,
+    placarAlunoAtual,
     metaAnualAlunoAtual,
     faturamentosPendentesAuditoria,
     atualizarCanal,

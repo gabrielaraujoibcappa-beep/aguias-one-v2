@@ -18,11 +18,11 @@ describe("RBAC Permissions (ÁGUIAS ONE v2)", () => {
     expect(ehResgate("concierge")).toBe(false);
   });
 
-  it("parecer de auditoria: admin, concierge e mentor; Anjo não edita check-in nem faturamento", () => {
+  it("parecer de auditoria: admin, concierge, mentor e anjo", () => {
     expect(canAudit("concierge")).toBe(true);
     expect(canAudit("admin")).toBe(true);
     expect(canAudit("mentor")).toBe(true);
-    expect(canAudit("anjo")).toBe(false);
+    expect(canAudit("anjo")).toBe(true);
     expect(canAudit("resgate")).toBe(false);
     expect(canAudit("mentorado")).toBe(false);
   });

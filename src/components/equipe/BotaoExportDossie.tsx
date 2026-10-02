@@ -21,7 +21,7 @@ export function montarUrlExport(matriculaId: string, filtros: FiltrosExport = {}
   return `/api/auditoria/export?${params.toString()}`;
 }
 
-/** Export é leitura (equipe incl. Anjo); parecer continua restrito a canAudit. Alinha botão à rota. */
+/** Export é leitura (toda a equipe); parecer segue canAudit. Alinha botão à rota. */
 export function podeExibirExport(papel: PapelUsuario): boolean {
   return isStaff(papel);
 }

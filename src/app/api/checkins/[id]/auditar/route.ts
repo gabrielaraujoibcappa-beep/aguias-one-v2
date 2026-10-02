@@ -1,9 +1,9 @@
 import { NextRequest, NextResponse } from "next/server";
 import { exigirSessao } from "@/lib/auth/sessao-api";
-import type { PapelUsuario } from "@/lib/auth/roles";
+import { PAPEIS_AUDITORIA } from "@/lib/auth/roles";
 
-// Parecer: admin, concierge e mentor. Anjo não edita check-in nem faturamento (SPEC diagnóstico §3)
-const PAPEIS_PARECER: PapelUsuario[] = ["admin", "concierge", "mentor"];
+// Parecer: admin, concierge, mentor e anjo
+const PAPEIS_PARECER = PAPEIS_AUDITORIA;
 import { supabaseAdmin } from "@/lib/supabase/admin";
 import { dispararEmail, link } from "@/lib/email/disparos";
 import { gerarEmailCheckinAjuste, gerarEmailCheckinAprovado } from "@/lib/email/templates";

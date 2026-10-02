@@ -156,7 +156,7 @@ export function VisualizadorEntrega({
           <p style={{ fontSize: "13px", color: "var(--cor-muted)", textAlign: "right" }}>
             {entrega.status === "aprovado"
               ? `Entrega aprovada${entrega.avaliadoPor ? ` por ${entrega.avaliadoPor}` : ""}.`
-              : "Somente admin, concierge ou mentor avaliam entregas. Seu acesso a esta tela é de consulta."}
+              : "Somente admin, concierge, mentor ou anjo avaliam entregas. Seu acesso a esta tela é de consulta."}
           </p>
         ) : !mostrandoCampoAjuste ? (
           <div style={{ display: "flex", justifyContent: "flex-end", gap: "var(--espaco-md)" }}>

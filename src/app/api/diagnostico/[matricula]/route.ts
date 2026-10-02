@@ -36,9 +36,10 @@ export async function GET(req: NextRequest, { params }: RouteParams) {
     // SPEC §16.1: com ANJO_LE_FATURAMENTO=false o Anjo vê só acima/igual/abaixo da entrada
     const soComparativo = sessao.papel === "anjo" && !ANJO_LE_FATURAMENTO;
 
-    const lerFaturamentoMensal = sessao.papel !== "concierge";
-    const lerNotas = sessao.papel === "anjo" || sessao.papel === "mentor" || sessao.papel === "admin";
-    const lerAuditoria = sessao.papel === "mentor" || sessao.papel === "admin";
+    // Toda a operação lê faturamento e notas; histórico de eventos: concierge, mentor e admin
+    const lerFaturamentoMensal = true;
+    const lerNotas = true;
+    const lerAuditoria = sessao.papel !== "anjo";
 
     const [faturamentos, notas, plano, eventos, trava] = await Promise.all([
       lerFaturamentoMensal

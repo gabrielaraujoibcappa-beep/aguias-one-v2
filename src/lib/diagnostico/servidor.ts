@@ -20,7 +20,7 @@ import {
 } from "./regras";
 
 export const PAPEIS_LEITURA_DIAGNOSTICO: PapelUsuario[] = ["concierge", "anjo", "mentor", "admin"];
-export const PAPEIS_ICP: PapelUsuario[] = ["mentor", "admin"];
+export const PAPEIS_ICP: PapelUsuario[] = ["mentor", "admin", "concierge"];
 
 export interface LinhaDiagnostico {
   id: string;

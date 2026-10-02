@@ -168,6 +168,17 @@ export function lerMeses(p: PayloadDiagnostico): MesPlacar[] {
 /** Mês conta no placar quando tem algum valor (0 é valor) e a fonte não é "não sei". */
 const mesPreenchido = (m: MesPlacar) => m.total !== null && m.fonte !== null && m.fonte !== "nao_sei";
 
+/** Meses preenchidos do placar em reais, com o mês de referência (para o gráfico de meta anual). */
+export function mesesDoPlacar(
+  p: PayloadDiagnostico,
+  matriculadoEm: string | Date
+): { mesReferencia: string; valorBruto: number }[] {
+  const refs = mesesReferencia(matriculadoEm);
+  return lerMeses(p)
+    .filter(mesPreenchido)
+    .map((m) => ({ mesReferencia: refs[m.n - 1], valorBruto: (m.total ?? 0) / 100 }));
+}
+
 // ---------------------------------------------------------------------------
 // Validação de envio
 // ---------------------------------------------------------------------------
@@ -360,16 +371,6 @@ export function calcularScores(p: PayloadDiagnostico): ScoresDiagnostico {
 const CAMPOS_ICP = new Set(TODOS_CAMPOS.filter((c) => c.consumo === "icp").map((c) => c.id));
 const FRASES = new Set<string>(CAMPOS_FRASE);
 
-const SCORES_CONCIERGE: (keyof ScoresDiagnostico)[] = [
-  "media_6m_bruta",
-  "maior_mes",
-  "menor_mes",
-  "n_meses_preenchidos",
-  "placar_nao_sei",
-  "pecas_de_pe",
-  "anjo_tipo_t0",
-];
-
 export interface VisaoDiagnostico {
   payload: PayloadDiagnostico;
   scores: Partial<ScoresDiagnostico>;
@@ -380,9 +381,8 @@ export interface VisaoDiagnostico {
 /**
  * Filtra payload e scores para o papel.
  * - mentorado: o próprio payload; dos scores só a média (a UI mostra depois de preencher).
- * - concierge: sem campos ICP (frases, forças, histórico na casa) e sem mix de receita/segmento.
  * - anjo: sem campos ICP; scores sem fit_one e sem job_statement.
- * - mentor/admin: tudo.
+ * - mentor, admin e concierge: tudo.
  */
 export function filtrarParaPapel(
   papel: PapelUsuario,
@@ -390,7 +390,7 @@ export function filtrarParaPapel(
   scores: Partial<ScoresDiagnostico> | null
 ): VisaoDiagnostico {
   const s = scores ?? {};
-  if (papel === "mentor" || papel === "admin") {
+  if (papel === "mentor" || papel === "admin" || papel === "concierge") {
     return { payload, scores: s, contemDinheiro: true };
   }
   if (papel === "mentorado") {
@@ -403,16 +403,6 @@ export function filtrarParaPapel(
   for (const [k, v] of Object.entries(payload)) {
     if (CAMPOS_ICP.has(k) || FRASES.has(k)) continue;
     semIcp[k] = v;
-  }
-
-  if (papel === "concierge") {
-    const visao: Partial<ScoresDiagnostico> = {};
-    for (const k of SCORES_CONCIERGE) if (k in s) (visao as any)[k] = s[k];
-    // Concierge vê média/maior/menor, mas não o mix por mês
-    for (const k of Object.keys(semIcp)) {
-      if (/^mes_\d\.(pericia|at|escritorio|outro)$/.test(k)) delete semIcp[k];
-    }
-    return { payload: semIcp, scores: visao, contemDinheiro: true };
   }
 
   // anjo
@@ -428,7 +418,6 @@ export function scoresDeCard(papel: PapelUsuario, s: Partial<ScoresDiagnostico> 
     pecas_de_pe: s.pecas_de_pe,
     placar_nao_sei: s.placar_nao_sei,
   };
-  if (papel === "concierge") return base;
   const anjo = {
     ...base,
     icp_segmento: s.icp_segmento,

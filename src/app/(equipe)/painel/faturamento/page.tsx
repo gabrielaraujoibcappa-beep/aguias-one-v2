@@ -10,6 +10,7 @@ import {
   DeclaracaoFaturamento,
   consolidarFaturamentoTurma,
   filtrarFaturamentosPorAluno,
+  filtrarPlacarPorAluno,
   formatarMesReferencia,
   formatarMoedaReal,
   obterMetaAnualAluno,
@@ -217,6 +218,7 @@ export default function PainelFaturamentoPage() {
         <DetalheFaturamentoAluno
           aluno={{ ...alunoSelecionado, turmaNome: estado.alunos.find((a) => a.id === alunoSelecionado.id)?.turmaNome }}
           faturamentos={filtrarFaturamentosPorAluno(estado.faturamentos, alunoSelecionado.id)}
+          placarEntrada={filtrarPlacarPorAluno(estado.placarEntrada, alunoSelecionado.id)}
           metaAnual={obterMetaAnualAluno(estado.metasFaturamentoAlunos, alunoSelecionado.id)}
           onDefinirMeta={(valor) => handleDefinirMeta(alunoSelecionado.id, alunoSelecionado.nome, valor)}
           onNovaDeclaracao={() => setModal({ aberto: true, declaracao: null, alunoFixoId: alunoSelecionado.id })}

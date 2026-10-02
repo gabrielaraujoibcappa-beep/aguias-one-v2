@@ -89,7 +89,7 @@ export default function PainelAuditoriaPage() {
       <div style={{ marginBottom: "var(--espaco-lg)" }}>
         <h1 style={{ fontSize: "28px", marginBottom: "var(--espaco-xs)" }}>Esteira de Auditoria de Entregas</h1>
         <p style={{ color: "var(--cor-muted)" }}>
-          Confira prints, teste links e aprove ou solicite ajustes. Avaliação feita por admin, concierge ou mentor.
+          Confira prints, teste links e aprove ou solicite ajustes. Avaliação feita por admin, concierge, mentor ou anjo.
         </p>
       </div>
 

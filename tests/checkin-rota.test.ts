@@ -147,10 +147,10 @@ describe("POST /api/checkins", () => {
 });
 
 describe("Auditoria de check-ins pela equipe", () => {
-  it("canAudit libera admin, concierge e mentor e bloqueia anjo", async () => {
+  it("canAudit libera admin, concierge, mentor e anjo e bloqueia mentorado", async () => {
     const { canAudit } = await import("../src/lib/auth/roles");
-    expect(["admin", "concierge", "mentor"].every((p) => canAudit(p as any))).toBe(true);
-    expect(canAudit("anjo")).toBe(false);
+    expect(["admin", "concierge", "mentor", "anjo"].every((p) => canAudit(p as any))).toBe(true);
+    expect(canAudit("mentorado")).toBe(false);
   });
 
   it("mapeia avaliador e data para o histórico", async () => {

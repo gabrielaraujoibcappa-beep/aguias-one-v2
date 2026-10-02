@@ -209,13 +209,13 @@ export function Sidebar() {
     ...(["concierge", "mentor", "admin"].includes(papel)
       ? [{ rotulo: "Concierge · Turma", href: "/concierge/turma", icone: IconUsers }]
       : []),
-    ...(["anjo", "mentor", "admin"].includes(papel)
+    ...(["anjo", "mentor", "admin", "concierge"].includes(papel)
       ? [
           { rotulo: "Mesa do Anjo", href: "/anjo", icone: IconAudit },
           { rotulo: "Lista do mês 6", href: "/anjo/mes6", icone: IconCalendar },
         ]
       : []),
-    ...(["mentor", "admin"].includes(papel)
+    ...(["mentor", "admin", "concierge"].includes(papel)
       ? [
           { rotulo: "Mentor · Turma", href: "/mentor/turma", icone: IconUsers },
           { rotulo: "ICP & Frases", href: "/mentor/icp", icone: IconFolder },

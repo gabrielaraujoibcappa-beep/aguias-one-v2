@@ -283,16 +283,13 @@ describe("Placar de entrada — visibilidade por papel (aceites 3 e 5)", () => {
   });
   const s = calcularScores(p);
 
-  it("concierge não recebe frases, forças, mix de receita nem segmento", () => {
+  it("concierge lê tudo, como mentor e admin", () => {
     const v = filtrarParaPapel("concierge", p, s);
-    for (const k of ["job_frase", "frase_sabado", "frase_preco", "frase_sozinho", "ultima_vez_organizou", "forca_push", "pagou_casa"]) {
-      expect(v.payload).not.toHaveProperty(k);
-    }
-    expect(v.payload).not.toHaveProperty("mes_1.pericia");
-    expect(v.payload["mes_1.fonte"]).toBe("extrato");
-    expect(v.scores).not.toHaveProperty("icp_segmento");
-    expect(v.scores).not.toHaveProperty("pct_pericia");
-    expect(v.scores.media_6m_bruta).toBe(600000);
+    expect(v.payload.job_frase).toBe(p.job_frase);
+    expect(v.payload["mes_1.pericia"]).toBe(500000);
+    expect(v.scores.icp_segmento).toBeDefined();
+    expect(v.scores.fit_one).toBe("sim");
+    expect(v.contemDinheiro).toBe(true);
   });
 
   it("anjo lê número e peças, sem frases e sem fit_one", () => {
@@ -321,7 +318,7 @@ describe("Placar de entrada — visibilidade por papel (aceites 3 e 5)", () => {
       expect(card).not.toHaveProperty("media_6m_bruta");
       expect(card).not.toHaveProperty("job_statement");
     }
-    expect(scoresDeCard("concierge", s)).not.toHaveProperty("risco_parcela");
+    expect(scoresDeCard("concierge", s)).toEqual(scoresDeCard("mentor", s));
     expect(scoresDeCard("anjo", s)).not.toHaveProperty("fit_one");
   });
 });
