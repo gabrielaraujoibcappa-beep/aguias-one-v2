@@ -79,6 +79,16 @@ export interface ProgressoMes {
   meta: number;
   percentual: number; // realizado / meta * 100, sem teto
   declarado: boolean; // houve ao menos uma declaração no mês
+  /** Valor do Placar de entrada (antes da mentoria) quando o mês não tem declaração. Só referência. */
+  placar: number | null;
+}
+
+/** Um mês do Placar de entrada (diagnóstico), em reais. */
+export interface MesPlacarEntrada {
+  matriculaId?: string;
+  alunoId?: string | null;
+  mesReferencia: string; // YYYY-MM-01
+  valorBruto: number;
 }
 
 export interface ProgressoMetaAnual {
@@ -105,7 +115,8 @@ export function calcularMetaMensal(metaAnual: number): number {
 export function calcularProgressoMetaAnual(
   faturamentos: DeclaracaoFaturamento[],
   metaAnual: number,
-  ano: number
+  ano: number,
+  placarEntrada: MesPlacarEntrada[] = []
 ): ProgressoMetaAnual {
   const metaMensal = calcularMetaMensal(metaAnual);
   const porMes = new Map<number, number>();
@@ -114,6 +125,14 @@ export function calcularProgressoMetaAnual(
     const [anoRef, mesRef] = f.mesReferencia.split("-").map(Number);
     if (anoRef !== ano || !mesRef || mesRef < 1 || mesRef > 12) continue;
     porMes.set(mesRef, (porMes.get(mesRef) ?? 0) + (Number(f.valorBruto) || 0));
+  }
+
+  // Placar de entrada: referência visual; não soma no realizado nem no percentual
+  const placarPorMes = new Map<number, number>();
+  for (const p of placarEntrada) {
+    const [anoRef, mesRef] = p.mesReferencia.split("-").map(Number);
+    if (anoRef !== ano || !mesRef || mesRef < 1 || mesRef > 12) continue;
+    placarPorMes.set(mesRef, Number(p.valorBruto) || 0);
   }
 
   const meses: ProgressoMes[] = MESES_ABREVIADOS.map((rotulo, idx) => {
@@ -126,6 +145,8 @@ export function calcularProgressoMetaAnual(
       meta: metaMensal,
       percentual: metaMensal > 0 ? (realizado / metaMensal) * 100 : 0,
       declarado: porMes.has(mes),
+      // Declaração do mês prevalece sobre o placar
+      placar: !porMes.has(mes) && placarPorMes.has(mes) ? placarPorMes.get(mes)! : null,
     };
   });
 
@@ -147,9 +168,13 @@ export function calcularProgressoMetaAnual(
 }
 
 /** Anos presentes nas declarações, mais o ano informado, em ordem decrescente. */
-export function listarAnosDisponiveis(faturamentos: DeclaracaoFaturamento[], anoAtual: number): number[] {
+export function listarAnosDisponiveis(
+  faturamentos: DeclaracaoFaturamento[],
+  anoAtual: number,
+  placarEntrada: Pick<MesPlacarEntrada, "mesReferencia">[] = []
+): number[] {
   const anos = new Set<number>([anoAtual]);
-  for (const f of faturamentos) {
+  for (const f of [...faturamentos, ...placarEntrada]) {
     const ano = Number(f.mesReferencia.split("-")[0]);
     if (ano) anos.add(ano);
   }
@@ -159,6 +184,10 @@ export function listarAnosDisponiveis(faturamentos: DeclaracaoFaturamento[], ano
 // ---------------------------------------------------------------------------
 // Operação: auditoria de declarações e consolidação de metas da turma
 // ---------------------------------------------------------------------------
+
+export function filtrarPlacarPorAluno(placar: MesPlacarEntrada[], alunoId: string): MesPlacarEntrada[] {
+  return placar.filter((p) => p.alunoId === alunoId);
+}
 
 export function filtrarFaturamentosPorAluno(faturamentos: DeclaracaoFaturamento[], alunoId: string): DeclaracaoFaturamento[] {
   return faturamentos.filter((f) => f.alunoId === alunoId);

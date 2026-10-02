@@ -168,6 +168,17 @@ export function lerMeses(p: PayloadDiagnostico): MesPlacar[] {
 /** Mês conta no placar quando tem algum valor (0 é valor) e a fonte não é "não sei". */
 const mesPreenchido = (m: MesPlacar) => m.total !== null && m.fonte !== null && m.fonte !== "nao_sei";
 
+/** Meses preenchidos do placar em reais, com o mês de referência (para o gráfico de meta anual). */
+export function mesesDoPlacar(
+  p: PayloadDiagnostico,
+  matriculadoEm: string | Date
+): { mesReferencia: string; valorBruto: number }[] {
+  const refs = mesesReferencia(matriculadoEm);
+  return lerMeses(p)
+    .filter(mesPreenchido)
+    .map((m) => ({ mesReferencia: refs[m.n - 1], valorBruto: (m.total ?? 0) / 100 }));
+}
+
 // ---------------------------------------------------------------------------
 // Validação de envio
 // ---------------------------------------------------------------------------

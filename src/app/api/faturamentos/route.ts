@@ -2,12 +2,49 @@ import { NextRequest, NextResponse } from "next/server";
 import { exigirSessao, podeAcessarMatricula, respostaProibida } from "@/lib/auth/sessao-api";
 import { supabaseAdmin } from "@/lib/supabase/admin";
 import { caminhoPertenceAoUsuario, caminhoSeguro } from "@/lib/arquivos/regras";
+import { mesesDoPlacar } from "@/lib/diagnostico/regras";
+import { ANJO_LE_FATURAMENTO } from "@/lib/diagnostico/parametros";
+import type { PayloadDiagnostico } from "@/lib/diagnostico/campos";
+import type { MesPlacarEntrada } from "@/lib/api/faturamento";
+import type { Sessao } from "@/lib/auth/sessao-api";
 import {
   ERRO_FATURAMENTO_APROVADO,
   ERRO_FATURAMENTO_SEM_COMPROVANTE,
   normalizarMesReferencia,
   normalizarValorBruto,
 } from "@/lib/api/faturamento";
+
+/**
+ * Meses do Placar de entrada (diagnóstico enviado) para o gráfico de meta anual.
+ * Mesma regra de leitura do diagnóstico: concierge não lê faturamento mensal e o
+ * Anjo só lê com ANJO_LE_FATURAMENTO ligado.
+ */
+async function buscarPlacarEntrada(sessao: Sessao, matriculaId: string | null, turmaId: string | null): Promise<MesPlacarEntrada[]> {
+  if (sessao.papel === "concierge" || (sessao.papel === "anjo" && !ANJO_LE_FATURAMENTO)) return [];
+
+  let query = supabaseAdmin
+    .from("diagnostico")
+    .select("matricula_id, payload, matriculas!inner (matriculado_em, turma_id, usuarios (id))")
+    .in("status", ["enviado", "congelado"]);
+  if (matriculaId) query = query.eq("matricula_id", matriculaId);
+  else if (!sessao.equipe) query = query.in("matricula_id", sessao.matriculaIds);
+  if (turmaId) query = query.eq("matriculas.turma_id", turmaId);
+
+  const { data, error } = await query;
+  if (error) {
+    console.error("[Faturamento placar]:", error.message);
+    return [];
+  }
+  return (data || []).flatMap((d: any) => {
+    const matricula = d.matriculas;
+    if (!matricula?.matriculado_em) return [];
+    return mesesDoPlacar((d.payload ?? {}) as PayloadDiagnostico, matricula.matriculado_em).map((m) => ({
+      ...m,
+      matriculaId: d.matricula_id,
+      alunoId: matricula.usuarios?.id ?? null,
+    }));
+  });
+}
 
 export async function GET(req: NextRequest) {
   const auth = await exigirSessao(req);
@@ -69,11 +106,14 @@ export async function GET(req: NextRequest) {
     const totalFaturado = formatados.reduce((acc, curr) => acc + curr.valorBruto, 0);
     const pendentesAuditoria = formatados.filter((f) => f.statusAuditoria === "pendente").length;
 
+    const placarEntrada = await buscarPlacarEntrada(auth.sessao, matriculaId, turmaId);
+
     return NextResponse.json({
       sucesso: true,
       totalFaturado,
       pendentesAuditoria,
       faturamentos: formatados,
+      placarEntrada,
     });
   } catch (err: any) {
     return NextResponse.json({ sucesso: false, erro: err?.message }, { status: 500 });

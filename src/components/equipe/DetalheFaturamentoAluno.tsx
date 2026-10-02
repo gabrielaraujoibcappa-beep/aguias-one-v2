@@ -2,7 +2,7 @@
 
 import React, { useState } from "react";
 import Link from "next/link";
-import { DeclaracaoFaturamento, formatarMesReferencia, formatarMoedaReal } from "@/lib/api/faturamento";
+import { DeclaracaoFaturamento, MesPlacarEntrada, formatarMesReferencia, formatarMoedaReal } from "@/lib/api/faturamento";
 import { MetaFaturamentoAnual } from "../faturamento/MetaFaturamentoAnual";
 import { BadgeStatusAuditoria } from "../faturamento/BadgeStatusAuditoria";
 import { AcoesAuditoriaFaturamento } from "./AcoesAuditoriaFaturamento";
@@ -11,6 +11,7 @@ import { ArquivoVisualizavel, ModalArquivo } from "../ui/ModalArquivo";
 interface DetalheFaturamentoAlunoProps {
   aluno: { id: string; nome: string; email?: string; turmaNome?: string };
   faturamentos: DeclaracaoFaturamento[];
+  placarEntrada?: MesPlacarEntrada[];
   metaAnual: number;
   onDefinirMeta: (valor: number) => void;
   onNovaDeclaracao: () => void;
@@ -27,6 +28,7 @@ const BOTAO_PEQUENO: React.CSSProperties = { fontSize: "12px", padding: "5px 12p
 export function DetalheFaturamentoAluno({
   aluno,
   faturamentos,
+  placarEntrada,
   metaAnual,
   onDefinirMeta,
   onNovaDeclaracao,
@@ -68,7 +70,7 @@ export function DetalheFaturamentoAluno({
       </div>
 
       {/* Meta anual editável + gráfico (mesmo componente que o mentorado vê) */}
-      <MetaFaturamentoAnual faturamentos={faturamentos} metaAnual={metaAnual} onDefinirMeta={onDefinirMeta} />
+      <MetaFaturamentoAnual faturamentos={faturamentos} placarEntrada={placarEntrada} metaAnual={metaAnual} onDefinirMeta={onDefinirMeta} />
 
       <div className="card">
         <h3 style={{ fontSize: "18px", marginBottom: "var(--espaco-md)" }}>Declarações do mentorado</h3>

@@ -17,6 +17,7 @@ export default function FaturamentoAlunoPage() {
     definirMetaFaturamentoAnual,
     reverterMetaFaturamento,
     faturamentosAlunoAtual,
+    placarAlunoAtual,
     metaAnualAlunoAtual,
     alunoAtualId,
     carregado,
@@ -69,6 +70,7 @@ export default function FaturamentoAlunoPage() {
 
       <MetaFaturamentoAnual
         faturamentos={faturamentosAlunoAtual}
+        placarEntrada={placarAlunoAtual}
         metaAnual={metaAnualAlunoAtual}
         onDefinirMeta={handleDefinirMeta}
       />
