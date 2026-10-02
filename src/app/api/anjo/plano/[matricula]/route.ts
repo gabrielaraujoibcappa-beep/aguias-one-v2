@@ -10,7 +10,7 @@ interface RouteParams {
 
 // GET /api/anjo/plano/:matricula — anjo, mentor, admin; mentorado só o próprio
 export async function GET(req: NextRequest, { params }: RouteParams) {
-  const auth = await exigirSessao(req, ["anjo", "mentor", "admin", "mentorado"]);
+  const auth = await exigirSessao(req, ["anjo", "mentor", "admin", "concierge", "mentorado"]);
   if (auth.erro) return auth.erro;
   try {
     const { matricula: matriculaId } = await params;

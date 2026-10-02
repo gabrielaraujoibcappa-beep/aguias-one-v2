@@ -10,7 +10,7 @@ import { listarJanelaMes6 } from "@/lib/acompanhamento/mes6-servidor";
  * Números com log; com ANJO_LE_FATURAMENTO=false o Anjo recebe só acima/igual/abaixo.
  */
 export async function GET(req: NextRequest) {
-  const auth = await exigirSessao(req, ["anjo", "mentor", "admin"]);
+  const auth = await exigirSessao(req, ["anjo", "mentor", "admin", "concierge"]);
   if (auth.erro) return auth.erro;
   const { sessao } = auth;
   try {

@@ -13,9 +13,9 @@ function redirecionar(request: NextRequest, pathname: string, params?: Record<st
 
 /** Painéis de acompanhamento por papel (SPEC diagnóstico §3 e §7). */
 const AREAS_POR_PAPEL: { prefixo: string; papeis: PapelUsuario[] }[] = [
-  { prefixo: "/anjo", papeis: ["anjo", "mentor", "admin"] },
+  { prefixo: "/anjo", papeis: ["anjo", "mentor", "admin", "concierge"] },
   { prefixo: "/concierge", papeis: ["concierge", "mentor", "admin"] },
-  { prefixo: "/mentor", papeis: ["mentor", "admin"] },
+  { prefixo: "/mentor", papeis: ["mentor", "admin", "concierge"] },
 ];
 
 const AREAS_DO_ALUNO = ["/onboarding", "/diagnostico"];
